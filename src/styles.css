@@ -628,3 +628,13 @@ html{background:#000}
 .headlayer{position:absolute;inset:0;pointer-events:none;z-index:6;overflow:hidden}
 /* v1.26.1: Bereichsname über dem Monat in der Farbe des Bereichs */
 .kk-all{color:var(--all)}.kk-fix{color:var(--fix)}.kk-hh{color:var(--hh)}
+/* v1.27: Bereichsname größer (zwischen Monat und „noch N Tage“) */
+.kick .kk{font-size:18px;font-weight:700;letter-spacing:-.2px;color:var(--text)}
+.kick .kk.kk-all{color:var(--all)}.kick .kk.kk-fix{color:var(--fix)}.kick .kk.kk-hh{color:var(--hh)}
+.kick{line-height:1.25}
+/* Untere Leiste: nur Symbole, schmaler */
+:root{--navh:54px}
+.nav{min-height:var(--navh);padding:4px;border-radius:28px}
+.navpill{top:4px;bottom:4px;left:4px;width:calc((100% - 8px) / 5);border-radius:24px}
+.nv{min-height:46px;gap:0}
+.nv svg{width:25px;height:25px}

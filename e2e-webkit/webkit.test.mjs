@@ -35,7 +35,7 @@ test('WebKit: App startet, Engine ist WebKit, Startdaten aus IndexedDB', async (
 
 test('WebKit: kein horizontales Scrollen auf iPhone-Breite', async () => {
   for (const tab of ['Alltag', 'Fixkosten', 'Mehr', 'Übersicht']) {
-    await click(By.xpath(`//nav//button[contains(normalize-space(.),'${tab}')]`));
+    await click(By.xpath(`//nav//button[@aria-label='${tab}']`));
     await sleep(200);
     const over = await d.executeScript('return document.documentElement.scrollWidth > window.innerWidth');
     assert.equal(over, false, tab);
@@ -43,7 +43,7 @@ test('WebKit: kein horizontales Scrollen auf iPhone-Breite', async () => {
 });
 
 test('WebKit: Buchung per Zahlenfeld, Tausenderpunkte, bleibt nach Neuladen', async () => {
-  await click(By.xpath("//nav//button[contains(normalize-space(.),'Buchungen')]"));
+  await click(By.xpath("//nav//button[@aria-label='Buchungen']"));
   await click(By.css('button[aria-label="Neue Buchung"]'));
   await click(By.css('button[aria-label="Betrag"]'));
   for (const k of ['1', '2', '3', '4', ',', '5']) await click(By.css(`[aria-label="Zahlenfeld"] button[aria-label="${k}"]`));
@@ -58,7 +58,7 @@ test('WebKit: Buchung per Zahlenfeld, Tausenderpunkte, bleibt nach Neuladen', as
   await d.wait(async () => (await d.findElements(By.css('.sheetwrap'))).length === 0, 5000);
   await d.navigate().refresh();
   await d.wait(until.elementLocated(By.css('nav')), 10000);
-  await click(By.xpath("//nav//button[contains(normalize-space(.),'Buchungen')]"));
+  await click(By.xpath("//nav//button[@aria-label='Buchungen']"));
   await d.wait(until.elementLocated(byText('b', 'WebKit-Test')), 10000);
   const amt = await d.findElement(By.xpath("//button[.//b[normalize-space(.)='WebKit-Test']]//span[contains(@class,'amt')]")).getText();
   assert.equal(amt, '1.234,50 €');
@@ -102,7 +102,7 @@ test('WebKit: Web Crypto mit den Backup-Parametern (PBKDF2-SHA256 600.000, AES-2
 
 test('WebKit: Content-Security-Policy ohne Verstöße beim Durchklicken', async () => {
   await d.executeScript('window.__csp = []; document.addEventListener("securitypolicyviolation", (e) => window.__csp.push(e.violatedDirective));');
-  await click(By.xpath("//nav//button[contains(normalize-space(.),'Mehr')]"));
+  await click(By.xpath("//nav//button[@aria-label='Mehr']"));
   for (const p of ['Sparen & Depot', 'Auswertung', 'Gehalt & Wiederkehrend', 'Daten & Backup']) {
     await click(By.xpath(`//button[contains(@class,'link')][contains(normalize-space(.),'${p}')]`));
     await sleep(250);
@@ -112,17 +112,17 @@ test('WebKit: Content-Security-Policy ohne Verstöße beim Durchklicken', async 
 });
 
 test('WebKit: Gemeinsames Konto – Einkauf ändert „Noch verfügbar“ nicht', async () => {
-  await click(By.xpath("//nav//button[contains(normalize-space(.),'Mehr')]"));
+  await click(By.xpath("//nav//button[@aria-label='Mehr']"));
   await click(By.xpath("//button[contains(@class,'link')][contains(normalize-space(.),'Gemeinsames Konto')]"));
   const setVal = async (label, v) => { const el = await d.findElement(By.css(`input[aria-label="${label}"]`)); await el.clear(); await el.sendKeys(v); };
   await setVal('Mein Beitrag pro Monat', '400');
   await setVal('Beitrag der anderen Person pro Monat', '350');
   await click(By.xpath("//button[normalize-space(.)='Einrichten' or normalize-space(.)='Speichern']"));
   await sleep(500);
-  await click(By.xpath("//nav//button[contains(normalize-space(.),'Übersicht')]"));
+  await click(By.xpath("//nav//button[@aria-label='Übersicht']"));
   await sleep(700);
   const before = await text('.hero .big');
-  await click(By.xpath("//nav//button[contains(normalize-space(.),'Buchungen')]"));
+  await click(By.xpath("//nav//button[@aria-label='Buchungen']"));
   await click(By.css('button[aria-label="Neue Buchung"]'));
   await click(By.xpath("//div[@role='dialog']//button[@role='tab'][normalize-space(.)='Haushaltskonto']"));
   await click(By.css('button[aria-label="Betrag"]'));
@@ -131,7 +131,7 @@ test('WebKit: Gemeinsames Konto – Einkauf ändert „Noch verfügbar“ nicht'
   await click(By.xpath("//div[@role='dialog']//button[contains(@class,'chip') and not(contains(@class,'recent')) and normalize-space(.)='Einkaufen']"));
   await click(byText('button', 'Speichern'));
   await d.wait(async () => (await d.findElements(By.css('.sheetwrap'))).length === 0, 5000);
-  await click(By.xpath("//nav//button[contains(normalize-space(.),'Übersicht')]"));
+  await click(By.xpath("//nav//button[@aria-label='Übersicht']"));
   await sleep(700);
   assert.equal(await text('.hero .big'), before);
   const card = await d.findElement(By.xpath("//button[contains(@class,'card')][contains(.,'Haushaltskonto')]")).getText();
@@ -140,7 +140,7 @@ test('WebKit: Gemeinsames Konto – Einkauf ändert „Noch verfügbar“ nicht'
 
 test('WebKit: CSV-Import – Datei lesen, Duplikat-Prüfung, übernehmen', async () => {
   const csv = (await import('node:fs')).readFileSync(new URL('../tests/fixtures/c24-beispiel.csv', import.meta.url), 'utf8');
-  await click(By.xpath("//nav//button[contains(normalize-space(.),'Mehr')]"));
+  await click(By.xpath("//nav//button[@aria-label='Mehr']"));
   await click(By.xpath("//button[contains(normalize-space(.),'CSV-Import')]"));
   await d.wait(until.elementLocated(By.css('input[aria-label="CSV-Datei"]')), 8000);
   await d.executeScript(`const inp = document.querySelector('input[aria-label="CSV-Datei"]');
@@ -159,11 +159,11 @@ test('WebKit: CSV-Import – Datei lesen, Duplikat-Prüfung, übernehmen', async
   results.csvImport = await (await d.findElement(By.css('.toast'))).getText();
   await click(By.xpath("//button[normalize-space(.)='Letzten Import rückgängig machen']"));
   await d.wait(until.elementLocated(By.xpath("//*[contains(normalize-space(.),'importierte Buchungen entfernt')]")), 8000);
-  await click(By.xpath("//nav//button[contains(normalize-space(.),'Übersicht')]"));
+  await click(By.xpath("//nav//button[@aria-label='Übersicht']"));
 });
 
 test('WebKit: Alltag – Unterkategorie gedrückt halten und ziehen', async () => {
-  await click(By.xpath("//nav//button[contains(normalize-space(.),'Alltag')]"));
+  await click(By.xpath("//nav//button[@aria-label='Alltag']"));
   const more = await d.findElements(By.css('.morecats'));
   if (more.length && /weitere/.test(await more[0].getText())) { await d.executeScript('arguments[0].click()', more[0]); await sleep(200); }
   const names = async () => d.executeScript(`const card=[...document.querySelectorAll('.card')].find(c=>c.querySelector('.ghead b')?.textContent==='Lebensmittel');return [...card.querySelectorAll('.subrow .sub span:first-child')].map(x=>x.textContent)`);
@@ -192,7 +192,7 @@ test('WebKit: Service Worker und Update-Prüfung', async () => {
     if (!('serviceWorker' in navigator)) { done('nicht vorhanden'); return; }
     Promise.race([navigator.serviceWorker.ready.then(() => 'aktiv'), new Promise((r) => setTimeout(() => r('nicht bereit nach 8 s'), 8000))]).then(done);`);
   results.serviceWorker = sw;
-  await click(By.xpath("//nav//button[contains(normalize-space(.),'Mehr')]"));
+  await click(By.xpath("//nav//button[@aria-label='Mehr']"));
   await click(By.xpath("//button[contains(@class,'link')][contains(normalize-space(.),'Daten & Backup')]"));
   await click(byText('button', 'Nach Update suchen'));
   const msg = await d.wait(until.elementLocated(By.xpath("//span[@role='status'][contains(.,'Version') or contains(.,'fehlgeschlagen')]")), 10000);

@@ -30,13 +30,13 @@ export function Header({ kicker, title, right, monthSwipe, keepLine }: { kicker?
   return (
     <div className="hd" data-swipe={monthSwipe ? 'month' : undefined}>
       {/* keepLine: leere Zeile über dem Titel, damit er auf derselben Höhe steht wie der Monat auf den anderen Reitern */}
-      <div>{kicker ? <div className="kick">{kicker}</div> : keepLine ? <div className="kick" aria-hidden="true">&nbsp;</div> : null}<h1>{title}</h1></div>
+      <div>{kicker ? <div className="kick">{kicker}</div> : keepLine ? <div className="kick" aria-hidden="true"><span className="kk">&nbsp;</span></div> : null}<h1>{title}</h1></div>
       {right}
     </div>
   );
 }
 
-export function MonthHeader({ month, onChange, kicker }: { month: string; onChange: (m: string) => void; kicker?: string }) {
+export function MonthHeader({ month, onChange, kicker }: { month: string; onChange: (m: string) => void; kicker?: ReactNode }) {
   return <Header kicker={kicker} title={monthLabel(month)} right={<MonthNav month={month} onChange={onChange} />} />;
 }
 

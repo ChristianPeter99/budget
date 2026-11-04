@@ -75,7 +75,7 @@ export function Overview({ onGoBookings, onGoBackup, onGoGroup, onAdd, onGoJoint
   return (
     <div className="ovswipe">
       <div className="hd" data-swipe="month">
-        <div><div className="kick">Übersicht{isCurrent ? ` · noch ${days} ${days === 1 ? 'Tag' : 'Tage'}` : ''}</div><h1>{monthLabel(month)}</h1></div>
+        <div><div className="kick"><span className="kk">Übersicht</span>{isCurrent ? ` · noch ${days} ${days === 1 ? 'Tag' : 'Tage'}` : ''}</div><h1>{monthLabel(month)}</h1></div>
         <div className="mn">
           <button className="ib" aria-label="Vorheriger Monat" onClick={() => setMonth(shiftMonth(month, -1))}><Icon name="left" /></button>
           <button className="ib" aria-label="Nächster Monat" onClick={() => setMonth(shiftMonth(month, 1))}><Icon name="right" /></button>

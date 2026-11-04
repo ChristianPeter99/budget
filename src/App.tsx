@@ -230,7 +230,7 @@ export function App() {
   };
   const goMore = (p: MorePage) => { setOrigin(tab); setMorePage(p); setTab('more'); };
   const nav = (t: Tab, icon: string, label: string) => (
-    <button data-tab={t} className={'nv' + (tab === t ? ' on' : '')} onClick={() => goTab(t)} aria-current={tab === t ? 'page' : undefined}><Icon name={icon} size={24} />{label}</button>
+    <button data-tab={t} className={'nv' + (tab === t ? ' on' : '')} onClick={() => goTab(t)} aria-current={tab === t ? 'page' : undefined} aria-label={label}><Icon name={icon} size={24} /></button>
   );
   return (
     <div className="app">

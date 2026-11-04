@@ -65,7 +65,7 @@ export function Alltag({ onAdd, onOpenTx }: { onAdd: (p: TxPreset) => void; onOp
     : <CategoriesPage group="alltag" back={<Back label="Alltag" onClick={() => setEditCats(false)} />} />;
   return (
     <>
-      <Header monthSwipe kicker={<><span className={isJoint ? 'kk-hh' : 'kk-all'}>{isJoint && jset ? jset.name : 'Alltag'}</span>{month === currentMonthKey() ? ` · noch ${daysLeftInMonth(month)} ${daysLeftInMonth(month) === 1 ? 'Tag' : 'Tage'}` : ''}</>} title={monthLabel(month)} right={<MonthNav month={month} onChange={setMonth} onEdit={() => setEditCats(true)} />} />
+      <Header monthSwipe kicker={<><span className={'kk ' + (isJoint ? 'kk-hh' : 'kk-all')}>{isJoint && jset ? jset.name : 'Alltag'}</span>{month === currentMonthKey() ? ` · noch ${daysLeftInMonth(month)} ${daysLeftInMonth(month) === 1 ? 'Tag' : 'Tage'}` : ''}</>} title={monthLabel(month)} right={<MonthNav month={month} onChange={setMonth} onEdit={() => setEditCats(true)} />} />
       <AccountSwitch />
       <div className="hero flathero">
         <div className="sp end">

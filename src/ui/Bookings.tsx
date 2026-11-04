@@ -124,9 +124,9 @@ export function Bookings({ onOpenTx, back, onAdd }: { onOpenTx: (t: Transaction)
   return (
     <>
       {back}
-      {period === 'month' ? <MonthHeader month={month} onChange={setMonth} kicker="Buchungen" />
-        : period === 'year' ? <Header kicker="Buchungen" title={month.slice(0, 4)} right={<MonthNav month={month} onChange={(m) => setMonth(shiftMonth(month, m > month ? 12 : -12))} />} />
-        : <Header kicker="Buchungen" title={period === 'custom' ? `${fmtD(custom.from)} – ${fmtD(custom.to)}` : 'Gesamt'} />}
+      {period === 'month' ? <MonthHeader month={month} onChange={setMonth} kicker={<span className="kk">Buchungen</span>} />
+        : period === 'year' ? <Header kicker={<span className="kk">Buchungen</span>} title={month.slice(0, 4)} right={<MonthNav month={month} onChange={(m) => setMonth(shiftMonth(month, m > month ? 12 : -12))} />} />
+        : <Header kicker={<span className="kk">Buchungen</span>} title={period === 'custom' ? `${fmtD(custom.from)} – ${fmtD(custom.to)}` : 'Gesamt'} />}
       <AccountSwitch />
       <div className="tbar">
         {onAdd && <button className="pillbtn addtx" aria-label="Neue Buchung" onClick={onAdd}><Icon name="plus" size={18} w={2.2} />Neue Buchung</button>}

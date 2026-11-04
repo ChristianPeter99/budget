@@ -3,7 +3,8 @@ import { expect, test } from '@playwright/test';
 test('Navigation: Buchungen statt Plus, Neue Buchung dort; Alltag ohne „Alle Buchungen“', async ({ page }) => {
   await page.goto('/');
   const nav = page.locator('nav');
-  await expect(nav.getByRole('button')).toHaveText(['Übersicht', 'Alltag', 'Buchungen', 'Fixkosten', 'Mehr']);
+  await expect(nav.getByRole('button')).toHaveText(['', '', '', '', '']);
+  for (const [i, l] of ['Übersicht', 'Alltag', 'Buchungen', 'Fixkosten', 'Mehr'].entries()) await expect(nav.getByRole('button').nth(i)).toHaveAttribute('aria-label', l);
   await nav.getByRole('button', { name: 'Alltag' }).click();
   await expect(page.getByRole('button', { name: /Alle Buchungen/ })).toHaveCount(0);
   await nav.getByRole('button', { name: 'Buchungen' }).click();
