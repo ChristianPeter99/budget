@@ -26,10 +26,11 @@ export function MonthNav({ month, onChange, onEdit, editLabel = 'Kategorien bear
   );
 }
 
-export function Header({ kicker, title, right, monthSwipe }: { kicker?: string; title: string; right?: ReactNode; monthSwipe?: boolean }) {
+export function Header({ kicker, title, right, monthSwipe, keepLine }: { kicker?: ReactNode; title: string; right?: ReactNode; monthSwipe?: boolean; keepLine?: boolean }) {
   return (
     <div className="hd" data-swipe={monthSwipe ? 'month' : undefined}>
-      <div>{kicker && <div className="kick">{kicker}</div>}<h1>{title}</h1></div>
+      {/* keepLine: leere Zeile über dem Titel, damit er auf derselben Höhe steht wie der Monat auf den anderen Reitern */}
+      <div>{kicker ? <div className="kick">{kicker}</div> : keepLine ? <div className="kick" aria-hidden="true">&nbsp;</div> : null}<h1>{title}</h1></div>
       {right}
     </div>
   );

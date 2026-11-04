@@ -27,6 +27,7 @@ export function BackupScreen({ back }: { back: ReactNode }) {
         <button className="btn" onClick={() => setMode('export')}>Verschlüsseltes Backup erstellen</button>
         <button className="btn sec2" onClick={() => setMode('import')}>Backup wiederherstellen</button>
       </div>
+      <p className="note" style={{ marginTop: -6 }}>Es gibt kein automatisches Backup. Die Datei ist mit deinem Passwort verschlüsselt; ohne Passwort ist sie nicht lesbar. Speichere sie z. B. in iCloud Drive.</p>
       <ReminderBlock />
       {data.snapshotAt && (
         <div className="card stack">
@@ -45,9 +46,6 @@ export function BackupScreen({ back }: { back: ReactNode }) {
           )}
         </div>
       )}
-      <p className="note">
-        Backups sind Handarbeit: Es gibt <b>kein automatisches Backup</b>. Die Datei ist mit deinem Passwort verschlüsselt (PBKDF2-SHA256 + AES-256-GCM). Das Passwort wird nirgends gespeichert; ohne Passwort ist die Datei nicht lesbar. Speichere sie z. B. in „Dateien“/iCloud Drive. Die Datenbank auf dem Gerät selbst ist <b>nicht</b> zusätzlich verschlüsselt, sie ist durch die Gerätesperre geschützt.
-      </p>
       <DataSections />
       {mode === 'export' && <ExportSheet onClose={() => setMode(null)} />}
       {mode === 'import' && <ImportSheet onClose={() => setMode(null)} />}

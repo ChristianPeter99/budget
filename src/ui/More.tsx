@@ -57,13 +57,12 @@ export function More({ initial = 'menu', onExit, onOpenTx, onAdd, onEditRec }: M
   ];
   return (
     <>
-      <Header title="Mehr" />
+      <Header title="Mehr" keepLine />
       <div className="card flush">
         {items.map(([p, ic, l, s]) => (
           <button className="link" key={p} onClick={() => setPage(p)}><span style={{ display: 'flex', gap: 12, alignItems: 'center' }}><Icon name={ic} />{l}</span><small>{s}<Chevr /></small></button>
         ))}
       </div>
-      <p className="note">Alle Daten liegen ausschließlich auf diesem Gerät (IndexedDB in Safari). Es werden keine Daten übertragen. Backups erstellst du manuell.</p>
     </>
   );
 }

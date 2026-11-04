@@ -54,7 +54,7 @@ export function Fixkosten({ onEdit, onNew }: { onEdit: (r: Recurring) => void; o
   if (editCats) return <CategoriesPage group="fix" back={<Back label="Fixkosten" onClick={() => setEditCats(false)} />} />;
   return (
     <>
-      <Header monthSwipe kicker="Fixkosten" title={monthLabel(month)} right={<MonthNav month={month} onChange={setMonth} onEdit={() => setEditCats(true)} />} />
+      <Header monthSwipe kicker={<span className="kk-fix">Fixkosten</span>} title={monthLabel(month)} right={<MonthNav month={month} onChange={setMonth} onEdit={() => setEditCats(true)} />} />
       <div className="hero flathero">
         <div className="fixhead">
           <div className="col"><span className="cap">Ausgaben</span><span className="fhbig"><Money cents={sumShown} /></span></div>

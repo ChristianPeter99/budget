@@ -111,6 +111,13 @@ export function App() {
     if (!c.main && mh && dx) c.main = placeClone(mh, null, dx);
     if (gh && c.ghostFor !== gh) { c.ghost?.remove(); c.ghost = placeClone(gh, mh, dx); c.ghostFor = gh; }
     const prog = Math.min(1, Math.abs(dx) / width());
+    // Ist der Kopf der aktuellen Seite weggescrollt, erscheint der neue sofort vollständig (nichts zum Überblenden)
+    const lr = layer.getBoundingClientRect();
+    const mainShown = !!c.main && c.main.getBoundingClientRect().bottom > lr.top + 8;
+    if (!mainShown && c.ghost) {
+      headParts(c.ghost).forEach((el) => { el.style.transition = 'none'; el.style.opacity = '1'; });
+      return;
+    }
     const a = headParts(c.main), b = headParts(c.ghost);
     for (const key of new Set([...a.keys(), ...b.keys()])) {
       const x = a.get(key), y = b.get(key);

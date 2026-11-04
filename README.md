@@ -2,6 +2,12 @@
 
 Haushaltsbuch als Progressive Web App. Alle Daten bleiben auf dem Gerät (IndexedDB). Keine Server, kein Tracking, keine externen Schriften oder Skripte.
 
+## Neu in Version 1.26.1
+- „Alltag“ (blau) und „Fixkosten“ (orange) über dem Monat in ihrer Farbe
+- Wischen nach dem Herunterscrollen: der Monat der neuen Seite erscheint sofort
+- „Mehr“: Titel auf derselben Höhe wie der Monat der anderen Reiter; Datenschutz-Hinweis unten entfernt
+- Daten & Backup: kürzere Hinweise; „Datenschutz“ nur noch mit dem Hinweistext
+
 ## Neu in Version 1.26
 - Blättern: Die Kopfzeile (Monat, Pfeile) bleibt beim Wischen stehen; nur was sich ändert („Übersicht“ → „Alltag“, „noch N Tage“, Stift, Titel bei „Mehr“) wird weich aus- und eingeblendet
 

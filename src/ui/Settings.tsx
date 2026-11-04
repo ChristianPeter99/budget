@@ -20,21 +20,19 @@ export function ReminderBlock() {
       <div className="wseg" role="radiogroup" aria-label="Backup-Erinnerung">
         {REMIND.map((d) => <button key={d} role="radio" aria-checked={s.backupReminderDays === d} className={s.backupReminderDays === d ? 'on' : ''} onClick={() => run((db) => saveSettings(db, { ...s, backupReminderDays: d }))}>{d === 0 ? 'Aus' : `${d} Tage`}</button>)}
       </div>
-      <span className="mini">Die Übersicht erinnert dich, wenn dein letztes Backup älter ist.</span>
+      <span className="mini">Hinweis auf der Übersicht, wenn das letzte Backup älter ist.</span>
     </div>
   );
 }
 
 /** Speicher & Datenschutz, Zurücksetzen, App-Version (früher „Einstellungen“). */
 export function DataSections() {
-  const { data, run } = useStore();
+  const { run } = useStore();
   const [reset, setReset] = useState(0);
   return (
     <>
       <div className="card flush">
-        <div className="sec"><h2>Speicher & Datenschutz</h2></div>
-        <div className="kv"><span>Buchungen</span><b>{data.transactions.length}</b></div>
-        <div className="kv"><span>Depot-Einträge</span><b>{data.depotEntries.length}</b></div>
+        <div className="sec"><h2>Datenschutz</h2></div>
         <p className="note pad">Alle Daten liegen nur auf diesem iPhone. Es wird nichts übertragen, es gibt kein Tracking. Die Datenbank ist durch die Gerätesperre geschützt, Backups zusätzlich mit deinem Passwort verschlüsselt.</p>
       </div>
 
