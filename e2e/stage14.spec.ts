@@ -26,6 +26,10 @@ test('Übersicht: Monat per Wischen im Kopf, sonst Reiterwechsel; Kacheln, Schne
   // Wischen auf dem Inhalt blättert zwischen den Reitern
   await swipe(page, page.locator('.gtile').nth(1), -1);
   await expect(nav.getByRole('button', { name: 'Alltag' })).toHaveAttribute('aria-current', 'page');
+  // feststehende Kopfzeile: nach dem Einrasten keine Kopie mehr, echter Kopf sichtbar
+  await expect(page.locator('.headlayer > *')).toHaveCount(0);
+  await expect(page.locator('main.view .hd')).toBeVisible();
+  await expect(page.locator('main.view .kick')).toContainText('Alltag');
   await expect(page.locator('.pageghost')).toHaveCount(0);
   await swipe(page, page.locator('.catbar'), -1);
   await expect(nav.getByRole('button', { name: 'Buchungen' })).toHaveAttribute('aria-current', 'page');

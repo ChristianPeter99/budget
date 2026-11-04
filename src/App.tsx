@@ -40,12 +40,15 @@ export function App() {
   const busy = useRef(false);
   const pos = useRef({ dx: 0, side: 1 as 1 | -1, frame: 0 });
   const resetAfterCommit = useRef(false);
+  const layerRef = useRef<HTMLDivElement>(null);
+  const clones = useRef<{ main?: HTMLElement; ghost?: HTMLElement; ghostFor?: Element }>({});
   // Nach dem Umblättern: Verschiebung zurücksetzen, bevor der Browser zeichnet (kein Aufblitzen der alten Seite)
   useLayoutEffect(() => {
     if (!resetAfterCommit.current) return;
     resetAfterCommit.current = false;
     const m = mainRef.current;
     if (m) { m.style.transition = 'none'; m.style.transform = ''; m.scrollTop = 0; }
+    clearHead();
     pos.current.dx = 0;
   }, [tab]);
   // iOS: während des seitlichen Ziehens nicht zusätzlich senkrecht scrollen (verhindert Zittern)
@@ -74,6 +77,50 @@ export function App() {
   const EASE = `transform ${SETTLE_MS}ms cubic-bezier(.22,.9,.3,1)`;
   const width = () => mainRef.current?.clientWidth || window.innerWidth;
   /** Position zeichnen – höchstens einmal pro Bildschirmbild. */
+  /**
+   * Kopfzeile beim Blättern feststehend: Die Köpfe beider Seiten werden gegen die Verschiebung gehalten.
+   * Gleiche Teile (Monat, Pfeile) bleiben einfach stehen, unterschiedliche (z. B. „Übersicht“ → „Alltag“,
+   * „noch 27 Tage“, Stift) werden weich überblendet.
+   */
+  const headParts = (hd: Element | null | undefined) => {
+    const m = new Map<string, HTMLElement>();
+    if (!hd) return m;
+    const h1 = hd.querySelector<HTMLElement>('h1'); if (h1) m.set('h1', h1);
+    const k = hd.querySelector<HTMLElement>('.kick'); if (k) m.set('kick', k);
+    hd.querySelectorAll<HTMLElement>('.mn button[aria-label], .mn .pillbtn').forEach((b) => m.set('b:' + (b.getAttribute('aria-label') ?? b.textContent ?? ''), b));
+    return m;
+  };
+  // Feststehende Kopie beider Köpfe in einer eigenen Ebene über der Seite (die Seiten selbst schneiden seitlich ab)
+  const placeClone = (src: HTMLElement, leftFrom: HTMLElement | null, shift: number) => {
+    const layer = layerRef.current!;
+    // Position ohne die aktuelle Verschiebung der Seite, damit der Kopf genau an seinem Ruheplatz steht
+    const lr = layer.getBoundingClientRect(), r = src.getBoundingClientRect(), lx = (leftFrom ?? src).getBoundingClientRect().left - shift;
+    const c = src.cloneNode(true) as HTMLElement;
+    c.removeAttribute('data-swipe');
+    Object.assign(c.style, { position: 'absolute', margin: '0', top: `${r.top - lr.top}px`, left: `${lx - lr.left}px`, width: `${r.width}px`, transform: '', transition: '' });
+    layer.appendChild(c);
+    src.style.visibility = 'hidden';
+    return c;
+  };
+  const headFx = (dx: number, _side: number, animate: boolean) => {
+    const layer = layerRef.current;
+    if (!layer) return;
+    const mh = mainRef.current?.querySelector<HTMLElement>('.hd') ?? null;
+    const gh = ghostRef.current?.querySelector<HTMLElement>('.hd') ?? null;
+    const c = clones.current;
+    if (!c.main && mh && dx) c.main = placeClone(mh, null, dx);
+    if (gh && c.ghostFor !== gh) { c.ghost?.remove(); c.ghost = placeClone(gh, mh, dx); c.ghostFor = gh; }
+    const prog = Math.min(1, Math.abs(dx) / width());
+    const a = headParts(c.main), b = headParts(c.ghost);
+    for (const key of new Set([...a.keys(), ...b.keys()])) {
+      const x = a.get(key), y = b.get(key);
+      const same = !!x && !!y && x.textContent === y.textContent;
+      const t = animate ? `opacity ${SETTLE_MS}ms ease` : 'none';
+      // Unterschiedliches erst aus-, dann einblenden (ohne Überlappung der Texte)
+      if (x) { x.style.transition = t; x.style.opacity = same ? '1' : String(Math.max(0, 1 - 2 * prog)); }
+      if (y) { y.style.transition = t; y.style.opacity = same ? '0' : String(Math.max(0, 2 * prog - 1)); }
+    }
+  };
   const paint = (animate = false) => {
     const p = pos.current;
     if (p.frame) cancelAnimationFrame(p.frame);
@@ -82,6 +129,7 @@ export function App() {
       const m = mainRef.current, g = ghostRef.current, tr = animate ? EASE : 'none';
       if (m) { m.style.transition = tr; m.style.transform = p.dx ? `translate3d(${p.dx}px,0,0)` : ''; }
       if (g) { g.style.transition = tr; g.style.transform = `translate3d(${p.dx + p.side * width()}px,0,0)`; }
+      headFx(p.dx, p.side, animate);
       // Markierung in der unteren Leiste wandert mit dem Finger mit
       const pill = pillRef.current;
       if (pill) {
@@ -94,6 +142,14 @@ export function App() {
   /** Hervorhebung in der unteren Leiste sofort umstellen (ohne Neuaufbau). */
   const highlight = (t: Tab) => {
     navRef.current?.querySelectorAll<HTMLElement>('[data-tab]').forEach((b) => b.classList.toggle('on', b.dataset.tab === t));
+  };
+  /** Feststehende Kopie entfernen und die echten Köpfe wieder zeigen (nach dem Einrasten). */
+  const clearHead = () => {
+    const c = clones.current;
+    c.main?.remove(); c.ghost?.remove();
+    clones.current = {};
+    mainRef.current?.querySelectorAll<HTMLElement>('.hd').forEach((h) => { h.style.visibility = ''; });
+    ghostRef.current?.querySelectorAll<HTMLElement>('.hd').forEach((h) => { h.style.visibility = ''; });
   };
   const settle = (to: number, then: () => void) => {
     busy.current = true;
@@ -143,10 +199,10 @@ export function App() {
         settle(d < 0 ? -w : w, () => { resetAfterCommit.current = true; setMorePage('menu'); setTab(next); setPeek(null); });
       } else {
         highlight(tab);
-        settle(0, () => setPeek(null));
+        settle(0, () => { clearHead(); setPeek(null); });
       }
     },
-    onPointerCancel: () => { const st = sw.current; sw.current = null; if (st?.lock === 'h') { highlight(tab); settle(0, () => setPeek(null)); } },
+    onPointerCancel: () => { const st = sw.current; sw.current = null; if (st?.lock === 'h') { highlight(tab); settle(0, () => { clearHead(); setPeek(null); }); } },
     // Nach einem Wisch keinen Tipp auf eine Karte oder Buchung auslösen
     onClickCapture: (e: React.MouseEvent) => { if (swiped.current) { e.preventDefault(); e.stopPropagation(); swiped.current = false; } }
   };
@@ -185,6 +241,7 @@ export function App() {
           <ErrorBoundary key={'ghost' + peek} onHome={() => undefined}>{renderTab(peek, true)}</ErrorBoundary>
         </div>
       )}
+      <div ref={layerRef} className="headlayer" aria-hidden="true" />
       </div>
       <nav ref={navRef} className="nav" aria-label="Hauptnavigation">
         <span ref={pillRef} className="navpill" aria-hidden="true" style={{ transform: `translateX(${TABS.indexOf(tab) * 100}%)` }} />
