@@ -1,0 +1,32 @@
+import { chromium } from 'playwright';
+const N = Number(process.argv[2]); const RATE = Number(process.argv[3]);
+const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1243/chrome-linux64/chrome' });
+const ctx = await b.newContext({ viewport:{width:390,height:844}});
+const p = await ctx.newPage(); p.setDefaultTimeout(180000);
+await p.goto('http://localhost:4173/'); await p.waitForTimeout(800);
+await p.evaluate((N) => new Promise((res, rej) => {
+  const r = indexedDB.open('budget-app');
+  r.onsuccess = () => { const db = r.result;
+    const q = db.transaction('categories').objectStore('categories').getAll();
+    q.onsuccess = () => { const leaves = q.result.filter(c => c.kind==='expense' && c.parentId);
+      const tx = db.transaction('transactions','readwrite'); const st = tx.objectStore('transactions');
+      for (let i=0;i<N;i++){ const d = new Date(2023,0,1); d.setDate(d.getDate()+ (i % 1400));
+        const iso = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        st.put({id:'p'+i,date:iso,type:'expense',amountCents:100+(i%5000),categoryId:leaves[i%leaves.length].id,description:'Test '+i,createdAt:new Date().toISOString()}); }
+      tx.oncomplete=()=>{db.close();res();}; tx.onerror=()=>rej(tx.error); }; };
+}), N);
+const cdp = await ctx.newCDPSession(p);
+await cdp.send('Emulation.setCPUThrottlingRate', { rate: RATE });
+const time = async (f) => { const t=Date.now(); await f(); return Date.now()-t; };
+const out = { N, RATE };
+out.start = await time(async()=>{ await p.reload(); await p.locator('h1').first().waitFor(); });
+out.alltagTab = await time(async()=>{ await p.getByRole('button',{name:'Alltag',exact:true}).click(); await p.locator('h1',{hasText:'Alltag'}).waitFor(); });
+await p.getByRole('button',{name:'Mehr',exact:true}).click();
+out.monatsliste = await time(async()=>{ await p.getByRole('button',{name:/Alle Buchungen/}).click(); await p.getByLabel('Suchen').waitFor(); });
+out.gesamtliste = await time(async()=>{ await p.getByRole('button',{name:'Gesamt'}).click(); await p.waitForFunction(()=>document.querySelectorAll('.swipe').length>1000); await p.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>r()))); });
+out.rows = await p.locator('.swipe').count();
+out.tasteInSuche = await time(async()=>{ await p.getByLabel('Suchen').press('T'); await p.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>r()))); });
+await p.getByLabel('Suchen').fill('');
+out.auswertung = await time(async()=>{ await p.getByRole('button',{name:'Zurück'}).or(p.getByRole('button',{name:'Mehr'}).first()).first().click(); await p.getByRole('button',{name:/Auswertung/}).click(); await p.getByText('Ausgaben nach Kategorie').waitFor(); });
+console.log(JSON.stringify(out));
+await b.close();
