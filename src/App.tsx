@@ -35,11 +35,13 @@ export function App() {
   const ghostRef = useRef<HTMLDivElement | null>(null);
   const navRef = useRef<HTMLElement>(null);
   const pillRef = useRef<HTMLSpanElement>(null);
-  const sw = useRef<{ x: number; y: number; month: boolean; lock?: 'h' | 'v'; lx: number; lt: number; v: number; next: Tab | null; dx: number } | null>(null);
+  const sw = useRef<{ x: number; y: number; month: boolean; pop: boolean; lock?: 'h' | 'v'; lx: number; lt: number; v: number; next: Tab | null; dx: number } | null>(null);
   const swiped = useRef(false);
   const busy = useRef(false);
   const pos = useRef({ dx: 0, side: 1 as 1 | -1, frame: 0 });
   const resetAfterCommit = useRef(false);
+  /** Zurückwischen aktiv: die vorige Ebene liegt als Kopie unter der Unterseite */
+  const popMode = useRef(false);
   const layerRef = useRef<HTMLDivElement>(null);
   const clones = useRef<{ main?: HTMLElement; ghost?: HTMLElement; ghostFor?: Element }>({});
   // Nach dem Umblättern: Verschiebung zurücksetzen, bevor der Browser zeichnet (kein Aufblitzen der alten Seite)
@@ -172,11 +174,44 @@ export function App() {
     pos.current.dx = to; paint(true);
     window.setTimeout(() => { then(); busy.current = false; if (pillRef.current) pillRef.current.style.transition = ''; }, SETTLE_MS);
   };
+  /** Vorige Ebene unter der Unterseite: leicht nach links versetzt und abgedunkelt, rückt mit dem Finger nach */
+  const popGhost = (d: number, animate: boolean) => {
+    const g = ghostRef.current, w = width();
+    if (!g) return;
+    const p = Math.min(1, d / w);
+    g.style.transition = animate ? `${EASE}, opacity ${SETTLE_MS}ms ease` : 'none';
+    g.style.transform = `translate3d(${-w * 0.3 * (1 - p)}px,0,0)`;
+    g.style.opacity = String(0.55 + 0.45 * p);
+  };
+  /** Loslassen: weit genug oder mit Schwung → Unterseite gleitet hinaus, sonst federt sie zurück */
+  const popEnd = (d: number, v: number) => {
+    const m = mainRef.current, w = width();
+    if (!m) return;
+    const go = d > w * 0.3 || (v > 0.35 && d > 30);
+    busy.current = true;
+    m.style.transition = EASE;
+    m.style.transform = go ? `translate3d(${w}px,0,0)` : '';
+    popGhost(go ? w : 0, true);
+    window.setTimeout(() => {
+      // Wichtig auf dem iPhone: Nach einem Wisch kommt dort kein Klick, die Klick-Sperre stünde noch –
+      // sie würde den „Zurück“-Klick verschlucken. Deshalb vorher aufheben.
+      if (go) { swiped.current = false; popBtn()?.click(); }
+      // erst nach dem Neuzeichnen der vorigen Ebene die Kopie entfernen (kein Aufblitzen)
+      requestAnimationFrame(() => {
+        m.classList.remove('popping');
+        m.style.transition = 'none'; m.style.transform = '';
+        if (go) m.scrollTop = 0;
+        popMode.current = false;
+        setPeek(null);
+        busy.current = false;
+      });
+    }, SETTLE_MS);
+  };
   const swipeHandlers = {
     onPointerDown: (e: React.PointerEvent) => {
       swiped.current = false;
       if (busy.current || (e.pointerType === 'mouse' && e.button !== 0) || noSwipe(e.target)) { sw.current = null; return; }
-      sw.current = { x: e.clientX, y: e.clientY, month: !!(e.target as Element).closest('[data-swipe="month"]'), lx: e.clientX, lt: e.timeStamp, v: 0, next: null, dx: 0 };
+      sw.current = { x: e.clientX, y: e.clientY, month: !!(e.target as Element).closest('[data-swipe="month"]'), pop: !!popBtn(), lx: e.clientX, lt: e.timeStamp, v: 0, next: null, dx: 0 };
     },
     onPointerMove: (e: React.PointerEvent) => {
       const st = sw.current;
@@ -187,6 +222,9 @@ export function App() {
       if (!st.lock) {
         if (Math.abs(ddx) > 8 && Math.abs(ddx) > 1.2 * Math.abs(ddy)) {
           st.lock = 'h';
+          // Auf einer Unterseite (mit „Zurück“) heißt Wischen nach rechts: eine Ebene zurück, wie bei iOS
+          st.pop = st.pop && ddx > 0;
+          if (st.pop) st.month = false;
           st.x = e.clientX; // ab hier ohne Sprung mitziehen
           try { (e.currentTarget as Element).setPointerCapture(e.pointerId); } catch { /* egal */ }
         } else if (Math.abs(ddy) > 10) { st.lock = 'v'; return; } else return;
@@ -196,6 +234,14 @@ export function App() {
       const dt = e.timeStamp - st.lt;
       if (dt > 0) st.v = 0.6 * ((e.clientX - st.lx) / dt) + 0.4 * st.v;
       st.lx = e.clientX; st.lt = e.timeStamp;
+      if (st.pop) {
+        st.dx = Math.max(0, d);
+        if (!popMode.current) { popMode.current = true; setPeek(tab === 'more' && morePage !== 'menu' ? origin : tab); }
+        const m = mainRef.current;
+        if (m) { m.style.transition = 'none'; m.style.transform = `translate3d(${st.dx}px,0,0)`; m.classList.add('popping'); }
+        popGhost(st.dx, false);
+        return;
+      }
       const next = d === 0 ? st.next : TABS[TABS.indexOf(tab) + (d < 0 ? 1 : -1)] ?? null;
       if (next !== st.next) { st.next = next; setPeek(next); }
       pos.current.side = d < 0 ? 1 : -1;
@@ -209,6 +255,8 @@ export function App() {
       if (!st || st.lock !== 'h') return;
       swiped.current = true;
       if (st.month) return;
+      // Schwung zählt nur, wenn der Finger beim Loslassen noch in Bewegung war
+      if (st.pop) { popEnd(st.dx, performance.now() - st.lt > 100 ? 0 : st.v); return; }
       const d = st.dx, w = width();
       const fling = Math.abs(st.v) > 0.4 && Math.sign(st.v) === Math.sign(d);
       const next = st.next;
@@ -220,7 +268,7 @@ export function App() {
         settle(0, () => { clearHead(); setPeek(null); });
       }
     },
-    onPointerCancel: () => { const st = sw.current; sw.current = null; if (st?.lock === 'h') { highlight(tab); settle(0, () => { clearHead(); setPeek(null); }); } },
+    onPointerCancel: () => { const st = sw.current; sw.current = null; if (st?.lock === 'h' && st.pop) { popEnd(0, 0); return; } if (st?.lock === 'h') { highlight(tab); settle(0, () => { clearHead(); setPeek(null); }); } },
     // Nach einem Wisch keinen Tipp auf eine Karte oder Buchung auslösen
     onClickCapture: (e: React.MouseEvent) => { if (swiped.current) { e.preventDefault(); e.stopPropagation(); swiped.current = false; } }
   };
@@ -255,7 +303,7 @@ export function App() {
         </ErrorBoundary>
       </main>
       {peek && (
-        <div className="pageghost" aria-hidden="true" inert ref={(el) => { ghostRef.current = el; if (el) el.style.transform = `translate3d(${pos.current.dx + pos.current.side * width()}px,0,0)`; }}>
+        <div className={'pageghost' + (popMode.current ? ' under' : '')} aria-hidden="true" inert ref={(el) => { ghostRef.current = el; if (el && !popMode.current) el.style.transform = `translate3d(${pos.current.dx + pos.current.side * width()}px,0,0)`; else if (el) popGhost(sw.current?.dx ?? 0, false); }}>
           <ErrorBoundary key={'ghost' + peek} onHome={() => undefined}>{renderTab(peek, true)}</ErrorBoundary>
         </div>
       )}

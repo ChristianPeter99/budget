@@ -135,3 +135,29 @@ test('Mehr in Gruppen; Auswertung mit farbigen Kategorie-Balken', async ({ page 
   await page.getByRole('button', { name: /^Auswertung/ }).click();
   await expect(page.locator('.catlab', { hasText: 'Wohnen' }).locator('svg')).toHaveCount(1);
 });
+
+test('Mehr-Unterseite: nach rechts wischen (irgendwo) geht zurück, kurzer Zug federt zurück', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('nav').getByRole('button', { name: 'Mehr' }).click();
+  await page.getByRole('button', { name: /^Auswertung/ }).click();
+  await expect(page.locator('main [data-pop]')).toBeVisible();
+  const y = 420;
+  await page.mouse.move(120, y); await page.mouse.down();
+  for (let i = 1; i <= 4; i++) { await page.mouse.move(120 + i * 12, y); await page.waitForTimeout(30); }
+  await page.waitForTimeout(150);
+  await page.mouse.up(); await page.waitForTimeout(500);
+  await expect(page.locator('main [data-pop]')).toBeVisible();
+  await page.mouse.move(120, y); await page.mouse.down();
+  for (let i = 1; i <= 12; i++) { await page.mouse.move(120 + i * 18, y); await page.waitForTimeout(16); }
+  await page.mouse.up();
+  await expect(page.getByRole('heading', { level: 1, name: 'Mehr' })).toBeVisible();
+  await expect(page.locator('main [data-pop]')).toHaveCount(0);
+  await expect(page.locator('nav [aria-current="page"]')).toHaveAttribute('aria-label', 'Mehr');
+});
+
+test('Kalender: Tage ohne Ausgaben ohne Farbe', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('nav').getByRole('button', { name: 'Alltag' }).click();
+  const colored = await page.locator('.calcell:not(.empty)').evaluateAll((els) => els.filter((e) => !(e.querySelector('.calamt')) && (e as HTMLElement).style.background !== '').length);
+  expect(colored).toBe(0);
+});

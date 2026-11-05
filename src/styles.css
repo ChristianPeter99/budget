@@ -771,3 +771,28 @@ html{background:#000}
 .callegend .lgref{margin-left:auto}
 .callegend .g{background:rgba(62,213,152,.45)}.callegend .y{background:rgba(232,176,75,.6)}.callegend .r{background:rgba(255,90,95,.75)}
 .calcell.t-none .calnum{color:var(--text2)}
+
+/* ───── 1.39: Kalender ohne Karte, fließende Ampel, Zurückwischen ───── */
+/* Bewusst keine Karte: hebt sich von den Kategorie-Blöcken ab */
+.calsec{display:flex;flex-direction:column;gap:var(--s1)}
+.calsec .calhead{display:flex;align-items:center;gap:var(--s2);width:100%;min-height:36px;padding:0 4px;background:none;border:0;color:inherit;font:inherit;text-align:left}
+.calsec .calhead .calavg{margin-left:auto;font-weight:600}
+.calsec .calchev{display:flex;color:var(--mut);transition:transform .2s ease}
+.calsec .calgrid{padding:0 0 var(--s1)}
+.calsec .calcell{background:transparent;box-shadow:none}
+.calsec .calcell .calnum{color:var(--text2)}
+.calsec .calcell.future .calnum{color:#4A4D57}
+.calsec .calcell.today{box-shadow:inset 0 0 0 1.5px #fff}
+.calsec .calcell.t-low .calnum,.calsec .calcell.t-ok .calnum,.calsec .calcell.t-high .calnum{color:rgba(255,255,255,.85)}
+.calsec .callegend{display:flex;flex-direction:column;align-items:stretch;gap:4px;padding:var(--s1) 4px 0}
+.calsec .calscale{display:block;height:6px;border-radius:3px;background:linear-gradient(90deg,hsla(155,78%,50%,.3) 0%,hsla(128,78%,50%,.55) 36%,hsla(40,78%,50%,.6) 40%,hsla(24,78%,50%,.8) 60%,hsla(4,78%,50%,.7) 64%,hsla(352,78%,50%,.95) 100%)}
+.calsec .callabels{display:flex;justify-content:space-between;font-size:11px;color:var(--mut)}
+.calsec .lgref{margin:0;font-size:11px;color:var(--mut)}
+/* Zurückwischen in Unterseiten: vorige Ebene liegt darunter, die Unterseite hat einen Schatten an der Kante */
+.stage>.view.popping{position:relative;z-index:1;background:var(--bg);box-shadow:-14px 0 30px rgba(0,0,0,.6)}
+.pageghost.under{z-index:0}
+.calsec .calhead .cap{flex:none;text-align:left}
+.calsec .calhead .calavg{flex:1;text-align:right}
+/* Wie eine App: Beschriftungen nicht markierbar (sonst stört eine Markierung das Wischen); Eingabefelder schon */
+.view,.pageghost{-webkit-user-select:none;user-select:none}
+.view input,.view textarea,[role="dialog"] input,[role="dialog"] textarea{-webkit-user-select:text;user-select:text}
