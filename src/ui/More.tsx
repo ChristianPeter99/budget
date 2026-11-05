@@ -7,7 +7,8 @@ import { budgetStatus, categoryFamily, categoryName, childrenOf, filterTransacti
 import { centsToGroupedInput, formatEUR, parseCents } from '../domain/money';
 import { monthLabel, monthRange } from '../domain/dates';
 import type { CatGroup, Recurring, Transaction, TxType } from '../domain/types';
-import { isHouseholdCat } from '../domain/types';
+import { catArea, isHouseholdCat } from '../domain/types';
+import type { CatArea } from '../domain/types';
 import type { TxPreset } from './TxSheet';
 import { CAT_ICONS } from '../domain/catIcons';
 import { Sparen } from './Sparen';
@@ -71,19 +72,21 @@ export function More({ initial = 'menu', onExit, onOpenTx, onAdd, onEditRec }: M
 export function CategoriesPage({ back, group, scope }: { back: React.ReactNode; group?: CatGroup; scope?: 'joint' }) {
   const { data, run } = useStore();
   const [sheet, setSheet] = useState<{ id?: string; parentId?: string | null } | null>(null);
-  const [kindView, setKindView] = useState<TxType>('expense');
+  const jset = data.settings.joint;
+  // Ohne feste Vorgabe: oben wählbar, welcher Bereich gerade gezeigt wird (Alltag, Fixkosten, Einnahmen, gemeinsames Konto)
+  const [areaView, setAreaView] = useState<CatArea>('alltag');
   const [pick, setPick] = useState<string | null>(null);
-  const tops = topLevel(data.categories).filter((c) => (scope === 'joint' ? isHouseholdCat(c)
-    : group ? c.kind === 'expense' && c.group === group && !isHouseholdCat(c) : c.kind === kindView));
+  const area: CatArea = scope === 'joint' ? 'joint' : group ? (group === 'alltag' ? 'alltag' : 'fix') : areaView;
+  const tops = topLevel(data.categories).filter((c) => catArea(c) === area);
+  const areas: [CatArea, string][] = [['alltag', 'Alltag'], ['fix', 'Fixkosten'], ['einnahme', 'Einnahmen'], ...(jset?.enabled ? [['joint', jset.name] as [CatArea, string]] : [])];
   return (
     <>
       {back}
       <Header kicker={scope === 'joint' ? (data.settings.joint?.name ?? 'Haushaltskonto') : group ? GROUP_LABEL[group] : undefined} title="Kategorien" right={<div className="mn">
         <button className="pillbtn" onClick={() => setSheet({ parentId: null })}>Neu</button>
       </div>} />
-      {!group && !scope && <div className="seg" role="tablist" aria-label="Art">
-        <button role="tab" aria-selected={kindView === 'expense'} className={kindView === 'expense' ? 'on' : ''} onClick={() => setKindView('expense')}>Ausgaben</button>
-        <button role="tab" aria-selected={kindView === 'income'} className={kindView === 'income' ? 'on' : ''} onClick={() => setKindView('income')}>Einnahmen</button>
+      {!group && !scope && <div className="fseg" role="tablist" aria-label="Bereich">
+        {areas.map(([a, l]) => <button key={a} role="tab" aria-selected={areaView === a} className={areaView === a ? 'on' : ''} onClick={() => setAreaView(a)}>{l}</button>)}
       </div>}
       <p className="note">Tippe auf eine Kategorie, um sie umzubenennen, zu verschieben, die Gruppe zu ändern oder sie mit einer anderen zusammenzuführen. Die Reihenfolge änderst du direkt in Alltag und Fixkosten: gedrückt halten und ziehen.</p>
       {tops.map((t) => {
@@ -109,7 +112,7 @@ export function CategoriesPage({ back, group, scope }: { back: React.ReactNode; 
         );
       })}
       {pick && <IconPickerSheet id={pick} onClose={() => setPick(null)} />}
-      {sheet && <CategorySheet {...sheet} group={group} {...(scope ? { scope } : {})} onClose={() => setSheet(null)} run={run} />}
+      {sheet && <CategorySheet {...sheet} group={group ?? (area === 'fix' ? 'fix' : area === 'alltag' ? 'alltag' : undefined)} {...(area === 'joint' ? { scope: 'joint' as const } : {})} {...(area === 'einnahme' ? { kind: 'income' as const } : {})} onClose={() => setSheet(null)} run={run} />}
     </>
   );
 }
@@ -135,13 +138,13 @@ function IconPickerSheet({ id, onClose }: { id: string; onClose: () => void }) {
   );
 }
 
-export function CategorySheet({ id, parentId, group: presetGroup, scope: presetScope, onClose, run }: { id?: string; parentId?: string | null; group?: CatGroup; scope?: 'joint'; onClose: () => void; run: ReturnType<typeof useStore>['run'] }) {
+export function CategorySheet({ id, parentId, group: presetGroup, scope: presetScope, kind: presetKind, onClose, run }: { id?: string; parentId?: string | null; group?: CatGroup; scope?: 'joint'; kind?: TxType; onClose: () => void; run: ReturnType<typeof useStore>['run'] }) {
   const { data } = useStore();
   const cats = data.categories;
   const cat = id ? cats.find((c) => c.id === id) : undefined;
   const parent = cat ? cats.find((c) => c.id === cat.parentId) : parentId ? cats.find((c) => c.id === parentId) : undefined;
   const [name, setName] = useState(cat?.name ?? '');
-  const [kind, setKind] = useState<TxType>(cat?.kind ?? parent?.kind ?? 'expense');
+  const [kind, setKind] = useState<TxType>(cat?.kind ?? parent?.kind ?? presetKind ?? 'expense');
   const [group, setGroup] = useState<CatGroup>(cat?.group ?? parent?.group ?? presetGroup ?? 'alltag');
   const [target, setTarget] = useState(cat ? (cat.parentId ?? '') : '');
   const [mergeTo, setMergeTo] = useState('');

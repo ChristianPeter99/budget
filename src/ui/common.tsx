@@ -160,7 +160,7 @@ export function EmptyState({ title, text, action }: { title: string; text?: stri
 }
 
 export function Back({ onClick, label = 'Mehr' }: { onClick: () => void; label?: string }) {
-  // data-pop: „eine Ebene zurück“ – auch für Tippen auf den aktiven Reiter und Wischen vom linken Rand
+  // data-pop: „eine Ebene zurück“ – auch beim Tippen auf den aktiven Reiter
   return <button className="back" data-pop="" onClick={onClick}><Icon name="left" size={16} w={2.2} />{label}</button>;
 }
 

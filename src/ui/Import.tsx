@@ -11,7 +11,8 @@ import { categoryName, topLevel } from '../domain/calc';
 import { formatDateDE } from '../domain/dates';
 import { formatEUR } from '../domain/money';
 import type { Category, CatGroup, Transaction } from '../domain/types';
-import { isHouseholdCat } from '../domain/types';
+import { catArea, isHouseholdCat } from '../domain/types';
+import type { CatArea } from '../domain/types';
 
 /** Ein Eintrag der Prüfliste */
 interface Row { c: Candidate; on: boolean; cat: string | null; dup: DupState; match?: Transaction; locked: boolean; /** Gegenbuchung, wenn Teil einer Retoure */ ret?: string }
@@ -277,7 +278,7 @@ export function ImportPage({ back }: { back: ReactNode }) {
         );
       })()}
       {picker && (
-        <CategoryPicker title={picker.title} cats={cats} household={account === 'joint' && picker.kind === 'expense'} kind={picker.kind} hint={picker.group && /^(paypal|klarna)/.test(picker.group) ? 'Gilt für alle angezeigten Buchungen. Bei Zahlungsdiensten wird nichts gemerkt, weil dahinter verschiedene Händler stecken.' : picker.group?.startsWith('block:') ? 'Gilt für alle Buchungen in diesem Block und wird je Händler für den nächsten Import gemerkt.' : picker.group ? 'Gilt für alle Buchungen dieses Händlers und wird für den nächsten Import gemerkt.' : 'Gilt nur für diese Buchung.'}
+        <CategoryPicker title={picker.title} cats={cats} current={rows?.find((r) => picker.keys.includes(r.c.key))?.cat ?? null} household={account === 'joint' && picker.kind === 'expense'} kind={picker.kind} hint={picker.group && /^(paypal|klarna)/.test(picker.group) ? 'Gilt für alle angezeigten Buchungen. Bei Zahlungsdiensten wird nichts gemerkt, weil dahinter verschiedene Händler stecken.' : picker.group?.startsWith('block:') ? 'Gilt für alle Buchungen in diesem Block und wird je Händler für den nächsten Import gemerkt.' : picker.group ? 'Gilt für alle Buchungen dieses Händlers und wird für den nächsten Import gemerkt.' : 'Gilt nur für diese Buchung.'}
           onClose={() => setPicker(null)}
           onPick={(id) => { update(picker.keys, (r) => ({ ...r, cat: id, on: r.locked ? r.on : r.on || tab === 'weitere' || picker.keys.length === 1 })); setPicker(null); }} />
       )}
@@ -334,9 +335,13 @@ function DetailSheet({ r, cats, block, partner, onClose, onToggle, onCategory }:
   );
 }
 
-function CategoryPicker({ title, cats: allCats, household, kind, hint, onPick, onClose }: { title: string; cats: Category[]; household: boolean; kind: 'expense' | 'income'; hint: string; onPick: (id: string) => void; onClose: () => void }) {
-  // Nur die Liste des Zielkontos; neue Kategorien landen ebenfalls dort
-  const cats = allCats.filter((c) => isHouseholdCat(c) === household);
+function CategoryPicker({ title, cats: allCats, current, household, kind, hint, onPick, onClose }: { title: string; cats: Category[]; current: string | null; household: boolean; kind: 'expense' | 'income'; hint: string; onPick: (id: string) => void; onClose: () => void }) {
+  // Eigenes Konto, Ausgaben: Alltag und Fixkosten getrennt wählbar; Vorgabe ist der Bereich der bisherigen Kategorie
+  const cur = current ? allCats.find((c) => c.id === current) : undefined;
+  const [area, setArea] = useState<'alltag' | 'fix'>(cur && catArea(cur) === 'fix' ? 'fix' : 'alltag');
+  const want: CatArea = household ? 'joint' : kind === 'income' ? 'einnahme' : area;
+  // Nur die Liste des Zielkontos bzw. Bereichs; neue Kategorien landen ebenfalls dort
+  const cats = allCats.filter((c) => catArea(c) === want);
   const scope = household ? { scope: 'joint' as const } : {};
   const { run, data } = useStore();
   const [adding, setAdding] = useState<string | null>(null);
@@ -346,8 +351,8 @@ function CategoryPicker({ title, cats: allCats, household, kind, hint, onPick, o
   const ids = new Set(pool.map((c) => c.id));
   const jointId = data.settings.joint?.categoryId;
   const tops = topLevel(cats, kind).filter((t) => !t.archived && t.id !== jointId);
-  // Hauptkategorien ohne Unterkategorien (meist Fixkosten) werden beim Import nicht angeboten – außer Sparen und Einnahmen
-  const lone = tops.filter((t) => ids.has(t.id) && (kind === 'income' || t.group === 'spar'));
+  // Hauptkategorien ohne Unterkategorien (z. B. Miete, Sparen, Einnahmen) direkt wählbar
+  const lone = tops.filter((t) => ids.has(t.id));
   async function create(top: Category) {
     if (!name.trim()) return;
     const c = await run((db) => addCategory(db, { name: name.trim(), kind, group: top.group, parentId: top.id, ...scope }), `„${name.trim()}“ angelegt`);
@@ -366,6 +371,11 @@ function CategoryPicker({ title, cats: allCats, household, kind, hint, onPick, o
   }
   return (
     <Sheet title={title} onClose={onClose}>
+      {kind === 'expense' && !household && (
+        <div className="fseg" role="tablist" aria-label="Bereich">
+          {([['alltag', 'Alltag'], ['fix', 'Fixkosten']] as const).map(([a, l]) => <button key={a} role="tab" aria-selected={area === a} className={area === a ? 'on' : ''} onClick={() => { setArea(a); setAdding(null); setNewTop(null); }}>{l}</button>)}
+        </div>
+      )}
       <p className="note">{hint} Fehlt eine Unterkategorie, lege sie mit „+“ an; ganz unten kannst du eine neue Kategorie anlegen.</p>
       {tops.map((t) => {
         const kids = pool.filter((c) => c.parentId === t.id);
@@ -388,11 +398,11 @@ function CategoryPicker({ title, cats: allCats, household, kind, hint, onPick, o
       })}
       {lone.length > 0 && (
         <div className="stack" style={{ gap: 8 }}>
-          <span className="mini">{kind === 'income' ? 'Einnahmen' : 'Sparen'}</span>
+          <span className="mini">{kind === 'income' ? 'Einnahmen' : household ? 'Ohne Unterkategorie' : area === 'fix' ? 'Fixkosten & Sparen' : 'Ohne Unterkategorie'}</span>
           <div className="sel">{lone.map((c) => <button key={c.id} onClick={() => onPick(c.id)}>{c.name}</button>)}</div>
         </div>
       )}
-      {!newTop && <button className="btn sec2" onClick={() => setNewTop({ name: '', sub: '', group: 'alltag' })}><Icon name="plus" size={18} w={2.2} />&nbsp;Neue Kategorie anlegen</button>}
+      {!newTop && <button className="btn sec2" onClick={() => setNewTop({ name: '', sub: '', group: area })}><Icon name="plus" size={18} w={2.2} />&nbsp;Neue Kategorie anlegen</button>}
       {newTop && (
         <form className="card flush" aria-label="Neue Kategorie" onSubmit={(e) => { e.preventDefault(); void createTop(); }}>
           <div className="sec"><h2>Neue Kategorie</h2></div>

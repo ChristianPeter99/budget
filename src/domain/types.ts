@@ -23,6 +23,14 @@ export interface Category {
 /** Gehört die Kategorie zur Liste des Haushaltskontos? */
 export const isHouseholdCat = (c: { scope?: 'joint' } | undefined): boolean => c?.scope === 'joint';
 
+/**
+ * Bereich einer Kategorie für Auswahllisten: Alltag, Fixkosten (inkl. Sparen), gemeinsames Konto oder Einnahmen.
+ * Erfassen, Kategorienverwaltung und CSV-Import zeigen immer nur die Kategorien eines Bereichs.
+ */
+export type CatArea = 'alltag' | 'fix' | 'joint' | 'einnahme';
+export const catArea = (c: { scope?: 'joint'; kind: TxType; group: CatGroup }): CatArea =>
+  isHouseholdCat(c) ? 'joint' : c.kind === 'income' ? 'einnahme' : c.group === 'alltag' ? 'alltag' : 'fix';
+
 export interface Transaction {
   id: string;
   date: string;

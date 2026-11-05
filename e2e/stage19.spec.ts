@@ -93,24 +93,57 @@ test('Aktiven Reiter antippen: nach oben bzw. eine Ebene zurück', async ({ page
   await expect(page.getByRole('heading', { level: 1, name: 'Mehr' })).toBeVisible();
 });
 
-test('Mehr-Unterseite: vom linken Rand nach rechts wischen geht zurück', async ({ page }) => {
+test('Erfassen: Kategorien getrennt nach Alltag und Fixkosten', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('nav').getByRole('button', { name: 'Buchungen' }).click();
+  await page.getByRole('button', { name: 'Neue Buchung' }).first().click();
+  const dlg = page.getByRole('dialog');
+  await expect(dlg.getByRole('tab', { name: 'Alltag' })).toHaveAttribute('aria-selected', 'true');
+  await expect(dlg.locator('.chip:not(.recent)', { hasText: /^Lebensmittel$/ })).toHaveCount(1);
+  await expect(dlg.locator('.chip:not(.recent)', { hasText: /^Wohnen$/ })).toHaveCount(0);
+  await dlg.getByRole('tab', { name: 'Fixkosten' }).click();
+  await expect(dlg.locator('.chip:not(.recent)', { hasText: /^Wohnen$/ })).toHaveCount(1);
+  await expect(dlg.locator('.chip:not(.recent)', { hasText: /^Lebensmittel$/ })).toHaveCount(0);
+});
+
+test('Kategorien in Mehr: oben Bereich wählen', async ({ page }) => {
   await page.goto('/');
   await page.locator('nav').getByRole('button', { name: 'Mehr' }).click();
-  await page.getByRole('button', { name: /Auswertung/ }).click();
-  await expect(page.locator('main [data-pop]')).toBeVisible();
-  const y = 400;
-  // kurzer Zug federt zurück
-  await page.mouse.move(6, y); await page.mouse.down();
-  for (let i = 1; i <= 4; i++) { await page.mouse.move(6 + i * 12, y); await page.waitForTimeout(30); }
-  await page.waitForTimeout(150);
-  await page.mouse.up(); await page.waitForTimeout(500);
-  await expect(page.locator('main [data-pop]')).toBeVisible();
-  // weiter Zug → zurück zum Menü
-  await page.mouse.move(6, y); await page.mouse.down();
-  for (let i = 1; i <= 12; i++) { await page.mouse.move(6 + i * 20, y); await page.waitForTimeout(16); }
-  await page.mouse.up();
-  await expect(page.getByRole('heading', { level: 1, name: 'Mehr' })).toBeVisible();
-  await expect(page.locator('main [data-pop]')).toHaveCount(0);
-  // Reiter wurde nicht gewechselt
-  await expect(page.locator('nav [aria-current="page"]')).toHaveAttribute('aria-label', 'Mehr');
+  await page.getByRole('button', { name: /^Kategorien/ }).click();
+  await expect(page.locator('.catname', { hasText: 'Lebensmittel' })).toHaveCount(1);
+  await expect(page.locator('.catname', { hasText: 'Wohnen' })).toHaveCount(0);
+  await page.getByRole('tab', { name: 'Fixkosten' }).click();
+  await expect(page.locator('.catname', { hasText: 'Wohnen' })).toHaveCount(1);
+  await expect(page.locator('.catname', { hasText: 'Lebensmittel' })).toHaveCount(0);
+  await page.getByRole('tab', { name: 'Einnahmen' }).click();
+  await expect(page.locator('.catname', { hasText: 'Gehalt' })).toHaveCount(1);
+});
+
+test('Neue Buchung in anderem Monat: Buchungen springen in diesen Monat', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('nav').getByRole('button', { name: 'Buchungen' }).click();
+  const h1 = page.getByRole('heading', { level: 1 });
+  const now = await h1.textContent();
+  await page.getByRole('button', { name: 'Vorheriger Monat' }).click();
+  await expect(h1).not.toHaveText(now!);
+  await addBooking(page, ['3'], 'Kantine', 'Sprung');
+  await expect(h1).toHaveText(now!);
+  await expect(page.locator('.swipe.fresh', { hasText: 'Sprung' })).toHaveCount(1);
+});
+
+test('CSV-Import: Kategorie wählen getrennt nach Alltag und Fixkosten', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('nav').getByRole('button', { name: 'Mehr' }).click();
+  await page.getByRole('button', { name: /CSV-Import/ }).click();
+  const d = new Date(); const today = `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`;
+  const csv = `Buchungsdatum,Betrag,Zahlungsempfänger,Kategorie,Unterkategorie\n${today},"-7,50",Muster Laden,Weitere Ausgaben,Weitere Ausgaben\n`;
+  await page.getByLabel('CSV-Datei').setInputFiles({ name: 'a.csv', mimeType: 'text/csv', buffer: Buffer.from(csv) });
+  await page.locator('.imp', { hasText: 'Muster' }).getByRole('button', { name: 'Kategorie wählen' }).click();
+  const dlg = page.getByRole('dialog');
+  await expect(dlg.getByRole('tab', { name: 'Alltag' })).toHaveAttribute('aria-selected', 'true');
+  await expect(dlg.locator('.sel button', { hasText: /^Kantine$/ })).toHaveCount(1);
+  await expect(dlg.locator('.sel button', { hasText: /^Wohnen$/ })).toHaveCount(0);
+  await dlg.getByRole('tab', { name: 'Fixkosten' }).click();
+  await expect(dlg.locator('.sel button', { hasText: /^Kantine$/ })).toHaveCount(0);
+  await expect(dlg.locator('.sel button').first()).toBeVisible();
 });

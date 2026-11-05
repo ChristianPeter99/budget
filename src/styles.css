@@ -697,9 +697,6 @@ html{background:#000}
 .lpprev{transform:scale(1.02)}
 @media (prefers-reduced-motion: reduce){.lpov,.lpprev,.lpmenu{animation:none}}
 
-/* Vom linken Rand zurückwischen: Schatten an der Kante der Unterseite */
-.view.popping{box-shadow:-14px 0 30px rgba(0,0,0,.6)}
-
 /* Neu gespeicherte Buchung gleitet hinein und leuchtet kurz */
 .swipe.fresh{animation:freshin .42s cubic-bezier(.2,.9,.3,1) backwards}
 .swipe.fresh .item{animation:freshglow 1.3s ease .1s backwards}
@@ -708,6 +705,3 @@ html{background:#000}
 .drill .swipe.fresh .item.dtx{animation-name:freshglowd}
 @keyframes freshglowd{0%{background-color:rgba(10,132,255,.32)}100%{background-color:#08080A}}
 @media (prefers-reduced-motion: reduce){.swipe.fresh,.swipe.fresh .item{animation:none}}
-/* Randwisch: vorige Ebene liegt unter der Unterseite */
-.stage>.view.popping{position:relative;z-index:1;background:var(--bg)}
-.pageghost.under{z-index:0}

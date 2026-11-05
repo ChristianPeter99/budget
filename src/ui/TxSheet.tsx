@@ -8,7 +8,11 @@ import { centsToInput, formatAmountTyping, formatEUR, parseCents } from '../doma
 import { isValidISODate, monthRange, todayISO } from '../domain/dates';
 import { childrenOf, filterTransactions, jointMonth, monthAvailable, salaryStartMonth } from '../domain/calc';
 import type { Transaction, TxType } from '../domain/types';
-import { isHouseholdCat } from '../domain/types';
+import { catArea } from '../domain/types';
+import type { CatArea } from '../domain/types';
+
+/** Bereich einer Ausgabe beim Erfassen */
+export type ExpArea = 'alltag' | 'fix' | 'joint';
 
 export interface TxPreset { categoryId?: string; type?: TxType; amountCents?: number; description?: string; account?: 'joint' }
 
@@ -26,8 +30,8 @@ export function duplicatePreset(tx: Transaction): TxPreset {
   return { categoryId: tx.categoryId, type: tx.type, amountCents: tx.amountCents, description: tx.description, ...(tx.account === 'joint' ? { account: 'joint' as const } : {}) };
 }
 
-export function TxSheet({ tx, preset, onClose, onDuplicate }: { tx?: Transaction; preset?: TxPreset; onClose: () => void; onDuplicate?: (p: TxPreset) => void }) {
-  const { data, run, month, flash, acct } = useStore();
+export function TxSheet({ tx, preset, area: areaHint, onClose, onDuplicate }: { tx?: Transaction; preset?: TxPreset; area?: ExpArea; onClose: () => void; onDuplicate?: (p: TxPreset) => void }) {
+  const { data, run, month, setMonth, flash, acct } = useStore();
   const jset = data.settings.joint;
   const cats = data.categories;
   const presetCat = preset?.categoryId ? cats.find((c) => c.id === preset.categoryId) : undefined;
@@ -43,20 +47,29 @@ export function TxSheet({ tx, preset, onClose, onDuplicate }: { tx?: Transaction
   const [busy, setBusy] = useState(false);
   // Zahlenfeld wie eine Tastatur: erscheint erst nach Tipp auf den Betrag, unten im Vordergrund
   const [padOpen, setPadOpen] = useState(false);
-  // Konto: bei bestehender Buchung deren Konto, sonst Vorgabe oder das gerade angesehene Konto
-  const [account, setAccount] = useState<'own' | 'joint'>(tx ? (tx.account === 'joint' ? 'joint' : 'own') : preset?.account === 'joint' || (!preset?.categoryId && acct === 'joint') ? 'joint' : 'own');
-  const jointOn = type === 'expense' && account === 'joint' && (!!jset?.enabled || tx?.account === 'joint');
+  // Bereich der Ausgabe (Alltag, Fixkosten, gemeinsames Konto): bestimmt, welche Kategorien zur Wahl stehen.
+  // Vorgabe: Bereich der Buchung bzw. Kategorie, sonst der Reiter, aus dem heraus erfasst wird.
+  const jointAvail = !!jset?.enabled || tx?.account === 'joint';
+  const [area, setArea] = useState<ExpArea>(() => {
+    if (tx?.account === 'joint' || preset?.account === 'joint') return 'joint';
+    const a = initialCat ? catArea(initialCat) : null;
+    if (a && a !== 'einnahme') return a;
+    const h = areaHint ?? (acct === 'joint' ? 'joint' : 'alltag');
+    return h === 'joint' && !jointAvail ? 'alltag' : h;
+  });
+  const jointOn = type === 'expense' && area === 'joint' && jointAvail;
+  const want: CatArea = type === 'income' ? 'einnahme' : jointOn ? 'joint' : area === 'joint' ? 'alltag' : area;
 
-  // Haushaltskonto und eigenes Konto haben getrennte Kategorienlisten
+  // Nur die Kategorien des gewählten Bereichs
   const tops = useMemo(
-    () => cats.filter((c) => c.parentId === null && c.kind === type && isHouseholdCat(c) === jointOn && (!c.archived || c.id === topId)).sort((a, b) => a.sort - b.sort),
-    [cats, type, topId, jointOn]
+    () => cats.filter((c) => c.parentId === null && catArea(c) === want && (!c.archived || c.id === topId)).sort((a, b) => a.sort - b.sort),
+    [cats, want, topId]
   );
-  // Beim Wechsel des Kontos passt die gewählte Kategorie nicht mehr zur Liste → zurücksetzen
+  // Beim Wechsel des Bereichs passt die gewählte Kategorie nicht mehr zur Liste → zurücksetzen
   useEffect(() => {
     const t = cats.find((c) => c.id === topId);
-    if (t && isHouseholdCat(t) !== jointOn) { setTopId(''); setLeafId(''); }
-  }, [jointOn, topId, cats]);
+    if (t && catArea(t) !== want) { setTopId(''); setLeafId(''); }
+  }, [want, topId, cats]);
   const kids = topId ? childrenOf(cats, topId).filter((c) => !c.archived || c.id === leafId) : [];
   const finalCatId = kids.length > 0 ? leafId : topId;
   const top = cats.find((c) => c.id === topId);
@@ -70,7 +83,7 @@ export function TxSheet({ tx, preset, onClose, onDuplicate }: { tx?: Transaction
     for (const t of sorted) {
       if (seen.has(t.categoryId)) continue;
       const c = cats.find((x) => x.id === t.categoryId);
-      if (!c || c.archived) continue;
+      if (!c || c.archived || catArea(c) !== want) continue;
       seen.add(c.id);
       const parent = c.parentId ? cats.find((x) => x.id === c.parentId) : undefined;
       const same = cats.some((x) => x.id !== c.id && x.name === c.name);
@@ -78,7 +91,7 @@ export function TxSheet({ tx, preset, onClose, onDuplicate }: { tx?: Transaction
       if (out.length === 6) break;
     }
     return out;
-  }, [tx, data.transactions, data.jointTransactions, jointOn, cats, type]);
+  }, [tx, data.transactions, data.jointTransactions, jointOn, cats, type, want]);
 
   // Notiz-Vorschläge aus früheren eigenen Einträgen: beim Tippen passende, sonst die häufigsten dieser Kategorie
   const noteSugg = useMemo(() => {
@@ -128,7 +141,12 @@ export function TxSheet({ tx, preset, onClose, onDuplicate }: { tx?: Transaction
     }
     const r = await run((db) => addTransaction(db, input), 'Buchung gespeichert');
     setBusy(false);
-    if (r) { markFresh(r.id); onClose(); }
+    if (r) {
+      markFresh(r.id);
+      // Gleich den Monat der neuen Buchung zeigen, damit man sie (samt Aufleuchten) sieht
+      if (r.date.slice(0, 7) !== month) setMonth(r.date.slice(0, 7));
+      onClose();
+    }
   }
   async function del() {
     if (!tx) return;
@@ -148,10 +166,11 @@ export function TxSheet({ tx, preset, onClose, onDuplicate }: { tx?: Transaction
         <button className={type === 'expense' ? 'on' : ''} onClick={() => { setType('expense'); setTopId(''); setLeafId(''); }}>Ausgabe</button>
         <button className={type === 'income' ? 'on' : ''} onClick={() => { setType('income'); setTopId(''); setLeafId(''); }}>Einnahme</button>
       </div>
-      {type === 'expense' && (jset?.enabled || tx?.account === 'joint') && (
-        <div className="fseg" role="tablist" aria-label="Bezahlt von">
-          <button role="tab" aria-selected={account === 'own'} className={account === 'own' ? 'on' : ''} onClick={() => setAccount('own')}>Mein Konto</button>
-          <button role="tab" aria-selected={account === 'joint'} className={account === 'joint' ? 'on' : ''} onClick={() => setAccount('joint')}>{jset?.name ?? 'Gemeinsam'}</button>
+      {type === 'expense' && (
+        <div className="fseg" role="tablist" aria-label="Bereich">
+          {([['alltag', 'Alltag'], ['fix', 'Fixkosten'], ...(jointAvail ? [['joint', jset?.name ?? 'Gemeinsam']] : [])] as [ExpArea, string][]).map(([a, l]) => (
+            <button key={a} role="tab" aria-selected={area === a} className={area === a ? 'on' : ''} onClick={() => setArea(a)}>{l}</button>
+          ))}
         </div>
       )}
       <div className="amtbox">

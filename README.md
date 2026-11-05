@@ -2,12 +2,18 @@
 
 Haushaltsbuch als Progressive Web App. Alle Daten bleiben auf dem Gerät (IndexedDB). Keine Server, kein Tracking, keine externen Schriften oder Skripte.
 
+## Neu in Version 1.30
+- Kategorien getrennt nach Bereich: Beim Erfassen wählt man oben Alltag, Fixkosten oder (wenn eingerichtet) das gemeinsame Konto und sieht nur dessen Kategorien; Vorgabe ist der Reiter, aus dem heraus man erfasst (Sparen-Kategorien stehen bei Fixkosten)
+- Mehr › Kategorien: oben Alltag · Fixkosten · Einnahmen (· gemeinsames Konto); neue Kategorien landen im gewählten Bereich
+- CSV-Import: Kategorie wählen mit Umschalter Alltag / Fixkosten; Hauptkategorien ohne Unterkategorie (z. B. Wohnen) sind jetzt direkt wählbar
+- Neue Buchung in einem anderen Monat: die App springt in diesen Monat, damit man sie samt Aufleuchten sieht
+- Zurückwischen vom linken Rand wieder entfernt
+
 ## Neu in Version 1.29
 - Aktiven Reiter nochmals antippen: eine Ebene zurück (z. B. aus einer Mehr-Unterseite), sonst weich nach oben scrollen
 - Kategorien, Unterkategorien und Detailzeilen klappen weich auf und zu
 - Druck-Feedback: Kacheln und Knöpfe geben beim Antippen leicht nach, Zeilen hellen kurz auf (iOS zeigt das dank touchstart-Empfänger)
 - Buchung gedrückt halten (Buchungen und Alltag): Menü mit Bearbeiten, Duplizieren, Löschen über verschwommenem Hintergrund; Löschen mit Rückgängig
-- Unterseiten (Mehr, Kategorien bearbeiten): vom linken Rand nach rechts wischen geht zurück, die vorige Ebene liegt darunter
 - Neu gespeicherte Buchung gleitet in die Liste und leuchtet kurz
 
 ## Neu in Version 1.28.1

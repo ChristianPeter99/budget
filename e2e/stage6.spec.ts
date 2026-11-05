@@ -19,6 +19,8 @@ const prevMonthDay = () => { const d = new Date(); d.setDate(1); d.setMonth(d.ge
 test('Alltag: meistgenutzte Kategorie bleibt sichtbar, auch ohne Ausgaben in diesem Monat', async ({ page }) => {
   await page.goto('/');
   await book(page, ['9'], 'Freizeit', 'Kino', 'Film', prevMonthDay());
+  // nach dem Speichern zeigt die App den Monat der Buchung; zurück in den aktuellen Monat
+  await page.getByRole('button', { name: 'Nächster Monat' }).click();
   await page.getByRole('button', { name: 'Alltag', exact: true }).click();
   await expect(page.locator('.ghead', { hasText: 'Freizeit' })).toBeVisible();
   await expect(page.locator('.ghead', { hasText: 'Freizeit' })).toContainText('0,00 €');
@@ -41,7 +43,10 @@ test('Kategorien: verschieben, Gruppe ändern, zusammenführen', async ({ page }
   await page.locator('.catname', { hasText: 'Bargeld' }).click();
   await page.getByLabel('Gruppe').selectOption({ label: 'Fixkosten' });
   await page.getByRole('dialog').getByRole('button', { name: 'Speichern' }).click();
+  await expect(page.locator('.catname', { hasText: 'Bargeld' })).toHaveCount(0);
+  await page.getByRole('tab', { name: 'Fixkosten' }).click();
   await expect(page.locator('.catname', { hasText: 'Bargeld' })).toContainText('Fixkosten');
+  await page.getByRole('tab', { name: 'Alltag' }).click();
 
   // Bäcker in Einkaufen zusammenführen
   await page.locator('.catsub .sub', { hasText: 'Bäcker' }).click();
