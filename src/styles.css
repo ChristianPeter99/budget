@@ -766,3 +766,8 @@ html{background:#000}
 .catlab>span{display:flex;flex:none}
 /* Einnahmen (z. B. Gehalt) in Grün, damit sie zwischen den Ausgaben auffallen */
 .tile.flat.t-in{color:var(--pos)}
+/* Kalender-Ampel */
+.callegend{justify-content:flex-start;gap:var(--s3)}
+.callegend .lgref{margin-left:auto}
+.callegend .g{background:rgba(62,213,152,.45)}.callegend .y{background:rgba(232,176,75,.6)}.callegend .r{background:rgba(255,90,95,.75)}
+.calcell.t-none .calnum{color:var(--text2)}

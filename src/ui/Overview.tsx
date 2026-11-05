@@ -71,7 +71,7 @@ export function Overview({ onGoBookings, onGoBackup, onGoGroup, onAdd, onGoJoint
   const goals = sortGoals(data.settings.savingsGoals ?? []).slice(0, 3);
   const tiles = [
     { key: 'fix' as const, label: 'Fixkosten', cents: groups.fix, icon: 'cal' },
-    { key: 'alltag' as const, label: 'Alltag', cents: groups.alltag, icon: 'card' },
+    { key: 'alltag' as const, label: 'Alltag', cents: groups.alltag, icon: 'wallet' },
     { key: 'spar' as const, label: 'Sparen', cents: groups.spar, icon: 'piggy' }
   ];
 
@@ -93,7 +93,7 @@ export function Overview({ onGoBookings, onGoBackup, onGoGroup, onAdd, onGoJoint
 
       <div className="hero ovhero">
         <SpendRing total={Math.max(av.incomeCents, sum.expenseCents)} label={`Ausgaben: Fixkosten ${formatEUR(groups.fix)}, Alltag ${formatEUR(groups.alltag)}, Sparen ${formatEUR(groups.spar)} von ${formatEUR(av.incomeCents)} ${av.expected ? 'erwartetem Gehalt' : 'Einnahmen'}`}
-          parts={[{ value: groups.fix, color: 'var(--fix)', icon: 'cal' }, { value: groups.alltag, color: 'var(--all)', icon: 'card' }, { value: groups.spar, color: 'var(--spar)', icon: 'piggy' },
+          parts={[{ value: groups.fix, color: 'var(--fix)', icon: 'cal' }, { value: groups.alltag, color: 'var(--all)', icon: 'wallet' }, { value: groups.spar, color: 'var(--spar)', icon: 'piggy' },
             { value: Math.max(0, sum.expenseCents - groups.fix - groups.alltag - groups.spar), color: 'var(--bar)' }]} />
         <div className="ovside">
           <span className="ovlabel">Noch verfügbar</span>

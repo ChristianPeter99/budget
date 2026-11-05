@@ -264,7 +264,7 @@ export function App() {
       <nav ref={navRef} className="nav" aria-label="Hauptnavigation">
         <span ref={pillRef} className="navpill" aria-hidden="true" style={{ transform: `translateX(${TABS.indexOf(tab) * 100}%)` }} />
         {nav('home', 'home', 'Übersicht')}
-        {nav('alltag', 'card', 'Alltag')}
+        {nav('alltag', 'wallet', 'Alltag')}
         {nav('bookings', 'list', 'Buchungen')}
         {nav('fix', 'cal', 'Fixkosten')}
         {nav('more', 'more', 'Mehr')}

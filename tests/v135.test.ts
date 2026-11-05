@@ -59,3 +59,14 @@ describe('Suche nach Betrag (v1.37)', () => {
     expect(amountQuery('12,505')).toBeNull();
   });
 });
+
+import { dayTone } from '../src/ui/Calendar';
+describe('Kalender-Ampel (v1.38)', () => {
+  it('ordnet Tage nach Tagesbudget ein', () => {
+    expect(dayTone(0, 5000).tone).toBe('none');
+    expect(dayTone(2000, 5000).tone).toBe('low');
+    expect(dayTone(5000, 5000).tone).toBe('ok');
+    expect(dayTone(6250, 5000).tone).toBe('ok');
+    expect(dayTone(6300, 5000).tone).toBe('high');
+  });
+});

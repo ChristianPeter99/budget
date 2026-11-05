@@ -12,10 +12,19 @@ import type { Category, Transaction } from '../domain/types';
 
 const WD = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
 
+/** Ampel je Tag, gemessen am Tagesbudget: grün darunter (heller = weniger), gelb im Rahmen, rot darüber (kräftiger = mehr). */
+export function dayTone(cents: number, ref: number): { tone: 'none' | 'low' | 'ok' | 'high'; bg: string } {
+  if (cents <= 0) return { tone: 'none', bg: 'rgba(62,213,152,.12)' };
+  const r = ref > 0 ? cents / ref : 1;
+  if (r < 0.75) return { tone: 'low', bg: `rgba(62,213,152,${(0.22 + 0.3 * (r / 0.75)).toFixed(2)})` };
+  if (r <= 1.25) return { tone: 'ok', bg: `rgba(232,176,75,${(0.42 + 0.3 * ((r - 0.75) / 0.5)).toFixed(2)})` };
+  return { tone: 'high', bg: `rgba(255,90,95,${(0.5 + 0.38 * Math.min(1, (r - 1.25) / 1.75)).toFixed(2)})` };
+}
+
 /**
- * Ausgaben-Kalender (Jonas): Jeder Tag des Monats als Kachel, je dunkler das Blau, desto mehr wurde an dem Tag
- * ausgegeben. Gezählt werden nur Alltagsausgaben ohne automatische Buchungen – Miete am 1. würde sonst alles
- * überstrahlen. Tage über dem Tagesbudget bekommen einen orangen Punkt. Tipp auf einen Tag zeigt seine Buchungen.
+ * Ausgaben-Kalender (Jonas): Jeder Tag des Monats als Kachel in Ampelfarben, gemessen am Tagesbudget
+ * (ohne Budget am eigenen Schnitt). Tage ohne Ausgaben sind zart grün. Gezählt werden nur Alltagsausgaben ohne automatische Buchungen – Miete am 1. würde sonst alles
+ * überstrahlen. Tipp auf einen Tag zeigt seine Buchungen.
  */
 export function SpendCalendar({ month, txs, cats, dailyBudget, open, onToggle, onOpenTx, onAdd, onDelete }: {
   month: string; txs: Transaction[]; cats: Category[]; dailyBudget: number | null; open: boolean; onToggle: () => void;
@@ -30,9 +39,11 @@ export function SpendCalendar({ month, txs, cats, dailyBudget, open, onToggle, o
     return m;
   }, [txs]);
   const total = [...byDay.values()].reduce((a, x) => a + x, 0);
-  const max = Math.max(0, ...byDay.values());
   const pastDays = month < today.slice(0, 7) ? n : month > today.slice(0, 7) ? 0 : Number(today.slice(8, 10));
   const avg = pastDays > 0 ? Math.round(total / pastDays) : 0;
+  // Vergleichswert: Tagesbudget, ohne Budget der eigene Schnitt
+  const hasBudget = dailyBudget !== null && dailyBudget > 0;
+  const ref = hasBudget ? (dailyBudget as number) : avg;
   const first = (new Date(Number(month.slice(0, 4)), Number(month.slice(5, 7)) - 1, 1).getDay() + 6) % 7; // Montag = 0
   const cells: (string | null)[] = [...Array<null>(first).fill(null), ...Array.from({ length: n }, (_, i) => `${month}-${String(i + 1).padStart(2, '0')}`)];
   while (cells.length % 7) cells.push(null);
@@ -54,14 +65,14 @@ export function SpendCalendar({ month, txs, cats, dailyBudget, open, onToggle, o
             if (!d) return <span key={'e' + i} className="calcell empty" aria-hidden="true" />;
             const c = byDay.get(d) ?? 0;
             const future = d > today;
-            // Wurzel-Skala: kleine Beträge bleiben sichtbar, große dominieren nicht alles
-            const a = c > 0 && max > 0 ? 0.16 + 0.64 * Math.sqrt(c / max) : 0;
-            const over = dailyBudget !== null && dailyBudget > 0 && c > dailyBudget;
+            // Heute ohne Ausgaben bleibt neutral – der Tag ist noch nicht vorbei
+            const t = future || (d === today && c === 0) ? null : dayTone(c, ref);
+            const word = !t ? '' : t.tone === 'none' ? ', Spar-Tag' : t.tone === 'low' ? ', unter dem Tagesbudget' : t.tone === 'ok' ? ', im Rahmen' : ', über dem Tagesbudget';
             return (
-              <button key={d} className={'calcell' + (d === today ? ' today' : '') + (future ? ' future' : '') + (over ? ' over' : '')}
-                style={a ? { background: `rgba(10,132,255,${a.toFixed(2)})` } : undefined}
+              <button key={d} className={'calcell' + (d === today ? ' today' : '') + (future ? ' future' : '') + (t ? ' t-' + t.tone : '')}
+                style={t ? { background: t.bg } : undefined}
                 disabled={future} onClick={() => setDay(d)}
-                aria-label={`${weekday(d)}: ${c > 0 ? formatEUR(c) : 'keine Ausgaben'}${over ? ', über dem Tagesbudget' : ''}`}>
+                aria-label={`${weekday(d)}: ${c > 0 ? formatEUR(c) : 'keine Ausgaben'}${word.replace('Tagesbudget', hasBudget ? 'Tagesbudget' : 'Schnitt')}`}>
                 <span className="calnum">{Number(d.slice(8, 10))}</span>
                 {c > 0 && <span className="calamt num">{shortEUR(c)}</span>}
               </button>
@@ -69,8 +80,10 @@ export function SpendCalendar({ month, txs, cats, dailyBudget, open, onToggle, o
           })}
         </div>
         <div className="callegend">
-          <span><i className="lg lo" /><i className="lg mid" /><i className="lg hi" />weniger · mehr</span>
-          {dailyBudget !== null && dailyBudget > 0 && <span><i className="lg overdot" />über {formatEUR0(dailyBudget)} Tagesbudget</span>}
+          <span><i className="lg g" />drunter</span>
+          <span><i className="lg y" />im Rahmen</span>
+          <span><i className="lg r" />drüber</span>
+          <span className="lgref">{hasBudget ? `Tagesbudget ${formatEUR0(ref)}` : ref > 0 ? `Schnitt ${formatEUR0(ref)}` : ''}</span>
         </div>
       </Collapse>
       {day && (
