@@ -715,3 +715,4 @@ html{background:#000}
 .sortpill{display:flex;align-items:center;gap:6px;height:32px;padding:0 var(--s3);border-radius:16px;border:1px solid var(--line);background:transparent;color:var(--text2);font-size:var(--t-note);font-weight:600;transition:transform .14s ease}
 .sortpill:active{transform:scale(.96)}
 .sortpill.on{color:var(--all);border-color:rgba(10,132,255,.45)}
+.sortpill.fix.on{color:var(--fix);border-color:rgba(240,144,46,.5)}

@@ -2,6 +2,9 @@
 
 Haushaltsbuch als Progressive Web App. Alle Daten bleiben auf dem Gerät (IndexedDB). Keine Server, kein Tracking, keine externen Schriften oder Skripte.
 
+## Neu in Version 1.33
+- Fixkosten: dasselbe Sortieren wie im Alltag – eigene Reihenfolge oder nach Betrag (Kategorien und Positionen darin absteigend, pausierte unten)
+
 ## Neu in Version 1.32
 - Alltag: Sortieren über dem ersten Kategorie-Block – „Eigene Reihenfolge“ (Ziehen wie bisher) oder „Nach Betrag“ (höchste Ausgaben des Monats oben, auch bei den Unterkategorien; Ziehen ist dann aus). Wird je Ansicht (Ich / Haushaltskonto) auf dem Gerät gemerkt
 

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useCountUp, MonthNav, catIcon, CatDetailSheet, DetailRow, PIE_SHADES, Back, Bar, CatBar, Money, Collapse, CollapseBtn, EmptyState, Header, useCollapsed } from './common';
+import { useCountUp, MonthNav, catIcon, CatDetailSheet, DetailRow, PIE_SHADES, Back, Bar, CatBar, Money, Collapse, CollapseBtn, EmptyState, Header, SortSheet, useCollapsed, useSortMode } from './common';
 import { CategoriesPage } from './More';
 import { Icon } from './icons';
 import { useStore } from '../state/store';
@@ -39,7 +39,12 @@ export function Fixkosten({ onEdit, onNew }: { onEdit: (r: Recurring) => void; o
   const [editCats, setEditCats] = useState(false);
   const fold = useCollapsed('fix');
   const [detail, setDetail] = useState(false);
+  const [sortMode, setSortMode] = useSortMode('fix');
+  const [sortOpen, setSortOpen] = useState(false);
+  const byAmount = sortMode === 'amount';
   const topSum = (id: string) => fixRecs.filter((r) => r.active && topOf(r.categoryId) === id).reduce((a, r) => a + r.amountCents, 0);
+  // Reihenfolge: eigene (per Ziehen) oder nach Betrag absteigend
+  const ordered = byAmount ? [...shownTops].sort((a, b) => topSum(b.id) - topSum(a.id) || a.sort - b.sort) : shownTops;
   const topDrag = useDragSort(shownTops.map((t) => t.id), (ids) => {
     const full = topLevel(cats, 'expense').map((c) => c.id);
     void run((db) => setCategoryOrder(db, mergeOrder(full, ids)));
@@ -62,7 +67,7 @@ export function Fixkosten({ onEdit, onNew }: { onEdit: (r: Recurring) => void; o
         </div>
         {sum > 0 && <CatBar segs={segs} base={sum} color="var(--fix-bar)" onOpen={() => setDetail(true)}
           label={`Fixkosten nach Kategorie: ${shownTops.filter((t) => topSum(t.id) > 0).map((t) => `${t.name} ${formatEUR(topSum(t.id))}`).join(', ')}`} />}
-        {sum > 0 && <span className="barhint">Balken antippen für Details · Kategorien halten zum Sortieren</span>}
+        {sum > 0 && <span className="barhint">{byAmount ? 'Balken antippen für Details' : 'Balken antippen für Details · Kategorien halten zum Sortieren'}</span>}
       </div>
 
       {upcoming.length > 0 && (
@@ -100,7 +105,16 @@ export function Fixkosten({ onEdit, onNew }: { onEdit: (r: Recurring) => void; o
       {fixRecs.length === 0 && (laterStart
         ? <EmptyState title="Keine Fixkosten in diesem Monat" text={`Deine Fixkosten gelten ab ${monthLabel(laterStart)}. Den Beginn änderst du in der Vorlage unter „Gilt ab“.`} />
         : <EmptyState title="Noch keine Fixkosten" text="Miete, Versicherungen, Abos – einmal anlegen, jeden Monat gebucht." action={{ label: 'Fixkosten anlegen', onClick: onNew }} />)}
-      {shownTops.map((t) => <FixCard key={t.id} t={t} drag={topDrag} collapsed={fold.isCollapsed(t.id)} onFold={() => fold.toggle(t.id)} recs={fixRecs.filter((r) => topOf(r.categoryId) === t.id)} onEdit={onEdit} />)}
+      {shownTops.length > 1 && (
+        <div className="sortrow">
+          <span className="cap">Kategorien</span>
+          <button className={'sortpill fix' + (byAmount ? ' on' : '')} aria-label={`Sortieren: ${byAmount ? 'nach Betrag' : 'eigene Reihenfolge'}`} onClick={() => setSortOpen(true)}>
+            <Icon name="sort" size={16} w={2.2} />{byAmount ? 'Nach Betrag' : 'Eigene Reihenfolge'}
+          </button>
+        </div>
+      )}
+      {sortOpen && <SortSheet mode={sortMode} onPick={setSortMode} onClose={() => setSortOpen(false)} />}
+      {ordered.map((t) => <FixCard key={t.id} t={t} drag={topDrag} byAmount={byAmount} collapsed={fold.isCollapsed(t.id)} onFold={() => fold.toggle(t.id)} recs={fixRecs.filter((r) => topOf(r.categoryId) === t.id)} onEdit={onEdit} />)}
       {fixRecs.length > 0 && <button className="addfix" onClick={onNew}><Icon name="plus" size={16} w={2.2} />Fixkosten hinzufügen</button>}
     </>
   );
@@ -111,26 +125,27 @@ export function sortRecurring(rs: Recurring[]): Recurring[] {
   return [...rs].sort((a, b) => (a.sort ?? 1e9) - (b.sort ?? 1e9) || b.amountCents - a.amountCents);
 }
 
-function FixCard({ t, drag, collapsed, onFold, recs, onEdit }: { t: Category; drag: ReturnType<typeof useDragSort>; collapsed: boolean; onFold: () => void; recs: Recurring[]; onEdit: (r: Recurring) => void }) {
+function FixCard({ t, drag, collapsed, onFold, recs, onEdit, byAmount }: { t: Category; drag: ReturnType<typeof useDragSort>; collapsed: boolean; onFold: () => void; recs: Recurring[]; onEdit: (r: Recurring) => void; byAmount: boolean }) {
   const { run, data } = useStore();
   const cats = data.categories;
-  const rs = sortRecurring(recs);
+  // Nach Betrag: Positionen ebenfalls absteigend (aktive vor pausierten); Ziehen ist dann aus
+  const rs = byAmount ? [...recs].sort((a, b) => Number(b.active) - Number(a.active) || b.amountCents - a.amountCents) : sortRecurring(recs);
   const rowDrag = useDragSort(rs.map((r) => r.id), (ids) => void run((db) => setRecurringOrder(db, ids)));
   const total = rs.filter((r) => r.active).reduce((a, r) => a + r.amountCents, 0);
   const it = drag.item(t.id);
   return (
     <div ref={it.ref} style={it.style} className={'card flush ' + it.className}>
-      <div className="ghead ghx dhandle" {...drag.handle(t.id)}>
+      <div className={'ghead ghx' + (byAmount ? '' : ' dhandle')} {...(byAmount ? {} : drag.handle(t.id))}>
         <div className="gmain"><span className="tile flat t-fix"><Icon name={catIcon(cats, t)} size={22} /></span><b>{t.name}</b><b className="num">{formatEUR(total)}</b></div>
         <CollapseBtn name={t.name} collapsed={collapsed} onClick={onFold} />
       </div>
       <Collapse open={!collapsed}>
       {rs.map((r) => {
         const yearly = r.interval === 'yearly' && r.yearlyCents;
-        const ri = rowDrag.item(r.id);
+        const ri = byAmount ? { ref: undefined, style: undefined, className: '' } : rowDrag.item(r.id);
         return (
           <div key={r.id} ref={ri.ref} style={ri.style} className={ri.className}>
-            <button className="sub dhandle" {...rowDrag.handle(r.id)} onClick={() => onEdit(r)}>
+            <button className={'sub' + (byAmount ? '' : ' dhandle')} {...(byAmount ? {} : rowDrag.handle(r.id))} onClick={() => onEdit(r)}>
               <span style={{ opacity: r.active ? 1 : 0.5 }}>
                 {r.name}{r.active ? '' : ' (pausiert)'}
                 {yearly ? <small className="mini" style={{ display: 'block' }}>jährlich {formatEUR(r.yearlyCents as number)}{r.dueMonth ? ` · fällig im ${monthName(r.dueMonth)}` : ''}</small> : null}

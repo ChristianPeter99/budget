@@ -445,7 +445,7 @@ export function SortSheet({ mode, onPick, onClose }: { mode: SortMode; onPick: (
     <Sheet title="Sortieren" onClose={onClose}>
       <div className="card flush" role="radiogroup" aria-label="Reihenfolge">
         {opt('custom', 'Eigene Reihenfolge', 'Kategorien gedrückt halten und an ihren Platz ziehen')}
-        {opt('amount', 'Nach Betrag', 'Höchste Ausgaben im Monat oben, auch bei den Unterkategorien')}
+        {opt('amount', 'Nach Betrag', 'Höchste Beträge im Monat oben, auch innerhalb der Kategorien')}
       </div>
     </Sheet>
   );

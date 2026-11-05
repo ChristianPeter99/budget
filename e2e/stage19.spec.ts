@@ -195,3 +195,19 @@ test('Alltag: Reihenfolge nach Betrag oder eigene, wird gemerkt', async ({ page 
   await expect(firstHead).toHaveText('Lebensmittel');
   await expect(page.locator('.card.flush > .ghead.dhandle').first()).toBeVisible();
 });
+
+test('Fixkosten: nach Betrag sortiert absteigend, eigene Reihenfolge wieder mit Ziehen', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('nav').getByRole('button', { name: 'Fixkosten' }).click();
+  await page.getByRole('button', { name: /^Sortieren/ }).click();
+  await page.getByRole('radio', { name: /Nach Betrag/ }).click();
+  const nums = async () => (await page.locator('.card.flush > .ghead .gmain b.num').allTextContents())
+    .map((t) => Number(t.replace(/[^\d,]/g, '').replace(',', '.')));
+  await expect(page.locator('.card.flush > .ghead.dhandle')).toHaveCount(0);
+  const a = await nums();
+  expect(a.length).toBeGreaterThan(1);
+  expect([...a].sort((x, y) => y - x)).toEqual(a);
+  await page.getByRole('button', { name: /^Sortieren/ }).click();
+  await page.getByRole('radio', { name: /Eigene Reihenfolge/ }).click();
+  await expect(page.locator('.card.flush > .ghead.dhandle').first()).toBeVisible();
+});
