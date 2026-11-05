@@ -12,7 +12,7 @@ import { catArea } from '../domain/types';
 import type { CatArea } from '../domain/types';
 
 /** Bereich einer Ausgabe beim Erfassen */
-export type ExpArea = 'alltag' | 'fix' | 'joint';
+export type ExpArea = 'alltag' | 'fix' | 'spar' | 'joint';
 
 export interface TxPreset { categoryId?: string; type?: TxType; amountCents?: number; description?: string; account?: 'joint' }
 
@@ -30,7 +30,7 @@ export function duplicatePreset(tx: Transaction): TxPreset {
   return { categoryId: tx.categoryId, type: tx.type, amountCents: tx.amountCents, description: tx.description, ...(tx.account === 'joint' ? { account: 'joint' as const } : {}) };
 }
 
-export function TxSheet({ tx, preset, area: areaHint, onClose, onDuplicate }: { tx?: Transaction; preset?: TxPreset; area?: ExpArea; onClose: () => void; onDuplicate?: (p: TxPreset) => void }) {
+export function TxSheet({ tx, preset, area: areaHint, lockArea, onClose, onDuplicate }: { tx?: Transaction; preset?: TxPreset; area?: ExpArea; lockArea?: boolean; onClose: () => void; onDuplicate?: (p: TxPreset) => void }) {
   const { data, run, month, setMonth, flash, acct } = useStore();
   const jset = data.settings.joint;
   const cats = data.categories;
@@ -58,6 +58,8 @@ export function TxSheet({ tx, preset, area: areaHint, onClose, onDuplicate }: { 
     return h === 'joint' && !jointAvail ? 'alltag' : h;
   });
   const jointOn = type === 'expense' && area === 'joint' && jointAvail;
+  // Aus Alltag oder Fixkosten heraus (und bei Sparen-Buchungen) gibt es keine Bereichswahl: nur dessen Kategorien
+  const areaFixed = !!lockArea || area === 'spar';
   const want: CatArea = type === 'income' ? 'einnahme' : jointOn ? 'joint' : area === 'joint' ? 'alltag' : area;
 
   // Nur die Kategorien des gewählten Bereichs
@@ -162,11 +164,11 @@ export function TxSheet({ tx, preset, area: areaHint, onClose, onDuplicate }: { 
 
   return (
     <Sheet title={title} onClose={onClose}>
-      <div className="fseg" role="group" aria-label="Art">
+      {!areaFixed && <div className="fseg" role="group" aria-label="Art">
         <button className={type === 'expense' ? 'on' : ''} onClick={() => { setType('expense'); setTopId(''); setLeafId(''); }}>Ausgabe</button>
         <button className={type === 'income' ? 'on' : ''} onClick={() => { setType('income'); setTopId(''); setLeafId(''); }}>Einnahme</button>
-      </div>
-      {type === 'expense' && (
+      </div>}
+      {type === 'expense' && !areaFixed && (
         <div className="fseg" role="tablist" aria-label="Bereich">
           {([['alltag', 'Alltag'], ['fix', 'Fixkosten'], ...(jointAvail ? [['joint', jset?.name ?? 'Gemeinsam']] : [])] as [ExpArea, string][]).map(([a, l]) => (
             <button key={a} role="tab" aria-selected={area === a} className={area === a ? 'on' : ''} onClick={() => setArea(a)}>{l}</button>

@@ -269,7 +269,8 @@ export function App() {
         {nav('fix', 'cal', 'Fixkosten')}
         {nav('more', 'more', 'Mehr')}
       </nav>
-      {tx && <ErrorBoundary key={'tx'} sheet homeLabel="Schließen" onHome={() => setTx(null)}><TxSheet key={tx.tx?.id ?? JSON.stringify(tx.preset ?? {})} tx={tx.tx} preset={tx.preset} area={tab === 'fix' ? 'fix' : acct === 'joint' && (tab === 'alltag' || tab === 'bookings') ? 'joint' : 'alltag'} onClose={() => setTx(null)} onDuplicate={(p) => setTx({ preset: p })} /></ErrorBoundary>}
+      {tx && <ErrorBoundary key={'tx'} sheet homeLabel="Schließen" onHome={() => setTx(null)}><TxSheet key={tx.tx?.id ?? JSON.stringify(tx.preset ?? {})} tx={tx.tx} preset={tx.preset} area={tab === 'fix' ? 'fix' : acct === 'joint' && (tab === 'alltag' || tab === 'bookings') ? 'joint' : 'alltag'}
+        lockArea={tab === 'alltag' || tab === 'fix' || (tab === 'home' && !!tx.preset?.categoryId)} onClose={() => setTx(null)} onDuplicate={(p) => setTx({ preset: p })} /></ErrorBoundary>}
       {rec && <RecurringSheet rec={rec.rec} presetGroup={rec.group} month={month} onClose={() => setRec(null)} run={run} />}
       {split && <SplitSheet onClose={() => setSplit(false)} />}
       {notice && (

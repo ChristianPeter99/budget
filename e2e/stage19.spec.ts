@@ -147,3 +147,22 @@ test('CSV-Import: Kategorie wählen getrennt nach Alltag und Fixkosten', async (
   await expect(dlg.locator('.sel button', { hasText: /^Kantine$/ })).toHaveCount(0);
   await expect(dlg.locator('.sel button').first()).toBeVisible();
 });
+
+test('Aus Alltag heraus: keine Bereichswahl, nur Alltags-Kategorien; Sparen eigener Bereich', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('nav').getByRole('button', { name: 'Alltag' }).click();
+  await page.locator('.ghead .gmain', { hasText: 'Lebensmittel' }).click();
+  const dlg = page.getByRole('dialog');
+  await expect(dlg).toBeVisible();
+  await expect(dlg.getByRole('tablist', { name: 'Bereich' })).toHaveCount(0);
+  await expect(dlg.locator('.chip:not(.recent)', { hasText: /^Freizeit$/ })).toHaveCount(1);
+  await expect(dlg.locator('.chip:not(.recent)', { hasText: /^Wohnen$/ })).toHaveCount(0);
+  await dlg.getByRole('button', { name: 'Abbrechen' }).click();
+  await expect(dlg).toHaveCount(0);
+  await page.locator('nav').getByRole('button', { name: 'Mehr' }).click();
+  await page.getByRole('button', { name: /^Kategorien/ }).click();
+  await page.getByRole('tab', { name: 'Fixkosten' }).click();
+  await expect(page.locator('.catname', { hasText: /^Sparen/ })).toHaveCount(0);
+  await page.getByRole('tab', { name: 'Sparen' }).click();
+  await expect(page.locator('.catname', { hasText: /^Sparen/ })).toHaveCount(1);
+});

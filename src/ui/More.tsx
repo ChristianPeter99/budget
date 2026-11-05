@@ -76,9 +76,9 @@ export function CategoriesPage({ back, group, scope }: { back: React.ReactNode; 
   // Ohne feste Vorgabe: oben wählbar, welcher Bereich gerade gezeigt wird (Alltag, Fixkosten, Einnahmen, gemeinsames Konto)
   const [areaView, setAreaView] = useState<CatArea>('alltag');
   const [pick, setPick] = useState<string | null>(null);
-  const area: CatArea = scope === 'joint' ? 'joint' : group ? (group === 'alltag' ? 'alltag' : 'fix') : areaView;
+  const area: CatArea = scope === 'joint' ? 'joint' : group ? (group === 'alltag' ? 'alltag' : group === 'spar' ? 'spar' : 'fix') : areaView;
   const tops = topLevel(data.categories).filter((c) => catArea(c) === area);
-  const areas: [CatArea, string][] = [['alltag', 'Alltag'], ['fix', 'Fixkosten'], ['einnahme', 'Einnahmen'], ...(jset?.enabled ? [['joint', jset.name] as [CatArea, string]] : [])];
+  const areas: [CatArea, string][] = [['alltag', 'Alltag'], ['fix', 'Fixkosten'], ['spar', 'Sparen'], ['einnahme', 'Einnahmen'], ...(jset?.enabled ? [['joint', jset.name] as [CatArea, string]] : [])];
   return (
     <>
       {back}
@@ -112,7 +112,7 @@ export function CategoriesPage({ back, group, scope }: { back: React.ReactNode; 
         );
       })}
       {pick && <IconPickerSheet id={pick} onClose={() => setPick(null)} />}
-      {sheet && <CategorySheet {...sheet} group={group ?? (area === 'fix' ? 'fix' : area === 'alltag' ? 'alltag' : undefined)} {...(area === 'joint' ? { scope: 'joint' as const } : {})} {...(area === 'einnahme' ? { kind: 'income' as const } : {})} onClose={() => setSheet(null)} run={run} />}
+      {sheet && <CategorySheet {...sheet} group={group ?? (area === 'fix' || area === 'alltag' || area === 'spar' ? area : undefined)} {...(area === 'joint' ? { scope: 'joint' as const } : {})} {...(area === 'einnahme' ? { kind: 'income' as const } : {})} onClose={() => setSheet(null)} run={run} />}
     </>
   );
 }

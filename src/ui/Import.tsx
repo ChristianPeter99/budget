@@ -338,7 +338,7 @@ function DetailSheet({ r, cats, block, partner, onClose, onToggle, onCategory }:
 function CategoryPicker({ title, cats: allCats, current, household, kind, hint, onPick, onClose }: { title: string; cats: Category[]; current: string | null; household: boolean; kind: 'expense' | 'income'; hint: string; onPick: (id: string) => void; onClose: () => void }) {
   // Eigenes Konto, Ausgaben: Alltag und Fixkosten getrennt wählbar; Vorgabe ist der Bereich der bisherigen Kategorie
   const cur = current ? allCats.find((c) => c.id === current) : undefined;
-  const [area, setArea] = useState<'alltag' | 'fix'>(cur && catArea(cur) === 'fix' ? 'fix' : 'alltag');
+  const [area, setArea] = useState<'alltag' | 'fix' | 'spar'>(() => { const a = cur ? catArea(cur) : 'alltag'; return a === 'fix' || a === 'spar' ? a : 'alltag'; });
   const want: CatArea = household ? 'joint' : kind === 'income' ? 'einnahme' : area;
   // Nur die Liste des Zielkontos bzw. Bereichs; neue Kategorien landen ebenfalls dort
   const cats = allCats.filter((c) => catArea(c) === want);
@@ -373,7 +373,7 @@ function CategoryPicker({ title, cats: allCats, current, household, kind, hint, 
     <Sheet title={title} onClose={onClose}>
       {kind === 'expense' && !household && (
         <div className="fseg" role="tablist" aria-label="Bereich">
-          {([['alltag', 'Alltag'], ['fix', 'Fixkosten']] as const).map(([a, l]) => <button key={a} role="tab" aria-selected={area === a} className={area === a ? 'on' : ''} onClick={() => { setArea(a); setAdding(null); setNewTop(null); }}>{l}</button>)}
+          {([['alltag', 'Alltag'], ['fix', 'Fixkosten'], ['spar', 'Sparen']] as const).map(([a, l]) => <button key={a} role="tab" aria-selected={area === a} className={area === a ? 'on' : ''} onClick={() => { setArea(a); setAdding(null); setNewTop(null); }}>{l}</button>)}
         </div>
       )}
       <p className="note">{hint} Fehlt eine Unterkategorie, lege sie mit „+“ an; ganz unten kannst du eine neue Kategorie anlegen.</p>
@@ -398,7 +398,7 @@ function CategoryPicker({ title, cats: allCats, current, household, kind, hint, 
       })}
       {lone.length > 0 && (
         <div className="stack" style={{ gap: 8 }}>
-          <span className="mini">{kind === 'income' ? 'Einnahmen' : household ? 'Ohne Unterkategorie' : area === 'fix' ? 'Fixkosten & Sparen' : 'Ohne Unterkategorie'}</span>
+          <span className="mini">{kind === 'income' ? 'Einnahmen' : household ? 'Ohne Unterkategorie' : area === 'fix' ? 'Fixkosten' : area === 'spar' ? 'Sparen' : 'Ohne Unterkategorie'}</span>
           <div className="sel">{lone.map((c) => <button key={c.id} onClick={() => onPick(c.id)}>{c.name}</button>)}</div>
         </div>
       )}
