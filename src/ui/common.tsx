@@ -16,9 +16,10 @@ export function catIcon(cats: Category[], c: Category): string {
   return c.icon ?? top?.icon ?? top?.name ?? 'dots';
 }
 
-export function MonthNav({ month, onChange, onEdit, editLabel = 'Kategorien bearbeiten' }: { month: string; onChange: (m: string) => void; onEdit?: () => void; editLabel?: string }) {
+export function MonthNav({ month, onChange, onEdit, editLabel = 'Kategorien bearbeiten', onSort, sortOn }: { month: string; onChange: (m: string) => void; onEdit?: () => void; editLabel?: string; onSort?: () => void; sortOn?: boolean }) {
   return (
     <div className="mn">
+      {onSort && <button className={'ib sortbtn' + (sortOn ? ' on' : '')} aria-label={sortOn ? 'Sortieren (nach Betrag)' : 'Sortieren'} onClick={onSort}><Icon name="sort" size={19} /></button>}
       {onEdit && <button className="ib editbtn" aria-label={editLabel} onClick={onEdit}><Icon name="edit" size={19} /></button>}
       <button className="ib" aria-label="Vorheriger Monat" onClick={() => onChange(shiftMonth(month, -1))}><Icon name="left" /></button>
       <button className="ib" aria-label="Nächster Monat" onClick={() => onChange(shiftMonth(month, 1))}><Icon name="right" /></button>
@@ -416,6 +417,38 @@ export function useCollapsed(view: string) {
     return n;
   });
   return { isCollapsed: (id: string) => set.has(id), toggle };
+}
+
+/** Reihenfolge der Kategorien: eigene (per Ziehen) oder nach Betrag absteigend. Pro Ansicht gemerkt (nur auf diesem Gerät). */
+export type SortMode = 'custom' | 'amount';
+const SORT_KEY = 'budget.sort.v1';
+export function useSortMode(view: string): [SortMode, (m: SortMode) => void] {
+  const read = (): Record<string, SortMode> => { try { return JSON.parse(localStorage.getItem(SORT_KEY) ?? '{}') ?? {}; } catch { return {}; } };
+  const [mode, setMode] = useState<SortMode>(() => (read()[view] === 'amount' ? 'amount' : 'custom'));
+  useEffect(() => { setMode(read()[view] === 'amount' ? 'amount' : 'custom'); }, [view]);
+  const set = (m: SortMode) => {
+    setMode(m);
+    try { const all = read(); all[view] = m; localStorage.setItem(SORT_KEY, JSON.stringify(all)); } catch { /* nur Komfort */ }
+  };
+  return [mode, set];
+}
+
+/** Auswahl der Reihenfolge (eigene oder nach Betrag). */
+export function SortSheet({ mode, onPick, onClose }: { mode: SortMode; onPick: (m: SortMode) => void; onClose: () => void }) {
+  const opt = (m: SortMode, title: string, text: string) => (
+    <button className="link sortopt" role="radio" aria-checked={mode === m} onClick={() => { onPick(m); onClose(); }}>
+      <span className="mid"><b>{title}</b><small>{text}</small></span>
+      {mode === m && <Icon name="check" size={18} w={2.6} />}
+    </button>
+  );
+  return (
+    <Sheet title="Sortieren" onClose={onClose}>
+      <div className="card flush" role="radiogroup" aria-label="Reihenfolge">
+        {opt('custom', 'Eigene Reihenfolge', 'Kategorien gedrückt halten und an ihren Platz ziehen')}
+        {opt('amount', 'Nach Betrag', 'Höchste Ausgaben im Monat oben, auch bei den Unterkategorien')}
+      </div>
+    </Sheet>
+  );
 }
 
 /** Pfeil rechts im Kategorie-Kopf zum Ein- und Ausklappen. */

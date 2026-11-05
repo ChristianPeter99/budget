@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useCountUp, catIcon, CatDetailSheet, DetailRow, PIE_SHADES, AccountSwitch, AmountInput, Back, CatBar, Chevr, Chevron, Collapse, CollapseBtn, Empty, Header, MonthNav, Money, Sheet, useCollapsed } from './common';
+import { useCountUp, catIcon, CatDetailSheet, DetailRow, PIE_SHADES, AccountSwitch, AmountInput, Back, CatBar, Chevr, Chevron, Collapse, CollapseBtn, Empty, Header, MonthNav, Money, Sheet, SortSheet, useCollapsed, useSortMode } from './common';
 import { Icon } from './icons';
 import { useStore } from '../state/store';
 import { budgetStatus, childrenOf, filterTransactions, jointMonth, monthAvailable, salaryStartMonth, sortTransactions, topLevel, totalsByCategory } from '../domain/calc';
@@ -30,6 +30,9 @@ export function Alltag({ onAdd, onOpenTx }: { onAdd: (p: TxPreset) => void; onOp
   const [editCats, setEditCats] = useState(false);
   const fold = useCollapsed(isJoint ? 'joint' : 'alltag');
   const [detail, setDetail] = useState(false);
+  const [sortMode, setSortMode] = useSortMode(isJoint ? 'joint' : 'alltag');
+  const [sortOpen, setSortOpen] = useState(false);
+  const byAmount = sortMode === 'amount';
   const toggle = (id: string) => setOpen((o) => { const n = new Set(o); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   const txOf = (catId: string) => sortTransactions(txs.filter((t) => t.categoryId === catId));
   const cats = data.categories;
@@ -54,8 +57,9 @@ export function Alltag({ onAdd, onOpenTx }: { onAdd: (p: TxPreset) => void; onOp
   // Beträge zählen beim Monatswechsel mit, wie auf der Übersicht
   const spentShown = useCountUp(spent);
   const leftShown = useCountUp(hasBase ? st.remainingCents : 0);
-  // Alle Kategorien sind sichtbar; jede lässt sich einzeln einklappen (wird gemerkt)
-  const shown = tops;
+  // Alle Kategorien sind sichtbar; jede lässt sich einzeln einklappen (wird gemerkt).
+  // Reihenfolge: eigene (per Ziehen) oder nach Betrag absteigend
+  const shown = byAmount ? [...tops].sort((a, b) => topTotal(b.id) - topTotal(a.id) || a.sort - b.sort) : tops;
   // Reihenfolge der Hauptkategorien per Gedrückthalten und Ziehen; unsichtbare behalten ihren Platz
   const topDrag = useDragSort(shown.map((t) => t.id), (ids) => {
     const full = topLevel(cats, 'expense').map((c) => c.id);
@@ -77,7 +81,7 @@ export function Alltag({ onAdd, onOpenTx }: { onAdd: (p: TxPreset) => void; onOp
         <CatBar segs={segs} base={target} onOpen={() => setDetail(true)}
           color={isJoint ? 'var(--hh-bar)' : 'var(--all-bar)'}
           label={`${formatEUR(spent)} von ${formatEUR(target)} ausgegeben: ${tops.filter((t) => topTotal(t.id) > 0).map((t) => `${t.name} ${formatEUR(topTotal(t.id))}`).join(', ') || 'noch nichts'}`} />
-        {segs.some((x) => x.cents > 0) && <span className="barhint">Balken antippen für Details · Kategorien halten zum Sortieren</span>}
+        {segs.some((x) => x.cents > 0) && <span className="barhint">{byAmount ? 'Balken antippen für Details' : 'Balken antippen für Details · Kategorien halten zum Sortieren'}</span>}
         {isJoint && jm && jset && (
           <button className="clickrow mini" style={{ textAlign: 'left' }} onClick={() => setPartnerEdit(true)}>
             Ich {formatEUR(jm.myCents)} · {jset.partnerName || 'Partner/in'} {formatEUR(jm.partnerCents)}{jset.partnerByMonth[month] !== undefined ? ' (diesen Monat angepasst)' : ''}{jm.carryCents !== 0 ? ` · Übertrag ${jm.carryCents > 0 ? '+' : '−'}${formatEUR(Math.abs(jm.carryCents))}` : ''}<Chevr />
@@ -85,9 +89,17 @@ export function Alltag({ onAdd, onOpenTx }: { onAdd: (p: TxPreset) => void; onOp
         )}
         {!hasBase && <span className="cap">{isJoint ? 'Lege unter Mehr › Gemeinsames Konto die Einzahlungen fest.' : 'Lege unter Mehr › Gehalt & Wiederkehrend dein Gehalt fest oder buche eine Einnahme, um ein Budget zu sehen.'}</span>}
       </div>
+      {tops.length > 1 && (
+        <div className="sortrow">
+          <span className="cap">Kategorien</span>
+          <button className={'sortpill' + (byAmount ? ' on' : '')} aria-label={`Sortieren: ${byAmount ? 'nach Betrag' : 'eigene Reihenfolge'}`} onClick={() => setSortOpen(true)}>
+            <Icon name="sort" size={16} w={2.2} />{byAmount ? 'Nach Betrag' : 'Eigene Reihenfolge'}
+          </button>
+        </div>
+      )}
       {tops.length === 0 && <div className="card"><Empty>Keine Alltags-Kategorien vorhanden.</Empty></div>}
       {shown.map((t) => (
-        <AlltagCard key={t.id} t={t} drag={topDrag} collapsed={fold.isCollapsed(t.id)} onFold={() => fold.toggle(t.id)} isJoint={isJoint} open={open} toggle={toggle} byCat={byCat} total={topTotal(t.id)} txOf={txOf} onAdd={onAdd} onOpenTx={onOpenTx} remove={remove} />
+        <AlltagCard key={t.id} t={t} drag={topDrag} collapsed={fold.isCollapsed(t.id)} onFold={() => fold.toggle(t.id)} isJoint={isJoint} open={open} toggle={toggle} byCat={byCat} total={topTotal(t.id)} txOf={txOf} onAdd={onAdd} onOpenTx={onOpenTx} remove={remove} byAmount={byAmount} />
       ))}
       {detail && <CatDetailSheet title={`${isJoint && jset ? jset.name : 'Alltag'} · ${monthLabel(month)}`} segs={segs} shades={PIE_SHADES[isJoint ? 'hh' : 'alltag']} sub="Ausgaben" onClose={() => setDetail(false)}
         renderDetail={(id) => {
@@ -103,6 +115,7 @@ export function Alltag({ onAdd, onOpenTx }: { onAdd: (p: TxPreset) => void; onOp
             </DetailRow>
           ));
         }} />}
+      {sortOpen && <SortSheet mode={sortMode} onPick={setSortMode} onClose={() => setSortOpen(false)} />}
       {partnerEdit && jset && <PartnerMonthSheet month={month} onClose={() => setPartnerEdit(false)} />}
     </>
   );
@@ -111,13 +124,16 @@ export function Alltag({ onAdd, onOpenTx }: { onAdd: (p: TxPreset) => void; onOp
 type Drag = ReturnType<typeof useDragSort>;
 
 /** Eine Hauptkategorie mit ihren Unterkategorien; Unterkategorien lassen sich per Gedrückthalten umsortieren. */
-function AlltagCard({ t, drag, collapsed, onFold, isJoint, open, toggle, byCat, total, txOf, onAdd, onOpenTx, remove }: {
+function AlltagCard({ t, drag, collapsed, onFold, isJoint, open, toggle, byCat, total, txOf, onAdd, onOpenTx, remove, byAmount }: {
   t: Category; drag: Drag; collapsed: boolean; onFold: () => void; isJoint: boolean; open: Set<string>; toggle: (id: string) => void; byCat: Map<string, number>; total: number;
-  txOf: (id: string) => Transaction[]; onAdd: (p: TxPreset) => void; onOpenTx: (t: Transaction) => void; remove: (id: string) => Promise<void>;
+  txOf: (id: string) => Transaction[]; onAdd: (p: TxPreset) => void; onOpenTx: (t: Transaction) => void; remove: (id: string) => Promise<void>; byAmount: boolean;
 }) {
   const { data, run } = useStore();
   const cats = data.categories;
-  const kids = childrenOf(cats, t.id).filter((c) => !c.archived);
+  const kidsAll = childrenOf(cats, t.id).filter((c) => !c.archived);
+  // Nach Betrag: Unterkategorien ebenfalls absteigend; Ziehen ist dann aus
+  const kids = byAmount ? [...kidsAll].sort((a, b) => (byCat.get(b.id) ?? 0) - (byCat.get(a.id) ?? 0) || a.sort - b.sort) : kidsAll;
+  const canDrag = !byAmount;
   const subDrag = useDragSort(kids.map((c) => c.id), (ids) => {
     const full = childrenOf(cats, t.id).map((c) => c.id);
     void run((db) => setCategoryOrder(db, mergeOrder(full, ids)));
@@ -125,7 +141,7 @@ function AlltagCard({ t, drag, collapsed, onFold, isJoint, open, toggle, byCat, 
   const it = drag.item(t.id);
   return (
     <div ref={it.ref} style={it.style} className={'card flush ' + it.className}>
-      <div className="ghead ghx dhandle" {...drag.handle(t.id)}>
+      <div className={'ghead ghx' + (canDrag ? ' dhandle' : '')} {...(canDrag ? drag.handle(t.id) : {})}>
         <button className="gmain" onClick={() => onAdd(isJoint ? { categoryId: t.id, account: 'joint' } : { categoryId: t.id })}>
           <span className={'tile flat ' + (isJoint ? 't-hh' : 't-all')}><Icon name={catIcon(cats, t)} size={22} /></span><b>{t.name}</b><b className="num">{formatEUR(total)}</b>
         </button>
@@ -136,10 +152,10 @@ function AlltagCard({ t, drag, collapsed, onFold, isJoint, open, toggle, byCat, 
         const isOpen = open.has(c.id);
         const list = txOf(c.id);
         const amount = byCat.get(c.id) ?? 0;
-        const si = kids.length > 1 ? subDrag.item(c.id) : null;
+        const si = canDrag && kids.length > 1 ? subDrag.item(c.id) : null;
         return (
           <div key={c.id} ref={si?.ref} style={si?.style} className={si?.className}>
-            <div className="subrow dhandle" {...(kids.length > 1 ? subDrag.handle(c.id) : {})}>
+            <div className={'subrow' + (si ? ' dhandle' : '')} {...(si ? subDrag.handle(c.id) : {})}>
               <button className="tog" aria-expanded={isOpen} aria-label={`Buchungen ${c.name} ${isOpen ? 'zuklappen' : 'aufklappen'}`} onClick={() => toggle(c.id)}><Chevron open={isOpen} /></button>
               <button className="sub" onClick={() => onAdd(isJoint ? { categoryId: c.id, account: 'joint' } : { categoryId: c.id })}><span>{c.name}</span><span className="num" style={{ color: amount === 0 ? 'var(--mut)' : undefined }}>{formatEUR(amount)}</span></button>
             </div>

@@ -75,6 +75,7 @@ const P = {
   piggy: '<path d="M4.5 12a6.5 5.5 0 0 1 11.5-3.5l3-1.5v4l1.5 1v3l-2 .6a6.5 6.5 0 0 1-2 2.4V20h-3v-1.5h-3V20h-3v-2.6A5.6 5.6 0 0 1 4.5 12z"/><path d="M15 11.5h.01" stroke-width="2.6"/>',
   doc: '<path d="M7 3h7l4 4v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v4h4M9 12h6M9 16h6"/>',
   pie: '<path d="M12 3.5a8.5 8.5 0 1 0 8.5 8.5H12z"/><path d="M15 3.8A8.5 8.5 0 0 1 20.2 9H15z"/>',
+  sort: '<path d="M8 4v16M4.5 7.5L8 4l3.5 3.5M16 20V4M12.5 16.5L16 20l3.5-3.5"/>',
   filter: '<path d="M4 6.5h16M7 12h10M10 17.5h4"/>',
   dots: '<path d="M5 12h.01M12 12h.01M19 12h.01" stroke-width="3"/>'
 } as const;

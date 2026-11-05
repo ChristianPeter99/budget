@@ -705,3 +705,13 @@ html{background:#000}
 .drill .swipe.fresh .item.dtx{animation-name:freshglowd}
 @keyframes freshglowd{0%{background-color:rgba(10,132,255,.32)}100%{background-color:#08080A}}
 @media (prefers-reduced-motion: reduce){.swipe.fresh,.swipe.fresh .item{animation:none}}
+/* Sortieren im Alltag-Kopf; aktiv (nach Betrag) in Alltagsblau */
+.mn .sortbtn.on{color:var(--all)}
+.sortopt{min-height:64px}
+.sortopt .mid{display:flex;flex-direction:column;gap:2px;font-size:var(--t-body)}
+.sortopt .mid small{color:var(--mut);font-size:var(--t-note)}
+.sortopt svg{color:var(--all)}
+.sortrow{display:flex;align-items:center;justify-content:space-between;gap:var(--s2);margin:calc(-1 * var(--s1)) 4px calc(-1 * var(--s2))}
+.sortpill{display:flex;align-items:center;gap:6px;height:32px;padding:0 var(--s3);border-radius:16px;border:1px solid var(--line);background:transparent;color:var(--text2);font-size:var(--t-note);font-weight:600;transition:transform .14s ease}
+.sortpill:active{transform:scale(.96)}
+.sortpill.on{color:var(--all);border-color:rgba(10,132,255,.45)}

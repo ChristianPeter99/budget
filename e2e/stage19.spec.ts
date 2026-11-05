@@ -166,3 +166,32 @@ test('Aus Alltag heraus: keine Bereichswahl, nur Alltags-Kategorien; Sparen eige
   await page.getByRole('tab', { name: 'Sparen' }).click();
   await expect(page.locator('.catname', { hasText: /^Sparen/ })).toHaveCount(1);
 });
+
+test('Alltag: Reihenfolge nach Betrag oder eigene, wird gemerkt', async ({ page }) => {
+  await page.goto('/');
+  await addBooking(page, ['5'], 'Kantine', 'Klein');
+  // größere Ausgabe in Freizeit
+  await page.getByRole('button', { name: 'Neue Buchung' }).first().click();
+  const dlg = page.getByRole('dialog');
+  await dlg.getByRole('button', { name: 'Betrag', exact: true }).click();
+  for (const k of ['9', '0']) await page.getByRole('group', { name: 'Zahlenfeld' }).getByRole('button', { name: k, exact: true }).click();
+  await dlg.locator('.chip:not(.recent)', { hasText: /^Freizeit$/ }).click();
+  await dlg.locator('.chip:not(.recent)', { hasText: /^Kino$/ }).click();
+  await page.getByRole('button', { name: 'Speichern' }).click();
+  await expect(dlg).toHaveCount(0);
+
+  await page.locator('nav').getByRole('button', { name: 'Alltag' }).click();
+  const firstHead = page.locator('.card.flush > .ghead .gmain b:first-of-type').first();
+  await expect(firstHead).toHaveText('Lebensmittel');
+  await page.getByRole('button', { name: /^Sortieren/ }).click();
+  await page.getByRole('radio', { name: /Nach Betrag/ }).click();
+  await expect(firstHead).toHaveText('Freizeit');
+  await expect(page.locator('.card.flush > .ghead.dhandle')).toHaveCount(0);
+  await page.reload();
+  await page.locator('nav').getByRole('button', { name: 'Alltag' }).click();
+  await expect(firstHead).toHaveText('Freizeit');
+  await page.getByRole('button', { name: /^Sortieren/ }).click();
+  await page.getByRole('radio', { name: /Eigene Reihenfolge/ }).click();
+  await expect(firstHead).toHaveText('Lebensmittel');
+  await expect(page.locator('.card.flush > .ghead.dhandle').first()).toBeVisible();
+});
