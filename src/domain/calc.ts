@@ -37,17 +37,35 @@ export function groupOfCategory(cats: Category[], id: string): CatGroup | undefi
   return cats.find((c) => c.id === id)?.group;
 }
 
+/**
+ * Suchtext als Betrag deuten: „12,50“, „12.50“, „12,5 €“ → genau dieser Betrag; „12“ → alle Beträge von 12,00 bis 12,99;
+ * „1.250“ / „1.250,00“ → Tausenderpunkt. Kein Betrag → null.
+ */
+export function amountQuery(q: string): { cents: number; exact: boolean } | null {
+  const s = q.replace(/€/g, '').replace(/\s/g, '');
+  let m = /^(\d{1,3}(?:\.\d{3})+|\d+)(?:,(\d{1,2}))?$/.exec(s);
+  if (!m) m = /^(\d+)\.(\d{1,2})$/.exec(s);
+  if (!m) return null;
+  const euros = Number((m[1] as string).replace(/\./g, ''));
+  if (!Number.isSafeInteger(euros)) return null;
+  if (m[2] === undefined) return { cents: euros * 100, exact: false };
+  return { cents: euros * 100 + Number((m[2] as string).padEnd(2, '0')), exact: true };
+}
+
 export function filterTransactions(txs: Transaction[], cats: Category[], f: TxFilter): Transaction[] {
   const fam = f.categoryId ? categoryFamily(cats, f.categoryId) : null;
   const q = f.q?.trim().toLowerCase();
   // Namen einmal vorberechnen statt je Buchung zu suchen (wichtig bei vielen Buchungen).
   const names = q ? new Map(cats.map((c) => [c.id, categoryName(cats, c.id).toLowerCase()])) : null;
+  // Sieht der Suchtext wie ein Betrag aus, passen auch Buchungen mit genau diesem Betrag (bzw. diesem Euro-Betrag)
+  const amt = q ? amountQuery(q) : null;
+  const amtHit = (c: number) => !!amt && (amt.exact ? c === amt.cents : Math.floor(c / 100) * 100 === amt.cents);
   return txs.filter((t) => {
     if (f.from && t.date < f.from) return false;
     if (f.to && t.date > f.to) return false;
     if (f.type && t.type !== f.type) return false;
     if (fam && !fam.has(t.categoryId)) return false;
-    if (q && !(t.description.toLowerCase().includes(q) || (names?.get(t.categoryId) ?? '').includes(q))) return false;
+    if (q && !(t.description.toLowerCase().includes(q) || (names?.get(t.categoryId) ?? '').includes(q) || amtHit(t.amountCents))) return false;
     return true;
   });
 }

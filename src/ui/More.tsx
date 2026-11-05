@@ -48,25 +48,37 @@ export function More({ initial = 'menu', onExit, onOpenTx, onAdd, onEditRec }: M
   if (page === 'settings') return <BackupScreen back={back} />;
   if (page === 'backup') return <BackupScreen back={back} />;
   if (page === 'import') return <ImportPage back={back} />;
-  const items: [Page, string, string, string][] = [
-    ['spar', 'Sparen', 'Sparen & Depot', ''],
-    ['wealth', 'Depot', 'Gesamtvermögen', ''],
-    ['joint', 'card', 'Gemeinsames Konto', data.settings.joint?.enabled ? data.settings.joint.name : 'aus'],
-    ['import', 'arrowdown', 'CSV-Import', ''],
-    ['stats', 'chart', 'Auswertung', ''],
-    ['categories', 'tag', 'Kategorien', ''],
-    ['recurring', 'repeat', 'Gehalt & Wiederkehrend', `${data.recurring.length}`],
-    ['budgets', 'target', 'Budgets', ''],
-    ['backup', 'lock', 'Daten & Backup', data.lastBackupAt ? 'gesichert' : 'fehlt']
+  // In drei Gruppen: Geld, Einrichten, Daten
+  const groups: [string, [Page, string, string, string][]][] = [
+    ['Geld', [
+      ['spar', 'piggy', 'Sparen & Depot', ''],
+      ['wealth', 'bank', 'Gesamtvermögen', ''],
+      ['joint', 'Gemeinsames Konto', 'Gemeinsames Konto', data.settings.joint?.enabled ? data.settings.joint.name : 'aus'],
+      ['stats', 'chart', 'Auswertung', '']
+    ]],
+    ['Einrichten', [
+      ['categories', 'tag', 'Kategorien', ''],
+      ['recurring', 'repeat', 'Gehalt & Wiederkehrend', `${data.recurring.length}`],
+      ['budgets', 'target', 'Budgets', '']
+    ]],
+    ['Daten', [
+      ['import', 'arrowdown', 'CSV-Import', ''],
+      ['backup', 'lock', 'Daten & Backup', data.lastBackupAt ? 'gesichert' : 'fehlt']
+    ]]
   ];
   return (
     <>
       <Header title="Mehr" keepLine />
-      <div className="card flush">
-        {items.map(([p, ic, l, s]) => (
-          <button className="link" key={p} onClick={() => setPage(p)}><span style={{ display: 'flex', gap: 12, alignItems: 'center' }}><Icon name={ic} />{l}</span><small>{s}<Chevr /></small></button>
-        ))}
-      </div>
+      {groups.map(([g, items]) => (
+        <section key={g} className="moregroup" aria-label={g}>
+          <span className="cap">{g}</span>
+          <div className="card flush">
+            {items.map(([p, ic, l, s]) => (
+              <button className="link" key={p} onClick={() => setPage(p)}><span style={{ display: 'flex', gap: 12, alignItems: 'center' }}><Icon name={ic} />{l}</span><small>{s}<Chevr /></small></button>
+            ))}
+          </div>
+        </section>
+      ))}
     </>
   );
 }

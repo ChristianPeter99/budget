@@ -206,7 +206,7 @@ export function Bookings({ onOpenTx, back, onAdd, onDuplicate }: { onOpenTx: (t:
           : <button className="pillbtn" onClick={() => setSelecting(true)}>Auswählen</button>)}
         <button className={'ib filterbtn' + (filtered ? ' on' : '')} aria-label={filtered ? 'Filter (aktiv)' : 'Filter'} onClick={() => setFilterOpen(true)}><Icon name="filter" size={20} w={2} /></button>
       </div>
-      <label className="search"><Icon name="search" size={18} /><input type="search" placeholder="Suchen" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Suchen" /></label>
+      <label className="search"><Icon name="search" size={18} /><input type="search" placeholder="Suchen: Text oder Betrag" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Suchen" /></label>
       {(list.length > 0 || filterText) && <div className="fline">
         <span className="cap num">{list.length === 1 ? '1 Buchung' : `${list.length} Buchungen`}</span>
         {filterText && <button className="freset" onClick={resetFilter} aria-label={`Filter zurücksetzen: ${filterText}`}>{filterText}<span aria-hidden="true"> ✕</span></button>}

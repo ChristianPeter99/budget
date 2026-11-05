@@ -25,7 +25,8 @@ const P = {
   Wohnen: '<path d="M4 11l8-7 8 7v9a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1z"/>',
   'Mobilität': '<path d="M2.5 15.5v-2.3c0-.7.5-1.3 1.2-1.5l2.6-.7 2.5-3.1A2 2 0 0 1 10.4 7h4.1a2 2 0 0 1 1.5.7l3 3.4 1.6.4c.7.2 1.1.8 1.1 1.5v2.5"/><path d="M5 16H2.5M21.5 16H19M9 16h6M8.5 11h11"/><circle cx="7" cy="16" r="2"/><circle cx="17" cy="16" r="2"/>',
   Versicherungen: '<path d="M12 3l8 3v6c0 4.5-3.2 7.8-8 9-4.8-1.2-8-4.5-8-9V6z"/>',
-  Sparen: '<path d="M4 16l5-5 4 4 7-8M15 7h5v5"/>',
+  // Sparen: Sparschwein (wie auf der Übersicht)
+  Sparen: '<path d="M4.5 12a6.5 5.5 0 0 1 11.5-3.5l3-1.5v4l1.5 1v3l-2 .6a6.5 6.5 0 0 1-2 2.4V20h-3v-1.5h-3V20h-3v-2.6A5.6 5.6 0 0 1 4.5 12z"/><path d="M15 11.5h.01" stroke-width="2.6"/>',
   Gehalt: '<path d="M12 5v14M6 13l6 6 6-6"/>',
   card: '<rect x="3" y="6" width="18" height="13" rx="2.5"/><path d="M3 10.5h18"/>',
   cal: '<rect x="4" y="5" width="16" height="15" rx="2.5"/><path d="M4 10h16M9 3v4M15 3v4"/>',

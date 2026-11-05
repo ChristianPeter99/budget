@@ -164,15 +164,19 @@ export function TxSheet({ tx, preset, area: areaHint, lockArea, onClose, onDupli
 
   return (
     <Sheet title={title} onClose={onClose}>
-      {!areaFixed && <div className="fseg" role="group" aria-label="Art">
-        <button className={type === 'expense' ? 'on' : ''} onClick={() => { setType('expense'); setTopId(''); setLeafId(''); }}>Ausgabe</button>
-        <button className={type === 'income' ? 'on' : ''} onClick={() => { setType('income'); setTopId(''); setLeafId(''); }}>Einnahme</button>
-      </div>}
-      {type === 'expense' && !areaFixed && (
+      {!areaFixed && (
+        // Eine Reihe statt zwei: Bereich der Ausgabe oder Einnahme
         <div className="fseg" role="tablist" aria-label="Bereich">
-          {([['alltag', 'Alltag'], ['fix', 'Fixkosten'], ...(jointAvail ? [['joint', jset?.name ?? 'Gemeinsam']] : [])] as [ExpArea, string][]).map(([a, l]) => (
-            <button key={a} role="tab" aria-selected={area === a} className={area === a ? 'on' : ''} onClick={() => setArea(a)}>{l}</button>
-          ))}
+          {([['alltag', 'Alltag'], ['fix', 'Fixkosten'], ...(jointAvail ? [['joint', jset?.name ?? 'Gemeinsam']] : []), ['einnahme', 'Einnahme']] as [ExpArea | 'einnahme', string][]).map(([a, l]) => {
+            const on = a === 'einnahme' ? type === 'income' : type === 'expense' && area === a;
+            return (
+              <button key={a} role="tab" aria-selected={on} className={on ? 'on' : ''} onClick={() => {
+                if (on) return;
+                if (a === 'einnahme') setType('income'); else { setType('expense'); setArea(a); }
+                setTopId(''); setLeafId('');
+              }}>{l}</button>
+            );
+          })}
         </div>
       )}
       <div className="amtbox">

@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
-import { AccountSwitch, Bar, Chevr, Chevron, Empty, MonthHeader, barColor } from './common';
+import { AccountSwitch, Bar, Chevr, Chevron, Empty, MonthHeader, barColor, catIcon } from './common';
+import { Icon } from './icons';
+import { isHouseholdCat } from '../domain/types';
 import { useStore } from '../state/store';
 import { savingsEntries } from '../db/repo';
 import { budgetStatus, categorySeries, jointMonth, categoryFamily, categoryName, expenseByGroup, filterTransactions, monthSeries, resolveBudget, summarize, totalsByTopCategory } from '../domain/calc';
@@ -226,15 +228,20 @@ export function Stats({ back }: { back?: ReactNode }) {
       <div className="card flush">
         <div className="sec"><h2>Ausgaben nach Kategorie</h2></div>
         {byCat.length === 0 && <Empty>Keine Ausgaben in diesem Zeitraum.</Empty>}
-        {byCat.map(([id, cents]) => (
+        {byCat.map(([id, cents]) => {
+          // Gruppenfarbe und Symbol: Fixkosten orange, Alltag blau, Sparen grün (gemeinsames Konto: eigene Farbe)
+          const c = cats.find((x) => x.id === id);
+          const col = !c ? 'var(--bar)' : isHouseholdCat(c) ? 'var(--hh-bar)' : c.group === 'fix' ? 'var(--fix)' : c.group === 'spar' ? 'var(--spar)' : c.group === 'alltag' ? 'var(--all)' : 'var(--bar)';
+          return (
           <div key={id}>
             <button className="hbar clickrow" onClick={() => setTrend(trend === id ? null : id)} aria-expanded={trend === id} aria-label={`${categoryName(cats, id)}: Verlauf ${trend === id ? 'schließen' : 'anzeigen'}`}>
-              <div className="sp"><b>{categoryName(cats, id)}</b><span className="num">{formatEUR(cents)} · {sums.expenseCents > 0 ? Math.round((cents / sums.expenseCents) * 100) : 0} %<Chevr /></span></div>
-              <Bar ratio={sums.expenseCents > 0 ? cents / sums.expenseCents : 0} color="var(--bar)" />
+              <div className="sp"><b className="catlab">{c && <span style={{ color: col }}><Icon name={catIcon(cats, c)} size={17} w={2} /></span>}{categoryName(cats, id)}</b><span className="num">{formatEUR(cents)} · {sums.expenseCents > 0 ? Math.round((cents / sums.expenseCents) * 100) : 0} %<Chevr /></span></div>
+              <Bar ratio={sums.expenseCents > 0 ? cents / sums.expenseCents : 0} color={col} />
             </button>
             {trend === id && <CategoryTrend series={categorySeries(all, cats, id, month, 12)} current={month} />}
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {!isJoint && (monthBudget !== null || budgetCats.length > 0) && (

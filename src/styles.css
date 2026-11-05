@@ -759,3 +759,8 @@ html{background:#000}
 .calcell{aspect-ratio:auto;height:42px;min-height:0}
 /* Hinweise ohne Knopf (z. B. Begrüßung, „Gespeichert“) fangen keine Tipps ab – darunter bleibt alles bedienbar */
 .toast:not(:has(button)){pointer-events:none}
+/* Mehr: Gruppen Geld · Einrichten · Daten */
+.moregroup{display:flex;flex-direction:column;gap:var(--s2)}
+.moregroup>.cap{padding-left:4px}
+.catlab{display:flex;align-items:center;gap:8px;min-width:0}
+.catlab>span{display:flex;flex:none}

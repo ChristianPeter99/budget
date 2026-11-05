@@ -108,3 +108,35 @@ test('Beim Öffnen erscheint „Hallo Benutzer“', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('.toast')).toContainText('Hallo Benutzer');
 });
+
+test('Erfassen: eine Reihe Alltag · Fixkosten · Einnahme', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('nav').getByRole('button', { name: 'Buchungen' }).click();
+  await page.getByRole('button', { name: 'Neue Buchung' }).first().click();
+  const dlg = page.getByRole('dialog');
+  await expect(dlg.getByRole('tablist', { name: 'Bereich' }).getByRole('tab')).toHaveText(['Alltag', 'Fixkosten', 'Einnahme']);
+  await expect(dlg.getByRole('group', { name: 'Art' })).toHaveCount(0);
+  await dlg.getByRole('tab', { name: 'Einnahme' }).click();
+  await expect(dlg.getByRole('heading', { name: 'Neue Einnahme' }).or(dlg.getByText('Neue Einnahme'))).toBeVisible();
+  await expect(dlg.locator('.chip:not(.recent)', { hasText: /^Gehalt$/ })).toHaveCount(1);
+  await dlg.getByRole('tab', { name: 'Fixkosten' }).click();
+  await expect(dlg.locator('.chip:not(.recent)', { hasText: /^Wohnen$/ })).toHaveCount(1);
+});
+
+test('Buchungen: Suche nach Betrag', async ({ page }) => {
+  await page.goto('/');
+  await addBooking(page, ['1', '2', ',', '5'], 'Lebensmittel', 'Bäcker', 'Betragssuche');
+  await page.getByLabel('Suchen').fill('12,50');
+  await expect(page.locator('.swipe .item')).toHaveCount(1);
+  await expect(page.locator('.swipe .item')).toContainText('Betragssuche');
+  await page.getByLabel('Suchen').fill('12');
+  await expect(page.locator('.swipe .item', { hasText: 'Betragssuche' })).toHaveCount(1);
+});
+
+test('Mehr in Gruppen; Auswertung mit farbigen Kategorie-Balken', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('nav').getByRole('button', { name: 'Mehr' }).click();
+  await expect(page.locator('.moregroup > .cap')).toHaveText(['Geld', 'Einrichten', 'Daten']);
+  await page.getByRole('button', { name: /^Auswertung/ }).click();
+  await expect(page.locator('.catlab', { hasText: 'Wohnen' }).locator('svg')).toHaveCount(1);
+});

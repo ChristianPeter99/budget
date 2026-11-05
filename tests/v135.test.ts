@@ -46,3 +46,16 @@ describe('Kündigungsfrist (v1.35)', () => {
     expect((await saveRecurring(db, r.id, { ...base, notice: '' }, '2026-11')).notice).toBeUndefined();
   });
 });
+
+import { amountQuery } from '../src/domain/calc';
+describe('Suche nach Betrag (v1.37)', () => {
+  it('erkennt Beträge in deutscher und englischer Schreibweise', () => {
+    expect(amountQuery('12,50')).toEqual({ cents: 1250, exact: true });
+    expect(amountQuery('12.5 €')).toEqual({ cents: 1250, exact: true });
+    expect(amountQuery('12')).toEqual({ cents: 1200, exact: false });
+    expect(amountQuery('1.250')).toEqual({ cents: 125000, exact: false });
+    expect(amountQuery('1.250,00')).toEqual({ cents: 125000, exact: true });
+    expect(amountQuery('Rewe')).toBeNull();
+    expect(amountQuery('12,505')).toBeNull();
+  });
+});
