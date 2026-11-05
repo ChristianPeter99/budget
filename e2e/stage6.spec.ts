@@ -86,11 +86,11 @@ test('Bearbeiten mit Rückgängig und Notiz-Vorschläge', async ({ page }) => {
 test('Große Systemschrift: Beträge brechen nicht um, Kopf des Erfassens bleibt einzeilig', async ({ page }) => {
   await page.goto('/');
   await page.addStyleTag({ content: 'html{font-size:23px !important}' });
-  await page.locator('.gval').first().waitFor();
-  const lines = await page.locator('.ovfacts b, .gval').evaluateAll((els) => els.map((e) => e.getClientRects().length));
+  await page.locator('.ocval').first().waitFor();
+  const lines = await page.locator('.ocval, .ovcenter .big').evaluateAll((els) => els.map((e) => e.getClientRects().length));
   expect(lines.length).toBeGreaterThan(3);
   expect(lines.every((n) => n === 1)).toBe(true);
-  const h = await page.locator('.gval').first().evaluate((e) => e.getBoundingClientRect().height);
+  const h = await page.locator('.ocval').first().evaluate((e) => e.getBoundingClientRect().height);
   expect(h).toBeLessThan(40);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.locator('nav').getByRole('button', { name: 'Buchungen' }).click(); await page.getByRole('button', { name: 'Neue Buchung' }).click();

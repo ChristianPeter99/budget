@@ -9,7 +9,7 @@ async function swipe(page: Page, el: Locator, dir: -1 | 1) {
   await page.mouse.up();
 }
 
-test('Übersicht: Monat per Wischen im Kopf, sonst Reiterwechsel; Kacheln, Schnell erfassen, Zuletzt', async ({ page }) => {
+test('Übersicht: Monat per Wischen im Kopf, sonst Reiterwechsel; Ring mit Ecken und Details', async ({ page }) => {
   await page.goto('/');
   await page.waitForTimeout(1500);
   const ok = page.getByRole('button', { name: 'OK', exact: true });
@@ -24,7 +24,7 @@ test('Übersicht: Monat per Wischen im Kopf, sonst Reiterwechsel; Kacheln, Schne
   await swipe(page, h1, 1);
   await expect(h1).toHaveText(start);
   // Wischen auf dem Inhalt blättert zwischen den Reitern
-  await swipe(page, page.locator('.gtile').nth(1), -1);
+  await swipe(page, page.locator('.ovcorner.bl'), -1);
   await expect(nav.getByRole('button', { name: 'Alltag' })).toHaveAttribute('aria-current', 'page');
   // feststehende Kopfzeile: nach dem Einrasten keine Kopie mehr, echter Kopf sichtbar
   await expect(page.locator('.headlayer > *')).toHaveCount(0);
@@ -41,7 +41,7 @@ test('Übersicht: Monat per Wischen im Kopf, sonst Reiterwechsel; Kacheln, Schne
   await expect(nav.getByRole('button', { name: 'Übersicht' })).toHaveAttribute('aria-current', 'page');
   await expect(h1).toHaveText(start);
   // kurzer, langsamer Zug federt zurück
-  const b = (await page.locator('.gtile').nth(1).boundingBox())!;
+  const b = (await page.locator('.ovcorner.bl').boundingBox())!;
   await page.mouse.move(b.x + 100, b.y + 20); await page.mouse.down();
   for (let i = 1; i <= 4; i++) { await page.mouse.move(b.x + 100 - i * 10, b.y + 20); await page.waitForTimeout(60); }
   await page.mouse.up();
@@ -49,7 +49,7 @@ test('Übersicht: Monat per Wischen im Kopf, sonst Reiterwechsel; Kacheln, Schne
   await expect(nav.getByRole('button', { name: 'Übersicht' })).toHaveAttribute('aria-current', 'page');
   await expect(page.locator('.pageghost')).toHaveCount(0);
   // Untere Leiste schaltet schon beim Ziehen über die Hälfte um, nicht erst nach der Animation
-  const t = (await page.locator('.gtile').nth(1).boundingBox())!;
+  const t = (await page.locator('.ovcorner.bl').boundingBox())!;
   await page.mouse.move(360, t.y + 20); await page.mouse.down();
   for (let i = 1; i <= 14; i++) await page.mouse.move(360 - i * 18, t.y + 20);
   await expect(nav.locator('[data-tab="alltag"]')).toHaveClass(/\bon\b/, { timeout: 250 });
@@ -58,13 +58,14 @@ test('Übersicht: Monat per Wischen im Kopf, sonst Reiterwechsel; Kacheln, Schne
   await expect(nav.getByRole('button', { name: 'Alltag' })).toHaveAttribute('aria-current', 'page');
   await expect(page.locator('.pageghost')).toHaveCount(0);
   await nav.getByRole('button', { name: 'Übersicht' }).click();
-  // Neue Übersicht: Kacheln mit Anteil am Einkommen, Schnell erfassen, eine Zeile „Zuletzt“
-  await expect(page.locator('.gtile')).toHaveCount(3);
-  await expect(page.locator('.gtile').first()).toContainText('%');
-  await expect(page.locator('.quick button')).toHaveCount(4);
-  await page.locator('.quick button').first().click();
-  await expect(page.getByRole('dialog')).toBeVisible();
-  await page.getByRole('dialog').getByRole('button', { name: 'Abbrechen' }).click();
-  await page.locator('.lastrow').click();
-  await expect(page.locator('nav').getByRole('button', { name: 'Buchungen' })).toHaveAttribute('aria-current', 'page');
+  // Übersicht als Ring: vier Ecken, Tipp zeigt Details in der Mitte, „öffnen“ springt in den Reiter
+  await expect(page.locator('.ovcorner')).toHaveCount(4);
+  await expect(page.locator('.ovcorner.tr')).toContainText('%');
+  await page.locator('.ovcorner.br').click();
+  await expect(page.locator('.ovcenter')).toContainText('Alltag');
+  await page.getByRole('button', { name: 'Zurück zur Gesamtansicht' }).click();
+  await expect(page.locator('.ovcenter')).toContainText('Noch verfügbar');
+  await page.locator('.ovcorner.tr').click();
+  await page.getByRole('button', { name: /Fixkosten öffnen/ }).click();
+  await expect(page.locator('nav').getByRole('button', { name: 'Fixkosten' })).toHaveAttribute('aria-current', 'page');
 });

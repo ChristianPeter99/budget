@@ -45,8 +45,10 @@ test('Sparziel anlegen, auf der Übersicht sehen, einzahlen, löschen mit Rückg
   await page.getByRole('button', { name: 'Zum angesparten Betrag hinzufügen' }).click();
   await expect(page.locator('.goalrow', { hasText: 'Urlaub' })).toContainText('300 €');
   await page.locator('nav').getByRole('button', { name: 'Übersicht' }).click();
-  await expect(page.locator('.goalrow', { hasText: 'Urlaub' })).toContainText('150 € pro Monat');
-  await page.locator('.goalrow', { hasText: 'Urlaub' }).click();
+  await expect(page.locator('.ovcorner.bl')).toContainText('Urlaub');
+  await page.locator('.ovcorner.bl').click();
+  await expect(page.locator('.ovcenter')).toContainText('Urlaub: 300 € / 1.200 €');
+  await page.getByRole('button', { name: /Sparen öffnen/ }).click();
   await expect(page.getByRole('heading', { name: 'Sparen & Depot' })).toBeVisible();
   await page.locator('.goalrow', { hasText: 'Urlaub' }).click();
   await page.getByRole('button', { name: 'Sparziel löschen' }).click();
@@ -100,8 +102,8 @@ test('Ausgaben-Kalender: Tag zeigt Betrag, Tipp zeigt Buchungen, Erfassen für d
 
 test('Übersicht: Symbole im Ring und in den Kacheln', async ({ page }) => {
   await page.goto('/');
-  await expect(page.locator('.ovhero svg[role="img"] svg').first()).toBeAttached();
-  await expect(page.locator('.gtile.g-spar .gname svg')).toHaveCount(1);
+  await expect(page.locator('.ovsvg svg').first()).toBeAttached();
+  await expect(page.locator('.ovcorner.bl .ocname svg')).toHaveCount(1);
 });
 
 test('Erfassen: eine Reihe Alltag · Fixkosten · Einnahme', async ({ page }) => {
@@ -160,4 +162,22 @@ test('Kalender: Tage ohne Ausgaben ohne Farbe', async ({ page }) => {
   await page.locator('nav').getByRole('button', { name: 'Alltag' }).click();
   const colored = await page.locator('.calcell:not(.empty)').evaluateAll((els) => els.filter((e) => !(e.querySelector('.calamt')) && (e as HTMLElement).style.background !== '').length);
   expect(colored).toBe(0);
+});
+
+test('Übersicht-Ring: Haushaltskonto innen und in der Ecke, wenn eingerichtet', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('.ovcorner.tl')).toContainText(/Einnahmen|Gehalt/);
+  await page.getByRole('button', { name: 'Mehr', exact: true }).click();
+  await page.getByRole('button', { name: /Gemeinsames Konto/ }).click();
+  await page.getByLabel('Mein Beitrag pro Monat').fill('400');
+  await page.getByLabel('Name der anderen Person').fill('Lena');
+  await page.getByLabel('Beitrag der anderen Person pro Monat').fill('350');
+  await page.getByRole('button', { name: 'Einrichten' }).click();
+  await expect(page.getByText('Gemeinsames Konto eingerichtet')).toBeVisible();
+  await page.locator('nav').getByRole('button', { name: 'Übersicht' }).click();
+  await expect(page.locator('.ovcorner.tl')).toContainText('übrig');
+  await page.locator('.ovcorner.tl').click();
+  await expect(page.locator('.ovcenter')).toContainText('ausgegeben');
+  await page.getByRole('button', { name: /Konto öffnen/ }).click();
+  await expect(page.locator('nav').getByRole('button', { name: 'Alltag' })).toHaveAttribute('aria-current', 'page');
 });

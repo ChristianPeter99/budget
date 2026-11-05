@@ -134,8 +134,8 @@ test('WebKit: Gemeinsames Konto – Einkauf ändert „Noch verfügbar“ nicht'
   await click(By.xpath("//nav//button[@aria-label='Übersicht']"));
   await sleep(700);
   assert.equal(await text('.hero .big'), before);
-  const card = await d.findElement(By.xpath("//button[contains(@class,'card')][contains(.,'Haushaltskonto')]")).getText();
-  assert.match(card, /730,00 €\s*übrig/);
+  const card = await d.findElement(By.css('.ovcorner.tl')).getText();
+  assert.match(card, /Haushaltskonto\s*730 €\s*übrig/);
 });
 
 test('WebKit: CSV-Import – Datei lesen, Duplikat-Prüfung, übernehmen', async () => {

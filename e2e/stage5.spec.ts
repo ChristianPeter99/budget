@@ -17,7 +17,7 @@ test('Gemeinsames Konto: Einkauf zählt nur dort, nicht im eigenen „Noch verf�
   await setupJoint(page);
   await page.getByRole('button', { name: 'Übersicht', exact: true }).click();
   const hero = page.locator('.hero .big');
-  await expect(page.locator('button.card', { hasText: 'Haushaltskonto' })).toContainText(/750,00 €\s*übrig/);
+  await expect(page.locator('.ovcorner.tl')).toContainText(/Haushaltskonto\s*750 €\s*übrig/);
   await page.waitForTimeout(400);
   const before = await hero.innerText();
 
@@ -35,10 +35,11 @@ test('Gemeinsames Konto: Einkauf zählt nur dort, nicht im eigenen „Noch verf�
 
   await page.waitForTimeout(400);
   await expect(hero).toHaveText(before);
-  await expect(page.locator('button.card', { hasText: 'Haushaltskonto' })).toContainText(/664,50 €\s*übrig/);
+  await expect(page.locator('.ovcorner.tl')).toContainText(/66[45] €\s*übrig/);
 
   // Ansicht im Alltag
-  await page.locator('button.card', { hasText: 'Haushaltskonto' }).click();
+  await page.locator('.ovcorner.tl').click();
+  await page.getByRole('button', { name: /Konto öffnen/ }).click();
   await expect(page.getByRole('tab', { name: 'Haushaltskonto', selected: true })).toBeVisible();
   await expect(page.locator('.hero')).toContainText('85,50 €');
   await expect(page.locator('.hero')).toContainText('Ich 400,00 € · Lena 350,00 €');

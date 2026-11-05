@@ -196,7 +196,7 @@ export const ANIM_MS = 600;
 export const COUNT_MS = 380;
 
 /** Animiert eine Zahlenliste weich zum neuen Stand (wie „Noch verfügbar“). Bei „Bewegung reduzieren“ sofort. */
-function useTweenList(target: number[], ms = ANIM_MS, initial?: number[]): number[] {
+export function useTweenList(target: number[], ms = ANIM_MS, initial?: number[]): number[] {
   const [v, setV] = useState(initial ?? target);
   const cur = useRef(initial ?? target);
   const key = target.join('|');
