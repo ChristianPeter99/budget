@@ -10,7 +10,7 @@ import type { DepotEntry } from '../domain/types';
 
 const dayNum = (iso: string) => Date.UTC(Number(iso.slice(0, 4)), Number(iso.slice(5, 7)) - 1, Number(iso.slice(8, 10))) / 86_400_000;
 
-function DepotChart({ entries, name = 'Depot' }: { entries: DepotEntry[]; name?: string }) {
+export function DepotChart({ entries, name = 'Depot' }: { entries: DepotEntry[]; name?: string }) {
   const W = 336, H = 150, P = { l: 4, r: 4, t: 12, b: 20 };
   if (entries.length === 0) return <Empty>Keine Einträge in diesem Zeitraum.</Empty>;
   const xs = entries.map((e) => dayNum(e.date));

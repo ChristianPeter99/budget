@@ -252,3 +252,21 @@ export function jointMonth(own: Transaction[], joint: Transaction[], recurring: 
     leftCents: budget - cur.spent, carryCents: carry, availableCents: carry + budget - cur.spent
   };
 }
+
+/**
+ * Plan für ein Sparziel ab dem aktuellen Monat: fehlender Betrag, Monate bis zum Ziel (aktueller und Zielmonat
+ * eingeschlossen) und nötige Rate pro Monat (aufgerundet auf ganze Cent). Überfällig = Zielmonat liegt zurück.
+ */
+export function goalPlan(g: { targetCents: number; savedCents: number; dueMonth: string }, currentMonth: string): {
+  remainingCents: number; monthsLeft: number; perMonthCents: number; ratio: number; done: boolean; overdue: boolean;
+} {
+  const remainingCents = Math.max(0, g.targetCents - g.savedCents);
+  const [cy, cm] = currentMonth.split('-').map(Number) as [number, number];
+  const [dy, dm] = g.dueMonth.split('-').map(Number) as [number, number];
+  const diff = (dy - cy) * 12 + (dm - cm);
+  const done = remainingCents === 0;
+  const overdue = !done && diff < 0;
+  const monthsLeft = Math.max(0, diff + 1);
+  const perMonthCents = done ? 0 : monthsLeft > 0 ? Math.ceil(remainingCents / monthsLeft) : remainingCents;
+  return { remainingCents, monthsLeft, perMonthCents, ratio: g.targetCents > 0 ? Math.min(1, g.savedCents / g.targetCents) : 0, done, overdue };
+}

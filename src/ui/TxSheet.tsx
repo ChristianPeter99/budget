@@ -14,7 +14,7 @@ import type { CatArea } from '../domain/types';
 /** Bereich einer Ausgabe beim Erfassen */
 export type ExpArea = 'alltag' | 'fix' | 'spar' | 'joint';
 
-export interface TxPreset { categoryId?: string; type?: TxType; amountCents?: number; description?: string; account?: 'joint' }
+export interface TxPreset { categoryId?: string; type?: TxType; amountCents?: number; description?: string; account?: 'joint'; date?: string }
 
 function pressKey(cur: string, k: string): string {
   if (k === 'back') return cur.slice(0, -1);
@@ -39,7 +39,7 @@ export function TxSheet({ tx, preset, area: areaHint, lockArea, onClose, onDupli
   const initialCat = cats.find((c) => c.id === initialCatId);
   const [type, setType] = useState<TxType>(tx?.type ?? initialCat?.kind ?? preset?.type ?? 'expense');
   const [amount, setAmount] = useState(tx ? centsToInput(tx.amountCents) : preset?.amountCents ? centsToInput(preset.amountCents) : '');
-  const [date, setDate] = useState(tx?.date ?? todayISO());
+  const [date, setDate] = useState(tx?.date ?? (preset?.date && isValidISODate(preset.date) ? preset.date : todayISO()));
   const [topId, setTopId] = useState(initialCat ? (initialCat.parentId ?? initialCat.id) : '');
   const [leafId, setLeafId] = useState(initialCat && initialCat.parentId ? initialCat.id : '');
   const [desc, setDesc] = useState(tx?.description ?? preset?.description ?? '');

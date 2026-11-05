@@ -8,6 +8,7 @@ import { formatEUR, formatEUR0 } from '../domain/money';
 import { isHouseholdCat } from '../domain/types';
 import type { Category, Transaction } from '../domain/types';
 import type { TxPreset } from './TxSheet';
+import { GoalRow, sortGoals } from './Goals';
 
 /** „Heute, 18:42“ / „Gestern, 18:42“; älter: „Mi, 8.10.“; Vorjahr: „8.10.25“ – passt immer in die schmale Spalte. */
 export function lastEntryLabel(txs: Transaction[], now = new Date()): string | null {
@@ -66,10 +67,12 @@ export function Overview({ onGoBookings, onGoBackup, onGoGroup, onAdd, onGoJoint
   const base = av.incomeCents;
   const pct = (c: number) => (base > 0 ? `${Math.round((c / base) * 100)} %` : '–');
 
+  // Sparziele (falls gesetzt): offene zuerst, höchstens drei
+  const goals = sortGoals(data.settings.savingsGoals ?? []).slice(0, 3);
   const tiles = [
-    { key: 'fix' as const, label: 'Fixkosten', cents: groups.fix },
-    { key: 'alltag' as const, label: 'Alltag', cents: groups.alltag },
-    { key: 'spar' as const, label: 'Sparen', cents: groups.spar }
+    { key: 'fix' as const, label: 'Fixkosten', cents: groups.fix, icon: 'cal' },
+    { key: 'alltag' as const, label: 'Alltag', cents: groups.alltag, icon: 'card' },
+    { key: 'spar' as const, label: 'Sparen', cents: groups.spar, icon: 'piggy' }
   ];
 
   return (
@@ -90,7 +93,7 @@ export function Overview({ onGoBookings, onGoBackup, onGoGroup, onAdd, onGoJoint
 
       <div className="hero ovhero">
         <SpendRing total={Math.max(av.incomeCents, sum.expenseCents)} label={`Ausgaben: Fixkosten ${formatEUR(groups.fix)}, Alltag ${formatEUR(groups.alltag)}, Sparen ${formatEUR(groups.spar)} von ${formatEUR(av.incomeCents)} ${av.expected ? 'erwartetem Gehalt' : 'Einnahmen'}`}
-          parts={[{ value: groups.fix, color: 'var(--fix)' }, { value: groups.alltag, color: 'var(--all)' }, { value: groups.spar, color: 'var(--spar)' },
+          parts={[{ value: groups.fix, color: 'var(--fix)', icon: 'cal' }, { value: groups.alltag, color: 'var(--all)', icon: 'card' }, { value: groups.spar, color: 'var(--spar)', icon: 'piggy' },
             { value: Math.max(0, sum.expenseCents - groups.fix - groups.alltag - groups.spar), color: 'var(--bar)' }]} />
         <div className="ovside">
           <span className="ovlabel">Noch verfügbar</span>
@@ -114,13 +117,22 @@ export function Overview({ onGoBookings, onGoBackup, onGoGroup, onAdd, onGoJoint
         <div className="gtiles">
         {tiles.map((t) => (
           <button key={t.key} className={'gtile g-' + t.key} onClick={() => onGoGroup(t.key)} aria-label={`${t.label}: ${formatEUR(t.cents)}, ${pct(t.cents)} der Einnahmen`}>
-            <span className="gname">{t.label}</span>
+            <span className="gname"><Icon name={t.icon} size={15} w={2.1} />{t.label}</span>
             <span className="gval">{formatEUR0(t.cents)}</span>
             <span className="gpct">{pct(t.cents)}</span>
           </button>
         ))}
         </div>
       </div>
+
+      {goals.length > 0 && (
+        <div className="stack" style={{ gap: 10 }}>
+          <span className="cap" style={{ paddingLeft: 4 }}>Sparziele</span>
+          <div className="card flush">
+            {goals.map((g) => <GoalRow key={g.id} g={g} onOpen={() => onGoGroup('spar')} />)}
+          </div>
+        </div>
+      )}
 
       {jm && data.settings.joint && (() => {
         const avail = jm.budgetCents + jm.carryCents;

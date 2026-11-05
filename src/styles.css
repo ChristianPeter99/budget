@@ -719,3 +719,41 @@ html{background:#000}
 .sortbtns{display:flex;gap:var(--s2);min-width:0}
 .sortpill.foldall{width:32px;padding:0;justify-content:center;flex:none}
 .sortrow .sortpill{white-space:nowrap}
+/* Budget-Balken unter dem Kategorienamen (Alltag) */
+.ghead .gnm{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
+.ghead .gnm b{flex:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ghead .gnm+b{flex:none;font-size:var(--t-body);font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+.gbar{display:block;height:4px;border-radius:2px;background:var(--track);overflow:hidden;margin-right:var(--s3)}
+.gbar>i{display:block;height:100%;border-radius:2px;transition:width .4s ease}
+/* Sparziele */
+.goalrow{text-align:left}
+.goalrow .sp b{font-size:var(--t-body);font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.goalrow .num{font-weight:600}
+.goalrow .mini.pos{color:var(--spar)}
+.goalrow .mini.warn{color:var(--warn)}
+.goalprev{align-self:flex-start}
+.goalprev.warn{color:var(--warn)}
+/* Ausgaben-Kalender (Alltag) */
+.calhead{display:flex;align-items:center;gap:var(--s2);width:100%;min-height:50px;padding:0 var(--s4);background:none;border:0;color:var(--text);text-align:left;font:inherit}
+.calhead svg{color:var(--all)}
+.calhead b{font-size:var(--t-section);font-weight:700;flex:none}
+.calhead .cap{flex:1;text-align:right;font-weight:600}
+.calhead .chev{color:var(--mut)}
+.calgrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;padding:0 var(--s3) var(--s2)}
+.calwd{font-size:11px;font-weight:600;color:var(--mut);text-align:center;padding:2px 0 4px}
+.calcell{position:relative;aspect-ratio:1/1.05;min-height:40px;border-radius:9px;border:0;background:var(--card2);color:var(--text);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:0;font:inherit;transition:transform .14s ease}
+.calcell.empty{background:transparent}
+.calcell:active:not(:disabled){transform:scale(.93)}
+.calcell .calnum{font-size:12px;font-weight:600;line-height:1;color:var(--text2)}
+.calcell .calamt{font-size:11px;font-weight:700;line-height:1.1;color:#fff}
+.calcell.future{background:transparent;box-shadow:inset 0 0 0 1px var(--line)}
+.calcell.future .calnum{color:var(--mut)}
+.calcell.today{box-shadow:inset 0 0 0 2px #fff}
+.calcell.over::after{content:'';position:absolute;top:4px;right:4px;width:6px;height:6px;border-radius:3px;background:var(--fix)}
+.callegend{display:flex;flex-wrap:wrap;justify-content:space-between;gap:var(--s2);padding:var(--s1) var(--s4) var(--s3);font-size:11px;color:var(--mut)}
+.callegend span{display:flex;align-items:center;gap:4px}
+.callegend .lg{display:inline-block;width:10px;height:10px;border-radius:3px}
+.callegend .lo{background:rgba(10,132,255,.2)}.callegend .mid{background:rgba(10,132,255,.5)}.callegend .hi{background:rgba(10,132,255,.8);margin-right:4px}
+.callegend .overdot{width:6px;height:6px;border-radius:3px;background:var(--fix)}
+.gtile .gname{display:flex;align-items:center;gap:5px}
+.calcell{aspect-ratio:auto;height:42px;min-height:0}

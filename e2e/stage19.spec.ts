@@ -216,14 +216,14 @@ test('Alle zu- und aufklappen in Alltag und Fixkosten', async ({ page }) => {
   await page.goto('/');
   for (const tab of ['Alltag', 'Fixkosten']) {
     await page.locator('nav').getByRole('button', { name: tab }).click();
-    await expect(page.locator('main .card.flush .clp').first()).toBeVisible();
+    await expect(page.locator('main .card.flush:not(.calcard) .clp').first()).toBeVisible();
     await page.getByRole('button', { name: 'Alle zuklappen' }).click();
-    await expect(page.locator('main .card.flush .clp')).toHaveCount(0);
+    await expect(page.locator('main .card.flush:not(.calcard) .clp')).toHaveCount(0);
     await page.reload();
     await page.locator('nav').getByRole('button', { name: tab }).click();
     await expect(page.locator('main .card.flush > .ghead').first()).toBeVisible();
-    await expect(page.locator('main .card.flush .clp')).toHaveCount(0);
+    await expect(page.locator('main .card.flush:not(.calcard) .clp')).toHaveCount(0);
     await page.getByRole('button', { name: 'Alle aufklappen' }).click();
-    await expect(page.locator('main .card.flush .clp.done').first()).toBeVisible();
+    await expect(page.locator('main .card.flush:not(.calcard) .clp.done').first()).toBeVisible();
   }
 });

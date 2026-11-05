@@ -12,6 +12,7 @@ import type { CatArea } from '../domain/types';
 import type { TxPreset } from './TxSheet';
 import { CAT_ICONS } from '../domain/catIcons';
 import { Sparen } from './Sparen';
+import { WealthPage } from './Wealth';
 import { Bookings } from './Bookings';
 import { Stats } from './Stats';
 import { BackupScreen } from './BackupScreen';
@@ -19,7 +20,7 @@ import { RecurringPage } from './Recurring';
 import { JointPage } from './Joint';
 import { ImportPage } from './Import';
 
-export type MorePage = 'menu' | 'joint' | 'spar' | 'bookings' | 'stats' | 'recurring' | 'categories' | 'budgets' | 'settings' | 'backup' | 'import';
+export type MorePage = 'menu' | 'wealth' | 'joint' | 'spar' | 'bookings' | 'stats' | 'recurring' | 'categories' | 'budgets' | 'settings' | 'backup' | 'import';
 type Page = MorePage;
 
 export interface MoreProps {
@@ -37,6 +38,7 @@ export function More({ initial = 'menu', onExit, onOpenTx, onAdd, onEditRec }: M
   const direct = initial !== 'menu' && page === initial;
   const back = <Back label={direct ? 'Zurück' : 'Mehr'} onClick={() => (direct ? onExit() : setPage('menu'))} />;
   if (page === 'joint') return <JointPage back={back} />;
+  if (page === 'wealth') return <WealthPage back={back} />;
   if (page === 'spar') return <Sparen back={back} onAdd={onAdd} onEditRec={onEditRec} />;
   if (page === 'bookings') return <Bookings back={back} onOpenTx={onOpenTx} onDuplicate={onAdd} />;
   if (page === 'stats') return <Stats back={back} />;
@@ -48,6 +50,7 @@ export function More({ initial = 'menu', onExit, onOpenTx, onAdd, onEditRec }: M
   if (page === 'import') return <ImportPage back={back} />;
   const items: [Page, string, string, string][] = [
     ['spar', 'Sparen', 'Sparen & Depot', ''],
+    ['wealth', 'Depot', 'Gesamtvermögen', ''],
     ['joint', 'card', 'Gemeinsames Konto', data.settings.joint?.enabled ? data.settings.joint.name : 'aus'],
     ['import', 'arrowdown', 'CSV-Import', ''],
     ['stats', 'chart', 'Auswertung', ''],
@@ -237,7 +240,8 @@ function BudgetsPage({ back }: { back: React.ReactNode }) {
   const [edit, setEdit] = useState<{ scope: 'month' | 'category'; categoryId?: string; title: string } | null>(null);
   const { from, to } = monthRange(month);
   const txs = filterTransactions(data.transactions, data.categories, { from, to, type: 'expense' });
-  const exp = data.categories.filter((c) => c.parentId === null && c.kind === 'expense' && !c.archived && !isHouseholdCat(c));
+  // Limits gibt es für die Alltags-Kategorien; sie erscheinen im Alltag als Balken unter dem Namen
+  const exp = data.categories.filter((c) => c.parentId === null && !c.archived && catArea(c) === 'alltag').sort((a, b) => a.sort - b.sort);
   const mTotal = resolveBudget(data.budgets, month, 'month');
   const mSpent = txs.reduce((a, t) => a + t.amountCents, 0);
   return (
@@ -249,6 +253,9 @@ function BudgetsPage({ back }: { back: React.ReactNode }) {
           <span className="mid"><b>Gesamtbudget Ausgaben</b><small>{mTotal === null ? 'nicht gesetzt' : `${formatEUR(mSpent)} von ${formatEUR(mTotal)}`}</small></span>
           {mTotal !== null && <span className="amt"><Money cents={mTotal - mSpent} /></span>}
         </button>
+      </div>
+      <span className="cap" style={{ paddingLeft: 4 }}>Alltag-Kategorien</span>
+      <div className="card flush">
         {exp.map((c) => {
           const b = resolveBudget(data.budgets, month, 'category', c.id);
           const fam = categoryFamily(data.categories, c.id);
@@ -256,12 +263,12 @@ function BudgetsPage({ back }: { back: React.ReactNode }) {
           const st = b !== null ? budgetStatus(spent, b) : null;
           return (
             <button className="item" key={c.id} onClick={() => setEdit({ scope: 'category', categoryId: c.id, title: c.name })}>
-              <span className="mid"><b>{c.name}</b><small>{st ? `${formatEUR(spent)} von ${formatEUR(b ?? 0)}` : 'kein Budget'}</small>{st && <Bar ratio={st.ratio} color={barColor(st.ratio, st.over, 'var(--inc)')} />}</span>
+              <span className="mid"><b>{c.name}</b><small>{st ? `${formatEUR(spent)} von ${formatEUR(b ?? 0)}` : 'kein Limit'}</small>{st && <Bar ratio={st.ratio} color={barColor(st.ratio, st.over, 'var(--all)')} />}</span>
             </button>
           );
         })}
       </div>
-      <p className="note">Ein Budget kann für alle Monate (Standard) oder nur für den gewählten Monat gelten.</p>
+      <p className="note">Ein Limit kann für alle Monate (Standard) oder nur für den gewählten Monat gelten. Im Alltag zeigt ein schmaler Balken unter dem Namen, wie viel davon schon ausgegeben ist.</p>
       {edit && <BudgetSheet {...edit} month={month} onClose={() => setEdit(null)} run={run} />}
     </>
   );

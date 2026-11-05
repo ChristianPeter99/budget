@@ -84,9 +84,9 @@ const P = {
 
 export type IconName = keyof typeof P;
 
-export function Icon({ name, size = 20, w = 1.8 }: { name: string; size?: number; w?: number }) {
+export function Icon({ name, size = 20, w = 1.8, x, y }: { name: string; size?: number; w?: number; x?: number; y?: number }) {
   const d = (P as Record<string, string>)[name] ?? P.dots;
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={w} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" dangerouslySetInnerHTML={{ __html: d }} />
+    <svg x={x} y={y} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={w} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" dangerouslySetInnerHTML={{ __html: d }} />
   );
 }

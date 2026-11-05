@@ -1,5 +1,5 @@
 import { AppError } from './types';
-import type { BackupData, Budget, Category, CatGroup, DepotEntry, Recurring, RecurringRun, Settings, Transaction, TxType } from './types';
+import type { BackupData, Budget, Category, CatGroup, DepotEntry, Recurring, RecurringRun, SavingsGoal, Settings, Transaction, TxType } from './types';
 import { MAX_CENTS } from './money';
 import { CAT_ICON_KEYS } from './catIcons';
 import { isValidISODate, isValidMonthKey } from './dates';
@@ -133,10 +133,12 @@ export function validateBackupData(raw: unknown): BackupCheck {
       || (r.interval === 'yearly' && !isInt(r.yearlyCents, 1)) || (r.interval !== 'yearly' && r.yearlyCents !== undefined)
       || (r.dueMonth !== undefined && (r.interval !== 'yearly' || !isInt(r.dueMonth, 1, 12)))) { err('Wiederkehrende Buchung mit ungültigem Intervall.'); continue; }
     if (r.sort !== undefined && !isInt(r.sort, 0, 100_000)) { err('Wiederkehrende Buchung mit ungültiger Reihenfolge.'); continue; }
+    if (r.notice !== undefined && !(isStr(r.notice, 80) && r.notice.trim())) { err('Wiederkehrende Buchung mit ungültiger Kündigungsfrist.'); continue; }
     rIds.add(r.id);
     const rec: Recurring = { id: r.id, name: r.name.trim(), type: r.type, amountCents: r.amountCents, categoryId: r.categoryId as string, startMonth: r.startMonth, day: r.day, active: r.active, createdAt: r.createdAt };
     if (r.endMonth !== undefined) rec.endMonth = r.endMonth;
     if (r.sort !== undefined) rec.sort = r.sort as number;
+    if (r.notice !== undefined) rec.notice = (r.notice as string).trim();
     if (r.interval === 'yearly') { rec.interval = 'yearly'; rec.yearlyCents = r.yearlyCents as number; if (r.dueMonth !== undefined) rec.dueMonth = r.dueMonth as number; }
     recurring.push(rec);
   }
@@ -182,7 +184,8 @@ export function validateBackupData(raw: unknown): BackupCheck {
     || (s.backupReminderDays !== undefined && !isInt(s.backupReminderDays, 0, 365))
     || (s.joint !== undefined && !validJoint(s.joint, catById))
     || (s.importRules !== undefined && !(isObj(s.importRules) && Object.keys(s.importRules).length <= 5000
-      && Object.entries(s.importRules).every(([k, v]) => k.length <= 80 && typeof v === 'string' && catById.has(v))))) err('Die Einstellungen sind ungültig.');
+      && Object.entries(s.importRules).every(([k, v]) => k.length <= 80 && typeof v === 'string' && catById.has(v))))
+    || (s.savingsGoals !== undefined && !validGoals(s.savingsGoals))) err('Die Einstellungen sind ungültig.');
   else settings = {
     expectedIncomeCents: s.expectedIncomeCents,
     split: { fix: s.split.fix, alltag: s.split.alltag, spar: s.split.spar },
@@ -194,6 +197,7 @@ export function validateBackupData(raw: unknown): BackupCheck {
   if (settings && isObj(s) && typeof s.fixAccountName === 'string' && s.fixAccountName.trim()) settings.fixAccountName = s.fixAccountName.trim();
   if (settings && isObj(s) && s.savingsHistory !== undefined) settings.savingsHistory = (s.savingsHistory as { date: string; cents: number }[]).map((e) => ({ date: e.date, cents: e.cents }));
   if (settings && isObj(s) && s.importRules !== undefined) settings.importRules = { ...(s.importRules as Record<string, string>) };
+  if (settings && isObj(s) && s.savingsGoals !== undefined) settings.savingsGoals = (s.savingsGoals as SavingsGoal[]).map((g) => ({ id: g.id, name: g.name.trim(), targetCents: g.targetCents, savedCents: g.savedCents, dueMonth: g.dueMonth, createdAt: g.createdAt }));
   if (settings && isObj(s) && s.joint !== undefined) {
     const j = s.joint as Record<string, unknown>;
     settings.joint = {
@@ -206,4 +210,16 @@ export function validateBackupData(raw: unknown): BackupCheck {
 
   if (errors.length || !settings) return { ok: false, errors: errors.length ? errors : ['Die Einstellungen fehlen.'] };
   return { ok: true, data: { categories, transactions, budgets, recurring, recurringRuns, depotEntries, settings } };
+}
+
+/** Sparziele: höchstens 50, eindeutige IDs, Name 1–40 Zeichen, Beträge in Cent, Zielmonat gültig. */
+function validGoals(v: unknown): boolean {
+  if (!Array.isArray(v) || v.length > 50) return false;
+  const ids = new Set<string>();
+  for (const g of v) {
+    if (!isObj(g) || !isStr(g.id, 100) || !g.id || ids.has(g.id) || typeof g.name !== 'string' || !g.name.trim() || g.name.length > 40
+      || !isInt(g.targetCents, 1, MAX_CENTS) || !isInt(g.savedCents, 0, MAX_CENTS) || !isValidMonthKey(g.dueMonth) || !isStr(g.createdAt, 40)) return false;
+    ids.add(g.id);
+  }
+  return true;
 }

@@ -226,7 +226,7 @@ function useTweenList(target: number[], ms = ANIM_MS, initial?: number[]): numbe
  * Gerade Übergänge zwischen den Abschnitten, abgerundet nur an Anfang und Ende. Wechselt weich (ANIM_MS).
  */
 let ringIntro = true;
-export function SpendRing({ parts, total, size = 132, label }: { parts: { value: number; color: string }[]; total: number; size?: number; label: string }) {
+export function SpendRing({ parts, total, size = 132, label }: { parts: { value: number; color: string; icon?: string }[]; total: number; size?: number; label: string }) {
   // Außenkante wie bisher (63,5), Ring nach innen dicker – im Verhältnis wie die Kreisdiagramme der Detailansicht
   const R = 51.5, W = 24, C = 2 * Math.PI * R;
   // Beim ersten Öffnen der App füllt sich der Ring einmal sanft (danach nur bei Monatswechseln)
@@ -235,7 +235,7 @@ export function SpendRing({ parts, total, size = 132, label }: { parts: { value:
     intro ? [...parts.map(() => 0), Math.max(0, total)] : undefined);
   const tot = Math.max(vals[vals.length - 1] ?? 0, vals.slice(0, -1).reduce((a, x) => a + x, 0), 1);
   let off = 0;
-  const segs = parts.map((p, i) => { const len = ((vals[i] ?? 0) / tot) * C; const seg = { len, off, color: p.color }; off += len; return seg; }).filter((x) => x.len > 0.2);
+  const segs = parts.map((p, i) => { const len = ((vals[i] ?? 0) / tot) * C; const seg = { len, off, color: p.color, icon: p.icon }; off += len; return seg; }).filter((x) => x.len > 0.2);
   const full = off >= C - 0.5;
   // Gerade Kanten überall; feine Fugen in Hintergrundfarbe zwischen den Teilen und am Ende (Variante E)
   const fuge = (l: number) => {
@@ -252,6 +252,14 @@ export function SpendRing({ parts, total, size = 132, label }: { parts: { value:
         {segs.map((sg, i) => <circle key={i} cx="66" cy="66" r={R} stroke={sg.color} strokeDasharray={`${sg.len} ${C - sg.len}`} strokeDashoffset={-sg.off} />)}
       </g>
       {cuts.map((l, i) => { const f = fuge(l); return <line key={i} {...f} style={{ stroke: 'var(--bg)' }} strokeWidth={i === cuts.length - 1 && !full ? 1.5 : 2.5} />; })}
+      {/* Symbol in der Mitte jedes Abschnitts, sobald er breit genug ist (wie in den Balken von Alltag und Fixkosten) */}
+      <g style={{ color: '#fff' }}>
+        {segs.map((sg, i) => {
+          if (!sg.icon || sg.len < 24) return null;
+          const a = ((sg.off + sg.len / 2) / C) * 2 * Math.PI, S = 14;
+          return <Icon key={'i' + i} name={sg.icon} size={S} w={2.2} x={66 + R * Math.sin(a) - S / 2} y={66 - R * Math.cos(a) - S / 2} />;
+        })}
+      </g>
     </svg>
   );
 }

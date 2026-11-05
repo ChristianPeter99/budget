@@ -26,6 +26,9 @@ test('Alltag: Unterkategorie und Hauptkategorie per Gedrückthalten verschieben,
   await page.goto('/');
   await settle(page);
   await page.getByRole('button', { name: 'Alltag', exact: true }).click();
+  // Kalender zuklappen (wird gemerkt), damit die Kategorien im Bild sind
+  await page.getByRole('button', { name: 'Ausgaben-Kalender zuklappen' }).click();
+  await expect(page.locator('.calgrid')).toHaveCount(0);
   const showAll = async () => { const m = page.locator('.morecats', { hasText: 'weitere Kategorien' }); if (await m.count()) await m.click(); };
   await showAll();
   const card = page.locator('.card', { has: page.locator('.ghead b', { hasText: /^Lebensmittel$/ }) });

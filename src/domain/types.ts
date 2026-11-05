@@ -79,6 +79,19 @@ export interface Recurring {
   yearlyCents?: number;
   /** Nur bei 'yearly': Monat (1–12), in dem die Zahlung tatsächlich anfällt (optional) */
   dueMonth?: number;
+  /** Kündigungsfrist als freier Text, z. B. „3 Monate zum Laufzeitende“ (optional) */
+  notice?: string;
+}
+
+/** Sparziel: Zielbetrag bis zu einem Monat; der angesparte Betrag wird von Hand gepflegt. */
+export interface SavingsGoal {
+  id: string;
+  name: string;
+  targetCents: number;
+  savedCents: number;
+  /** Zielmonat "YYYY-MM" */
+  dueMonth: string;
+  createdAt: string;
 }
 
 /** Merker, dass die Buchung einer Vorlage für einen Monat bereits erzeugt wurde. */
@@ -109,6 +122,8 @@ export interface Settings {
   joint?: JointSettings;
   /** Beim CSV-Import gemerkte Zuordnungen: normalisierter Empfänger → Kategorie */
   importRules?: Record<string, string>;
+  /** Sparziele (optional) */
+  savingsGoals?: SavingsGoal[];
 }
 
 /**

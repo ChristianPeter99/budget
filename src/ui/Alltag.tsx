@@ -1,15 +1,16 @@
 import { useMemo, useState } from 'react';
-import { useCountUp, catIcon, CatDetailSheet, DetailRow, PIE_SHADES, AccountSwitch, AmountInput, Back, CatBar, Chevr, Chevron, Collapse, CollapseBtn, Empty, Header, MonthNav, Money, Sheet, SortSheet, FoldAllBtn, useCollapsed, useSortMode } from './common';
+import { barColor, useCountUp, catIcon, CatDetailSheet, DetailRow, PIE_SHADES, AccountSwitch, AmountInput, Back, CatBar, Chevr, Chevron, Collapse, CollapseBtn, Empty, Header, MonthNav, Money, Sheet, SortSheet, FoldAllBtn, useCollapsed, useSortMode } from './common';
 import { Icon } from './icons';
 import { useStore } from '../state/store';
-import { budgetStatus, childrenOf, filterTransactions, jointMonth, monthAvailable, salaryStartMonth, sortTransactions, topLevel, totalsByCategory } from '../domain/calc';
+import { budgetStatus, resolveBudget, childrenOf, filterTransactions, jointMonth, monthAvailable, salaryStartMonth, sortTransactions, topLevel, totalsByCategory } from '../domain/calc';
 import { deleteTransactions, restoreTransactions, setCategoryOrder, setPartnerMonth } from '../db/repo';
 import { mergeOrder, useDragSort } from './dragSort';
 import { SwipeRow } from './Bookings';
 import { CategoriesPage } from './More';
-import { currentMonthKey, daysLeftInMonth, monthLabel, monthRange } from '../domain/dates';
+import { currentMonthKey, daysInMonth, daysLeftInMonth, monthLabel, monthRange } from '../domain/dates';
+import { SpendCalendar } from './Calendar';
 import type { Category, Transaction } from '../domain/types';
-import { isHouseholdCat } from '../domain/types';
+import { catArea, isHouseholdCat } from '../domain/types';
 import { centsToGroupedInput, formatEUR, parseCents } from '../domain/money';
 import type { TxPreset } from './TxSheet';
 import { duplicatePreset } from './TxSheet';
@@ -52,6 +53,9 @@ export function Alltag({ onAdd, onOpenTx }: { onAdd: (p: TxPreset) => void; onOp
   const own = useMemo(() => monthAvailable(filterTransactions(data.transactions, cats, { from, to }), data.settings, month, salaryStartMonth(data.recurring, cats)), [data.transactions, cats, from, to, data.settings, month, data.recurring]);
   const target = isJoint && jm ? jm.budgetCents + jm.carryCents : own.availableCents + spent;
   const st = budgetStatus(spent, target);
+  // Kalender: nur Alltagsausgaben ohne automatische Buchungen (Beitrag zum gemeinsamen Konto, Abos …)
+  const calTxs = useMemo(() => txs.filter((t) => !t.recurringId && (isJoint || catArea(cats.find((c) => c.id === t.categoryId) ?? { kind: 'expense', group: 'fix' }) === 'alltag')), [txs, cats, isJoint]);
+  const calFold = useCollapsed('calendar');
   const segs = tops.map((t) => ({ id: t.id, name: t.name, icon: catIcon(cats, t), cents: topTotal(t.id) }));
   const hasBase = isJoint ? target > 0 : own.incomeCents > 0;
   // Beträge zählen beim Monatswechsel mit, wie auf der Übersicht
@@ -89,6 +93,9 @@ export function Alltag({ onAdd, onOpenTx }: { onAdd: (p: TxPreset) => void; onOp
         )}
         {!hasBase && <span className="cap">{isJoint ? 'Lege unter Mehr › Gemeinsames Konto die Einzahlungen fest.' : 'Lege unter Mehr › Gehalt & Wiederkehrend dein Gehalt fest oder buche eine Einnahme, um ein Budget zu sehen.'}</span>}
       </div>
+      <SpendCalendar month={month} cats={cats} open={!calFold.isCollapsed(isJoint ? 'joint' : 'own')} onToggle={() => calFold.toggle(isJoint ? 'joint' : 'own')}
+        txs={calTxs} dailyBudget={hasBase && target > 0 ? Math.round(target / daysInMonth(month)) : null}
+        onOpenTx={onOpenTx} onAdd={(p) => onAdd(isJoint ? { ...p, account: 'joint' } : p)} onDelete={(id) => void remove(id)} />
       {tops.length > 1 && (
         <div className="sortrow">
           <span className="cap">Kategorien</span>
@@ -140,11 +147,19 @@ function AlltagCard({ t, drag, collapsed, onFold, isJoint, open, toggle, byCat, 
     void run((db) => setCategoryOrder(db, mergeOrder(full, ids)));
   });
   const it = drag.item(t.id);
+  // Budget (Mehr › Budgets) als schmaler Balken unter dem Namen; nur eigenes Konto
+  const { month } = useStore();
+  const limit = isJoint ? null : resolveBudget(data.budgets, month, 'category', t.id);
+  const st = limit !== null ? budgetStatus(total, limit) : null;
   return (
     <div ref={it.ref} style={it.style} className={'card flush ' + it.className}>
       <div className={'ghead ghx' + (canDrag ? ' dhandle' : '')} {...(canDrag ? drag.handle(t.id) : {})}>
         <button className="gmain" onClick={() => onAdd(isJoint ? { categoryId: t.id, account: 'joint' } : { categoryId: t.id })}>
-          <span className={'tile flat ' + (isJoint ? 't-hh' : 't-all')}><Icon name={catIcon(cats, t)} size={22} /></span><b>{t.name}</b><b className="num">{formatEUR(total)}</b>
+          <span className={'tile flat ' + (isJoint ? 't-hh' : 't-all')}><Icon name={catIcon(cats, t)} size={22} /></span>
+          {limit !== null && st
+            ? <span className="gnm"><b>{t.name}</b><span className="gbar" role="img" aria-label={`Budget ${t.name}: ${formatEUR(total)} von ${formatEUR(limit)}${st.over ? ', überschritten' : ''}`}><i style={{ width: `${Math.min(100, st.ratio * 100)}%`, background: barColor(st.ratio, st.over, 'var(--all)') }} /></span></span>
+            : <b>{t.name}</b>}
+          <b className="num">{formatEUR(total)}</b>
         </button>
         <CollapseBtn name={t.name} collapsed={collapsed} onClick={onFold} />
       </div>

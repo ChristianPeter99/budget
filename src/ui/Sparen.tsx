@@ -7,6 +7,16 @@ import { formatDateDE, monthLabel, todayISO } from '../domain/dates';
 import { formatEUR, formatEUR0, parseCents } from '../domain/money';
 import type { Recurring } from '../domain/types';
 import type { TxPreset } from './TxSheet';
+import { GoalsCard } from './Goals';
+
+/** Sparkonto heute geschätzt: letzter erfasster Kontostand plus seitdem gebuchte Sparraten (bis heute). */
+export function savingsEstimate(data: ReturnType<typeof useStore>['data'], today = todayISO()): { cents: number; known: boolean } {
+  const s = data.settings;
+  const isSpar = (catId: string) => data.categories.find((c) => c.id === catId)?.group === 'spar';
+  if (!s.savingsBalanceDate) return { cents: 0, known: false };
+  const since = data.transactions.filter((t) => t.type === 'expense' && isSpar(t.categoryId) && t.date > (s.savingsBalanceDate as string) && t.date <= today).reduce((a, t) => a + t.amountCents, 0);
+  return { cents: s.savingsBalanceCents + since, known: true };
+}
 
 export function Sparen({ back, onEditRec }: { back: ReactNode; onAdd?: (p: TxPreset) => void; onEditRec: (r: Recurring) => void }) {
   const { data, run } = useStore();
@@ -49,6 +59,7 @@ export function Sparen({ back, onEditRec }: { back: ReactNode; onAdd?: (p: TxPre
     <>
       {back}
       <Header title="Sparen & Depot" />
+      <GoalsCard />
       <div className="card flush">
         <div className="sec"><h2>Sparen</h2>{sparRecs[0] && <button onClick={() => onEditRec(sparRecs[0] as Recurring)}>Sparrate ändern</button>}</div>
         <div className="kv"><span>Monatliche Sparrate</span><b>{formatEUR(rate)}</b></div>

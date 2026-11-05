@@ -1,7 +1,7 @@
 import { CAT_ICON_KEYS } from '../domain/catIcons';
 import type { AnyTx, Db } from './db';
 import { DB_VERSION } from './db';
-import type { BackupData, Budget, Category, CatGroup, DepotEntry, JointSettings, Recurring, SavingsEntry, Settings, Transaction, TxType } from '../domain/types';
+import type { BackupData, Budget, Category, CatGroup, DepotEntry, JointSettings, Recurring, SavingsEntry, SavingsGoal, Settings, Transaction, TxType } from '../domain/types';
 import { AppError, DEFAULT_SETTINGS, isHouseholdCat, newId } from '../domain/types';
 import { isValidISODate, isValidMonthKey, shiftMonth } from '../domain/dates';
 import { validateAmountCents, validateBackupData, validateName } from '../domain/validate';
@@ -91,6 +91,48 @@ export async function addSavingsEntry(db: Db, date: string, cents: number): Prom
 
 export async function deleteSavingsEntry(db: Db, date: string): Promise<void> {
   await writeSavings(db, (h) => h.filter((e) => e.date !== date));
+}
+
+/* ───────── Sparziele ───────── */
+
+export interface GoalInput { name: string; targetCents: number; savedCents: number; dueMonth: string }
+
+/** Sparziel anlegen (id = null) oder ändern. */
+export async function saveGoal(db: Db, id: string | null, input: GoalInput): Promise<SavingsGoal> {
+  const name = validateName(input.name, 'Namen');
+  if (name.length > 40) throw new AppError('Der Name darf höchstens 40 Zeichen lang sein.');
+  if (!Number.isInteger(input.targetCents) || input.targetCents < 1 || input.targetCents > MAX_CENTS) throw new AppError('Bitte gib einen gültigen Zielbetrag ein.');
+  if (!Number.isInteger(input.savedCents) || input.savedCents < 0 || input.savedCents > MAX_CENTS) throw new AppError('Bitte gib einen gültigen angesparten Betrag ein.');
+  if (!isValidMonthKey(input.dueMonth)) throw new AppError('Bitte wähle einen Zielmonat.');
+  const tx = db.transaction('settings', 'readwrite');
+  const cur = (await tx.store.get('app'))?.value ?? { ...DEFAULT_SETTINGS };
+  const goals = [...(cur.savingsGoals ?? [])];
+  const i = id ? goals.findIndex((g) => g.id === id) : -1;
+  if (id && i < 0) { abortTx(tx); throw new AppError('Das Sparziel wurde nicht gefunden.'); }
+  if (!id && goals.length >= 50) { abortTx(tx); throw new AppError('Es sind höchstens 50 Sparziele möglich.'); }
+  const g: SavingsGoal = { id: id ?? newId(), name, targetCents: input.targetCents, savedCents: input.savedCents, dueMonth: input.dueMonth, createdAt: i >= 0 ? (goals[i] as SavingsGoal).createdAt : new Date().toISOString() };
+  if (i >= 0) goals[i] = g; else goals.push(g);
+  await tx.store.put({ key: 'app', value: { ...cur, savingsGoals: goals } });
+  await tx.done;
+  return g;
+}
+
+/** Sparziel löschen; gibt das gelöschte Ziel zurück (für „Rückgängig“). */
+export async function deleteGoal(db: Db, id: string): Promise<SavingsGoal | undefined> {
+  const tx = db.transaction('settings', 'readwrite');
+  const cur = (await tx.store.get('app'))?.value ?? { ...DEFAULT_SETTINGS };
+  const g = (cur.savingsGoals ?? []).find((x) => x.id === id);
+  await tx.store.put({ key: 'app', value: { ...cur, savingsGoals: (cur.savingsGoals ?? []).filter((x) => x.id !== id) } });
+  await tx.done;
+  return g;
+}
+
+/** Gelöschtes Sparziel wiederherstellen. */
+export async function restoreGoal(db: Db, g: SavingsGoal): Promise<void> {
+  const tx = db.transaction('settings', 'readwrite');
+  const cur = (await tx.store.get('app'))?.value ?? { ...DEFAULT_SETTINGS };
+  if (!(cur.savingsGoals ?? []).some((x) => x.id === g.id)) await tx.store.put({ key: 'app', value: { ...cur, savingsGoals: [...(cur.savingsGoals ?? []), g] } });
+  await tx.done;
 }
 
 /* ───────── Buchungen ───────── */
@@ -396,6 +438,8 @@ export interface RecurringInput {
   amountCents: number;
   /** Nur jährlich: Monat 1–12, in dem die Zahlung anfällt (optional) */
   dueMonth?: number | null;
+  /** Kündigungsfrist (optional, freier Text); leer = keine */
+  notice?: string | null;
 }
 
 export { yearlyShare } from '../domain/calc';
@@ -429,6 +473,11 @@ export async function saveRecurring(db: Db, id: string | null, input: RecurringI
   }
   if (old?.endMonth && old.endMonth >= startMonth) r.endMonth = old.endMonth;
   if (old?.sort !== undefined) r.sort = old.sort;
+  const notice = input.notice === undefined ? old?.notice : (input.notice ?? '').trim();
+  if (notice) {
+    if (notice.length > 80) { abortTx(tx); throw new AppError('Die Kündigungsfrist darf höchstens 80 Zeichen lang sein.'); }
+    r.notice = notice;
+  }
   await tx.objectStore('recurring').put(r);
   await tx.done;
   return r;

@@ -150,6 +150,7 @@ function FixCard({ t, drag, collapsed, onFold, recs, onEdit, byAmount }: { t: Ca
               <span style={{ opacity: r.active ? 1 : 0.5 }}>
                 {r.name}{r.active ? '' : ' (pausiert)'}
                 {yearly ? <small className="mini" style={{ display: 'block' }}>jährlich {formatEUR(r.yearlyCents as number)}{r.dueMonth ? ` · fällig im ${monthName(r.dueMonth)}` : ''}</small> : null}
+                {r.notice ? <small className="mini" style={{ display: 'block' }}>Kündigungsfrist: {r.notice}</small> : null}
               </span>
               <span className="num">{yearly ? '≈ ' : ''}{formatEUR(r.amountCents)}</span>
             </button>

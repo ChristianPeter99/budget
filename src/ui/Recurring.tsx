@@ -115,6 +115,7 @@ export function RecurringSheet({ rec, onClose, run, presetGroup }: { rec: Recurr
   const [active, setActive] = useState(rec?.active ?? true);
   const [due, setDue] = useState(rec?.dueMonth ? String(rec.dueMonth) : '');
   const [start, setStart] = useState(rec?.startMonth ?? currentMonthKey());
+  const [notice, setNotice] = useState(rec?.notice ?? '');
   const [err, setErr] = useState('');
   const [confirm, setConfirm] = useState(false);
   const opts = data.categories.filter((c) => c.kind === type && !isHouseholdCat(c) && (!c.archived || c.id === cat) && (!presetGroup || c.group === presetGroup)
@@ -135,7 +136,7 @@ export function RecurringSheet({ rec, onClose, run, presetGroup }: { rec: Recurr
     const r = await run(async (db) => {
       const saved = await saveRecurring(db, rec?.id ?? null, {
         name: name.trim(), type, amountCents: cents, interval: yearly ? 'yearly' : 'monthly', categoryId: cat, startMonth: start, day: d, active,
-        dueMonth: yearly && due ? Number(due) : null
+        dueMonth: yearly && due ? Number(due) : null, notice: type === 'expense' ? notice : null
       }, now);
       await runRecurring(db, now);
       return saved;
@@ -165,6 +166,7 @@ export function RecurringSheet({ rec, onClose, run, presetGroup }: { rec: Recurr
         <label className="field"><span>Kategorie</span><select value={cat} onChange={(e) => setCat(e.target.value)}><option value="">Wählen …</option>{opts.map((c) => <option key={c.id} value={c.id}>{categoryName(data.categories, c.id)}</option>)}</select></label>
         <label className="field"><span>Gilt ab</span><input type="month" value={start} max={shiftMonth(currentMonthKey(), 24)} aria-label="Gilt ab (Monat)" onChange={(e) => setStart(e.target.value)} /></label>
         <label className="field"><span>{yearly ? 'Buchung am' : 'Tag im Monat'}</span><DayInput value={day} onChange={setDay} label={yearly ? 'Buchung am (Tag)' : 'Tag im Monat'} /></label>
+        {type === 'expense' && <label className="field"><span>Kündigungsfrist</span><input value={notice} maxLength={80} placeholder="optional, z. B. 3 Monate" aria-label="Kündigungsfrist (optional)" onChange={(e) => setNotice(e.target.value)} /></label>}
         <label className="field"><span>Aktiv</span><input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} /></label>
       </div>
       {err && <div className="err-text" role="alert">{err}</div>}
