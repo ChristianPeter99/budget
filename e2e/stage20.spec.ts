@@ -103,3 +103,8 @@ test('Übersicht: Symbole im Ring und in den Kacheln', async ({ page }) => {
   await expect(page.locator('.ovhero svg[role="img"] svg').first()).toBeAttached();
   await expect(page.locator('.gtile.g-spar .gname svg')).toHaveCount(1);
 });
+
+test('Beim Öffnen erscheint „Hallo Benutzer“', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('.toast')).toContainText('Hallo Benutzer');
+});
