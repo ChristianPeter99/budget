@@ -20,7 +20,7 @@ type Tab = 'home' | 'alltag' | 'bookings' | 'fix' | 'more';
 const TABS: Tab[] = ['home', 'alltag', 'bookings', 'fix', 'more'];
 
 export function App() {
-  const { status, fatal, notice, dismissNotice, month, setMonth, run, setAcct, acct, flash } = useStore();
+  const { status, fatal, notice, dismissNotice, month, setMonth, run, setAcct, acct } = useStore();
   const pwa = usePwa();
   const [tab, setTab] = useState<Tab>('home');
   const [origin, setOrigin] = useState<Tab>('home');
@@ -51,13 +51,6 @@ export function App() {
     clearHead();
     pos.current.dx = 0;
   }, [tab]);
-  // Begrüßung beim Öffnen der App (einmal pro Start, sobald die Daten geladen sind)
-  const greeted = useRef(false);
-  useEffect(() => {
-    if (status !== 'ready' || greeted.current) return;
-    greeted.current = true;
-    flash('Hallo Benutzer');
-  }, [status, flash]);
   // iOS: während des seitlichen Ziehens nicht zusätzlich senkrecht scrollen (verhindert Zittern)
   useEffect(() => {
     const m = mainRef.current;

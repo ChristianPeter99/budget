@@ -27,7 +27,8 @@ const P = {
   Versicherungen: '<path d="M12 3l8 3v6c0 4.5-3.2 7.8-8 9-4.8-1.2-8-4.5-8-9V6z"/>',
   // Sparen: Sparschwein (wie auf der Übersicht)
   Sparen: '<path d="M4.5 12a6.5 5.5 0 0 1 11.5-3.5l3-1.5v4l1.5 1v3l-2 .6a6.5 6.5 0 0 1-2 2.4V20h-3v-1.5h-3V20h-3v-2.6A5.6 5.6 0 0 1 4.5 12z"/><path d="M15 11.5h.01" stroke-width="2.6"/>',
-  Gehalt: '<path d="M12 5v14M6 13l6 6 6-6"/>',
+  // Gehalt: Geldschein
+  Gehalt: '<rect x="2.5" y="6" width="19" height="12" rx="2.5"/><circle cx="12" cy="12" r="2.6"/><path d="M6.2 9.6h.01M17.8 14.4h.01" stroke-width="2.2"/>',
   card: '<rect x="3" y="6" width="18" height="13" rx="2.5"/><path d="M3 10.5h18"/>',
   cal: '<rect x="4" y="5" width="16" height="15" rx="2.5"/><path d="M4 10h16M9 3v4M15 3v4"/>',
   Depot: '<path d="M5 20V11M12 20V4M19 20v-6"/>',

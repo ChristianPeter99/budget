@@ -764,3 +764,5 @@ html{background:#000}
 .moregroup>.cap{padding-left:4px}
 .catlab{display:flex;align-items:center;gap:8px;min-width:0}
 .catlab>span{display:flex;flex:none}
+/* Einnahmen (z. B. Gehalt) in Grün, damit sie zwischen den Ausgaben auffallen */
+.tile.flat.t-in{color:var(--pos)}
