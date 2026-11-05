@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useCountUp, MonthNav, catIcon, CatDetailSheet, DetailRow, PIE_SHADES, Back, Bar, CatBar, Money, Collapse, CollapseBtn, EmptyState, Header, SortSheet, useCollapsed, useSortMode } from './common';
+import { useCountUp, MonthNav, catIcon, CatDetailSheet, DetailRow, PIE_SHADES, Back, Bar, CatBar, Money, Collapse, CollapseBtn, EmptyState, Header, SortSheet, FoldAllBtn, useCollapsed, useSortMode } from './common';
 import { CategoriesPage } from './More';
 import { Icon } from './icons';
 import { useStore } from '../state/store';
@@ -108,9 +108,10 @@ export function Fixkosten({ onEdit, onNew }: { onEdit: (r: Recurring) => void; o
       {shownTops.length > 1 && (
         <div className="sortrow">
           <span className="cap">Kategorien</span>
+          <span className="sortbtns"><FoldAllBtn ids={shownTops.map((t) => t.id)} fold={fold} />
           <button className={'sortpill fix' + (byAmount ? ' on' : '')} aria-label={`Sortieren: ${byAmount ? 'nach Betrag' : 'eigene Reihenfolge'}`} onClick={() => setSortOpen(true)}>
             <Icon name="sort" size={16} w={2.2} />{byAmount ? 'Nach Betrag' : 'Eigene Reihenfolge'}
-          </button>
+          </button></span>
         </div>
       )}
       {sortOpen && <SortSheet mode={sortMode} onPick={setSortMode} onClose={() => setSortOpen(false)} />}

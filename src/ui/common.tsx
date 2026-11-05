@@ -416,7 +416,25 @@ export function useCollapsed(view: string) {
     try { const all = readCollapsed(); all[view] = [...n]; localStorage.setItem(COLLAPSE_KEY, JSON.stringify(all)); } catch { /* nur Komfort */ }
     return n;
   });
-  return { isCollapsed: (id: string) => set.has(id), toggle };
+  /** Mehrere auf einmal ein- oder ausklappen („Alle zuklappen“ / „Alle aufklappen“) */
+  const setAll = (ids: string[], collapsed: boolean) => setSet((old) => {
+    const n = new Set(old);
+    for (const id of ids) { if (collapsed) n.add(id); else n.delete(id); }
+    try { const all = readCollapsed(); all[view] = [...n]; localStorage.setItem(COLLAPSE_KEY, JSON.stringify(all)); } catch { /* nur Komfort */ }
+    return n;
+  });
+  return { isCollapsed: (id: string) => set.has(id), toggle, setAll };
+}
+
+/** Knopf neben „Sortieren“: alle Kategorien zu- bzw. aufklappen. Sind alle zu, klappt er alle auf. */
+export function FoldAllBtn({ ids, fold, onFold }: { ids: string[]; fold: ReturnType<typeof useCollapsed>; onFold?: (collapsed: boolean) => void }) {
+  const allShut = ids.length > 0 && ids.every((id) => fold.isCollapsed(id));
+  return (
+    <button className="sortpill foldall" aria-label={allShut ? 'Alle aufklappen' : 'Alle zuklappen'}
+      onClick={() => { fold.setAll(ids, !allShut); onFold?.(!allShut); }}>
+      <Icon name={allShut ? 'unfold' : 'fold'} size={17} w={2.2} />
+    </button>
+  );
 }
 
 /** Reihenfolge der Kategorien: eigene (per Ziehen) oder nach Betrag absteigend. Pro Ansicht gemerkt (nur auf diesem Gerät). */

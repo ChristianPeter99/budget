@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useCountUp, catIcon, CatDetailSheet, DetailRow, PIE_SHADES, AccountSwitch, AmountInput, Back, CatBar, Chevr, Chevron, Collapse, CollapseBtn, Empty, Header, MonthNav, Money, Sheet, SortSheet, useCollapsed, useSortMode } from './common';
+import { useCountUp, catIcon, CatDetailSheet, DetailRow, PIE_SHADES, AccountSwitch, AmountInput, Back, CatBar, Chevr, Chevron, Collapse, CollapseBtn, Empty, Header, MonthNav, Money, Sheet, SortSheet, FoldAllBtn, useCollapsed, useSortMode } from './common';
 import { Icon } from './icons';
 import { useStore } from '../state/store';
 import { budgetStatus, childrenOf, filterTransactions, jointMonth, monthAvailable, salaryStartMonth, sortTransactions, topLevel, totalsByCategory } from '../domain/calc';
@@ -92,9 +92,10 @@ export function Alltag({ onAdd, onOpenTx }: { onAdd: (p: TxPreset) => void; onOp
       {tops.length > 1 && (
         <div className="sortrow">
           <span className="cap">Kategorien</span>
+          <span className="sortbtns"><FoldAllBtn ids={shown.map((t) => t.id)} fold={fold} onFold={(c) => { if (c) setOpen(new Set()); }} />
           <button className={'sortpill' + (byAmount ? ' on' : '')} aria-label={`Sortieren: ${byAmount ? 'nach Betrag' : 'eigene Reihenfolge'}`} onClick={() => setSortOpen(true)}>
             <Icon name="sort" size={16} w={2.2} />{byAmount ? 'Nach Betrag' : 'Eigene Reihenfolge'}
-          </button>
+          </button></span>
         </div>
       )}
       {tops.length === 0 && <div className="card"><Empty>Keine Alltags-Kategorien vorhanden.</Empty></div>}

@@ -716,3 +716,6 @@ html{background:#000}
 .sortpill:active{transform:scale(.96)}
 .sortpill.on{color:var(--all);border-color:rgba(10,132,255,.45)}
 .sortpill.fix.on{color:var(--fix);border-color:rgba(240,144,46,.5)}
+.sortbtns{display:flex;gap:var(--s2);min-width:0}
+.sortpill.foldall{width:32px;padding:0;justify-content:center;flex:none}
+.sortrow .sortpill{white-space:nowrap}
