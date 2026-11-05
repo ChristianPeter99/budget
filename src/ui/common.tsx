@@ -324,8 +324,8 @@ export function CollapseBtn({ name, collapsed, onClick }: { name: string; collap
 
 /** Farbabstufungen für das Kreisdiagramm (gleicher Farbton, gut unterscheidbar); [Füllung, Symbolfarbe]. */
 export const PIE_SHADES: Record<'alltag' | 'fix' | 'hh', [string, string][]> = {
-  alltag: [['#3E66C9', '#FFFFFF'], ['#6EA2FF', '#0E0F12'], ['#2A4790', '#FFFFFF'], ['#A9CBFF', '#0E0F12'], ['#5478DA', '#FFFFFF'], ['#D2E1FF', '#0E0F12'], ['#1F3570', '#FFFFFF'], ['#8FB0FF', '#0E0F12']],
-  fix: [['#E8832A', '#FFFFFF'], ['#F7B26A', '#0E0F12'], ['#B5581A', '#FFFFFF'], ['#FAD3A6', '#0E0F12'], ['#D06A1F', '#FFFFFF'], ['#FFC48A', '#0E0F12'], ['#8F4A17', '#FFFFFF'], ['#F09A50', '#0E0F12']],
+  alltag: [['#0A84FF', '#FFFFFF'], ['#5EB0FF', '#0E0F12'], ['#0062CC', '#FFFFFF'], ['#A8D4FF', '#0E0F12'], ['#3399FF', '#FFFFFF'], ['#D3E9FF', '#0E0F12'], ['#004A99', '#FFFFFF'], ['#7FC1FF', '#0E0F12']],
+  fix: [['#F0902E', '#FFFFFF'], ['#F7B26A', '#0E0F12'], ['#B5581A', '#FFFFFF'], ['#FAD3A6', '#0E0F12'], ['#D06A1F', '#FFFFFF'], ['#FFC48A', '#0E0F12'], ['#8F4A17', '#FFFFFF'], ['#F5A04E', '#0E0F12']],
   hh: [['#2A86B5', '#FFFFFF'], ['#5EC8F2', '#0E0F12'], ['#1D6489', '#FFFFFF'], ['#A6E1F8', '#0E0F12'], ['#3FA3D2', '#FFFFFF'], ['#CFEFFC', '#0E0F12'], ['#164C68', '#FFFFFF'], ['#82D4F5', '#0E0F12']]
 };
 

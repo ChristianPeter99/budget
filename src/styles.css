@@ -9,7 +9,7 @@
   --bg:#0E0F12;--card:#1A1B20;--card2:#25262D;--raise:#1A1B20;--line:#26272E;--track:#2C2E36;--ring-track:#24262D;--hh:#5EC8F2;
   --text:#F4F4F6;--text2:#B4B8C0;--mut:#A3A7B0;--faint:#8A8E98;
   --neg:#FF7A7A;--warn:#E8B04B;--pos:#3ED598;
-  --fix:#F0902E;--all:#6EA2FF;--spar:#3ED598;--bar:#A3ABB8;--inc:#D5D8DF;
+  --fix:#F0902E;--all:#0A84FF;--spar:#3ED598;--bar:#A3ABB8;--inc:#D5D8DF;
   /* Schriftstufen (bei Standard-Textgröße 17 px: 40 · 28 · 17 · 15 · 13 · 11) */
   --t-hero:2.353rem;--t-title:1.647rem;--t-section:1rem;--t-body:.882rem;--t-note:.765rem;--t-micro:.647rem;
   --s1:4px;--s2:8px;--s3:12px;--s4:16px;--s5:24px;--s6:32px;
@@ -99,7 +99,7 @@ h1,h2,p{margin:0}
 .item .mid small{font-size:var(--t-note);color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .item .amt,.amt{font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
 .tile{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex:none}
-.t-all{background:rgba(110,162,255,.16);color:var(--all)}
+.t-all{background:rgba(10,132,255,.16);color:var(--all)}
 .t-fix{background:rgba(240,144,46,.16);color:var(--fix)}
 .t-spar{background:rgba(62,213,152,.16);color:var(--spar)}
 .t-in{background:rgba(213,216,223,.12);color:var(--inc)}
@@ -396,7 +396,7 @@ body.dragging .view{overflow-y:hidden}
 .ghead:has(.tile.flat){min-height:50px;padding:var(--s2) var(--s4) var(--s2) var(--s3)}
 .tile.flat{height:28px}
 /* v1.16: Kategorie-Balken mit Symbolen, einklappbare Kategorien */
-:root{--all-bar:#3E66C9;--fix-bar:#E8832A;--hh-bar:#2A86B5}
+:root{--all-bar:var(--all);--fix-bar:var(--fix);--hh-bar:#2A86B5}
 .t-hh{color:var(--hh)}
 .catbar{display:flex;height:30px;border-radius:10px;overflow:hidden;background:var(--track);gap:2px}
 .catbar>span{display:flex;align-items:center;justify-content:center;min-width:0;color:#fff;transition:width .25s ease}
@@ -514,7 +514,7 @@ body.dragging .view{overflow-y:hidden}
 .fseg{display:flex;flex-wrap:wrap;gap:var(--s2)}
 .fseg button,.fchip{height:36px;padding:0 14px;border-radius:18px;border:1px solid var(--line);background:transparent;color:var(--text2);
   font-size:15px;font-weight:600;display:inline-flex;align-items:center;gap:6px;flex:none;white-space:nowrap;transition:background .15s ease,color .15s ease,border-color .15s ease}
-.fseg button.on,.fchip.on{background:rgba(110,162,255,.16);border-color:rgba(110,162,255,.55);color:#CFE0FF}
+.fseg button.on,.fchip.on{background:rgba(10,132,255,.16);border-color:rgba(10,132,255,.55);color:#CFE0FF}
 .fsearch{height:40px}
 .fchips{padding-bottom:2px}
 /* v1.21: Knöpfe kreisrund an den Enden (Kapsel), Hauptknopf in Fenstern kompakter */
@@ -559,7 +559,7 @@ html{background:#000}
 /* Umschalter überall als einzelne Kapseln (wie im Filter) */
 .seg{background:none;padding:0;gap:var(--s2);flex-wrap:wrap;border-radius:0}
 .seg button{flex:none;height:36px;padding:0 14px;border-radius:18px;border:1px solid var(--line);background:transparent;color:var(--text2);font-size:15px}
-.seg button.on{background:rgba(110,162,255,.16);border-color:rgba(110,162,255,.55);color:#CFE0FF}
+.seg button.on{background:rgba(10,132,255,.16);border-color:rgba(10,132,255,.55);color:#CFE0FF}
 /* Auswahl-Chips, Zahlenfeld */
 .chip{background:transparent}
 .chip.recent{background:var(--card);border-color:var(--line)}
@@ -584,7 +584,7 @@ html{background:#000}
 .gtile{border-radius:20px;padding:12px}
 .gtile+.gtile{border-left:0}
 .gtile.g-fix{background:rgba(240,144,46,.11)}
-.gtile.g-alltag{background:rgba(110,162,255,.11)}
+.gtile.g-alltag{background:rgba(10,132,255,.11)}
 .gtile.g-spar{background:rgba(62,213,152,.10)}
 .gtile:active{filter:brightness(1.25)}
 /* Leiste unten: durchsichtiger, Inhalt dahinter stärker verschwommen */

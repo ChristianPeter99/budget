@@ -2,6 +2,9 @@
 
 Haushaltsbuch als Progressive Web App. Alle Daten bleiben auf dem Gerät (IndexedDB). Keine Server, kein Tracking, keine externen Schriften oder Skripte.
 
+## Neu in Version 1.27.1
+- Farbschema: Alltag einheitlich iOS-Blau (#0A84FF), Fixkosten einheitlich Orange (#F0902E) – Text, Ring, Kacheln, Symbole und Balken in derselben Farbe; nur die Detailkreise nutzen Abstufungen davon
+
 ## Neu in Version 1.27
 - Bereichsname über dem Monat größer (18 px, fett) – zwischen Monat und „noch N Tage“; Alltag blau, Fixkosten orange
 - Untere Leiste nur mit Symbolen und schmaler (54 px); die Namen bleiben für VoiceOver erhalten
