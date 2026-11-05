@@ -757,3 +757,5 @@ html{background:#000}
 .callegend .overdot{width:6px;height:6px;border-radius:3px;background:var(--fix)}
 .gtile .gname{display:flex;align-items:center;gap:5px}
 .calcell{aspect-ratio:auto;height:42px;min-height:0}
+/* Hinweise ohne Knopf (z. B. Begrüßung, „Gespeichert“) fangen keine Tipps ab – darunter bleibt alles bedienbar */
+.toast:not(:has(button)){pointer-events:none}
