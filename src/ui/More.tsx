@@ -37,7 +37,7 @@ export function More({ initial = 'menu', onExit, onOpenTx, onAdd, onEditRec }: M
   const back = <Back label={direct ? 'Zurück' : 'Mehr'} onClick={() => (direct ? onExit() : setPage('menu'))} />;
   if (page === 'joint') return <JointPage back={back} />;
   if (page === 'spar') return <Sparen back={back} onAdd={onAdd} onEditRec={onEditRec} />;
-  if (page === 'bookings') return <Bookings back={back} onOpenTx={onOpenTx} />;
+  if (page === 'bookings') return <Bookings back={back} onOpenTx={onOpenTx} onDuplicate={onAdd} />;
   if (page === 'stats') return <Stats back={back} />;
   if (page === 'recurring') return <RecurringPage back={back} />;
   if (page === 'categories') return <CategoriesPage back={back} />;

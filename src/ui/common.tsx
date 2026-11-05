@@ -160,7 +160,33 @@ export function EmptyState({ title, text, action }: { title: string; text?: stri
 }
 
 export function Back({ onClick, label = 'Mehr' }: { onClick: () => void; label?: string }) {
-  return <button className="back" onClick={onClick}><Icon name="left" size={16} w={2.2} />{label}</button>;
+  // data-pop: „eine Ebene zurück“ – auch für Tippen auf den aktiven Reiter und Wischen vom linken Rand
+  return <button className="back" data-pop="" onClick={onClick}><Icon name="left" size={16} w={2.2} />{label}</button>;
+}
+
+/** Dauer des weichen Auf- und Zuklappens */
+export const COLLAPSE_MS = 260;
+/**
+ * Weiches Auf- und Zuklappen: Die Höhe wächst bzw. schrumpft (Grid 0fr → 1fr). Beim Zuklappen bleibt der Inhalt
+ * bis zum Ende der Bewegung stehen und wird erst danach entfernt.
+ */
+export function Collapse({ open, children }: { open: boolean; children: ReactNode }) {
+  const [mounted, setMounted] = useState(open);
+  const [state, setState] = useState<'shut' | 'open' | 'done'>(open ? 'done' : 'shut');
+  useEffect(() => {
+    if (open) {
+      setMounted(true);
+      let f2 = 0;
+      const f1 = requestAnimationFrame(() => { f2 = requestAnimationFrame(() => setState('open')); });
+      const t = window.setTimeout(() => setState('done'), COLLAPSE_MS + 40);
+      return () => { cancelAnimationFrame(f1); cancelAnimationFrame(f2); window.clearTimeout(t); };
+    }
+    setState('shut');
+    const t = window.setTimeout(() => setMounted(false), COLLAPSE_MS);
+    return () => window.clearTimeout(t);
+  }, [open]);
+  if (!mounted) return null;
+  return <div className={'clp ' + state} aria-hidden={open ? undefined : true}><div className="clpin">{children}</div></div>;
 }
 
 /** Dauer der Monatswechsel-Animationen (Betrag und Kreisdiagramm laufen synchron), Ausklang ease-out */
@@ -595,7 +621,7 @@ export function DetailRow({ name, cents, approx, children }: { name: string; cen
         <span className="dettog">{can && <Chevron open={open} />}</span>
         <span className="detname">{name}</span><span className="num">{approx ? '≈ ' : ''}{formatEUR(cents)}</span>
       </button>
-      {can && open && <div className="drill">{children}</div>}
+      {can && <Collapse open={open}><div className="drill">{children}</div></Collapse>}
     </>
   );
 }

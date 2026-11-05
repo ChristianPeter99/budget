@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Sheet } from './common';
 import { Icon } from './icons';
 import { useStore } from '../state/store';
+import { markFresh } from './fresh';
 import { addTransaction, deleteTransactions, restoreTransactions, updateTransaction } from '../db/repo';
 import { centsToInput, formatAmountTyping, formatEUR, parseCents } from '../domain/money';
 import { isValidISODate, monthRange, todayISO } from '../domain/dates';
@@ -18,6 +19,11 @@ function pressKey(cur: string, k: string): string {
   if (dec !== undefined) return dec.length >= 2 ? cur : cur + k;
   if (int === '0') return k === '0' ? cur : k;
   return int.length >= 9 ? cur : cur + k;
+}
+
+/** Vorlage für „Duplizieren“: gleiche Kategorie, Art, Betrag und Beschreibung, aber heutiges Datum. */
+export function duplicatePreset(tx: Transaction): TxPreset {
+  return { categoryId: tx.categoryId, type: tx.type, amountCents: tx.amountCents, description: tx.description, ...(tx.account === 'joint' ? { account: 'joint' as const } : {}) };
 }
 
 export function TxSheet({ tx, preset, onClose, onDuplicate }: { tx?: Transaction; preset?: TxPreset; onClose: () => void; onDuplicate?: (p: TxPreset) => void }) {
@@ -122,7 +128,7 @@ export function TxSheet({ tx, preset, onClose, onDuplicate }: { tx?: Transaction
     }
     const r = await run((db) => addTransaction(db, input), 'Buchung gespeichert');
     setBusy(false);
-    if (r) onClose();
+    if (r) { markFresh(r.id); onClose(); }
   }
   async function del() {
     if (!tx) return;
@@ -210,7 +216,7 @@ export function TxSheet({ tx, preset, onClose, onDuplicate }: { tx?: Transaction
       )}
       {tx && (
         <div className="stack" style={{ gap: 0 }}>
-          {onDuplicate && <button className="btn sec2" onClick={() => onDuplicate({ categoryId: tx.categoryId, type: tx.type, amountCents: tx.amountCents, description: tx.description, ...(tx.account === 'joint' ? { account: 'joint' as const } : {}) })}>Duplizieren (als neue Buchung mit heutigem Datum)</button>}
+          {onDuplicate && <button className="btn sec2" onClick={() => onDuplicate(duplicatePreset(tx))}>Duplizieren (als neue Buchung mit heutigem Datum)</button>}
           <button className="btn danger" onClick={del} disabled={busy}>Buchung löschen</button>
         </div>
       )}

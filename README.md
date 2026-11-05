@@ -2,6 +2,14 @@
 
 Haushaltsbuch als Progressive Web App. Alle Daten bleiben auf dem Gerät (IndexedDB). Keine Server, kein Tracking, keine externen Schriften oder Skripte.
 
+## Neu in Version 1.29
+- Aktiven Reiter nochmals antippen: eine Ebene zurück (z. B. aus einer Mehr-Unterseite), sonst weich nach oben scrollen
+- Kategorien, Unterkategorien und Detailzeilen klappen weich auf und zu
+- Druck-Feedback: Kacheln und Knöpfe geben beim Antippen leicht nach, Zeilen hellen kurz auf (iOS zeigt das dank touchstart-Empfänger)
+- Buchung gedrückt halten (Buchungen und Alltag): Menü mit Bearbeiten, Duplizieren, Löschen über verschwommenem Hintergrund; Löschen mit Rückgängig
+- Unterseiten (Mehr, Kategorien bearbeiten): vom linken Rand nach rechts wischen geht zurück, die vorige Ebene liegt darunter
+- Neu gespeicherte Buchung gleitet in die Liste und leuchtet kurz
+
 ## Neu in Version 1.28.1
 - Fix: klebende Tageszeile in Safari stand mitten im Bild statt oben (Abstand oben ist jetzt ein eigenes Element statt Innenabstand)
 - Alltag und Fixkosten: Kopf einer aufgeklappten Kategorie bleibt beim Scrollen durch ihre Unterkategorien oben stehen

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useCountUp, MonthNav, catIcon, CatDetailSheet, DetailRow, PIE_SHADES, Back, Bar, CatBar, Money, CollapseBtn, EmptyState, Header, useCollapsed } from './common';
+import { useCountUp, MonthNav, catIcon, CatDetailSheet, DetailRow, PIE_SHADES, Back, Bar, CatBar, Money, Collapse, CollapseBtn, EmptyState, Header, useCollapsed } from './common';
 import { CategoriesPage } from './More';
 import { Icon } from './icons';
 import { useStore } from '../state/store';
@@ -124,7 +124,8 @@ function FixCard({ t, drag, collapsed, onFold, recs, onEdit }: { t: Category; dr
         <div className="gmain"><span className="tile flat t-fix"><Icon name={catIcon(cats, t)} size={22} /></span><b>{t.name}</b><b className="num">{formatEUR(total)}</b></div>
         <CollapseBtn name={t.name} collapsed={collapsed} onClick={onFold} />
       </div>
-      {!collapsed && rs.map((r) => {
+      <Collapse open={!collapsed}>
+      {rs.map((r) => {
         const yearly = r.interval === 'yearly' && r.yearlyCents;
         const ri = rowDrag.item(r.id);
         return (
@@ -139,6 +140,7 @@ function FixCard({ t, drag, collapsed, onFold, recs, onEdit }: { t: Category; dr
           </div>
         );
       })}
+      </Collapse>
     </div>
   );
 }

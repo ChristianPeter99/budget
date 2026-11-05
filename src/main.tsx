@@ -23,6 +23,8 @@ window.addEventListener('resize', fitStandalone);
 window.addEventListener('orientationchange', fitStandalone);
 window.visualViewport?.addEventListener('resize', fitStandalone);
 document.addEventListener('visibilitychange', fitStandalone);
+// iOS Safari zeigt :active (Druck-Feedback) nur, wenn es irgendwo einen touchstart-Empfänger gibt
+document.addEventListener('touchstart', () => undefined, { passive: true });
 createRoot(document.getElementById('root') as HTMLElement).render(
   <StrictMode><ErrorBoundary><StoreProvider><App /></StoreProvider></ErrorBoundary></StrictMode>
 );

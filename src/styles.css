@@ -657,3 +657,57 @@ html{background:#000}
 .dayh{top:calc(env(safe-area-inset-top) + var(--edge, 0px));box-shadow:0 calc(-1 * var(--edge, 0px) - 1px) 0 var(--bg)}
 .card.flush{overflow:hidden;overflow:clip}
 .card.flush>.ghead.ghx{position:sticky;top:calc(env(safe-area-inset-top) + var(--edge, 0px));z-index:3;background:var(--card);box-shadow:0 calc(-1 * var(--edge, 0px) - 1px) 0 var(--bg)}
+
+/* ───── 1.29: Auf-/Zuklappen, Druck-Feedback, Menü nach Gedrückthalten, Randwisch, neue Buchung ───── */
+.clp{display:grid;grid-template-rows:0fr;transition:grid-template-rows .26s cubic-bezier(.3,.7,.2,1),opacity .2s ease;opacity:0}
+.clp.open,.clp.done{grid-template-rows:1fr;opacity:1}
+.clp>.clpin{min-height:0;overflow:hidden}
+.clp.done>.clpin{overflow:visible}
+@media (prefers-reduced-motion: reduce){.clp{transition:none}}
+
+/* Druck-Feedback: Flächen geben leicht nach, Zeilen hellen kurz auf */
+.gtile,.quick button,.pillbtn,.btn,.chip,.fchip,.fseg button,.wseg button,.seg button,.iconpick,.ib,.mn button,.nv,.emptystate .pillbtn,.catbar.tap{transition:transform .14s ease,background-color .14s ease,opacity .14s ease,filter .14s ease}
+.gtile:active,.quick button:active,.pillbtn:active,.btn:active,.chip:active,.fchip:active,.fseg button:active,.wseg button:active,.seg button:active,.iconpick:active,.mn button:active,.nv:active{transform:scale(.96)}
+.btn:active{filter:brightness(.88)}
+.swipe .item:active,.swipe .item.holding,.sub:active,.link:active,.gmain:active,.detrow:active:not(:disabled),.lastrow:active,.clickrow:active,.subrow .tog:active{background-color:#1C1D22}
+.drill .swipe .item.dtx:active,.drill .swipe .item.dtx.holding{background-color:#17181C}
+.link,.sub,.gmain,.detrow,.lastrow,.clickrow{transition:background-color .12s ease}
+.swipe .item{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+.swipe .item.holding{transform:scale(.985);transition:transform .45s ease,background-color .2s ease}
+.swipe .item.lifted{visibility:hidden}
+@media (prefers-reduced-motion: reduce){.gtile:active,.quick button:active,.pillbtn:active,.btn:active,.chip:active,.fchip:active,.fseg button:active,.wseg button:active,.seg button:active,.iconpick:active,.mn button:active,.nv:active,.swipe .item.holding{transform:none}}
+
+/* Menü nach Gedrückthalten */
+.lpov{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.42);-webkit-backdrop-filter:blur(16px) saturate(1.2);backdrop-filter:blur(16px) saturate(1.2);animation:lpin .18s ease both}
+.lpov.out{animation:lpout .16s ease both}
+.lpprev{position:fixed;border-radius:14px;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.55);animation:lpup .22s cubic-bezier(.2,.9,.3,1.2) both;pointer-events:none}
+.lpprev .swipe{border-top:0}
+.lpprev .item{background:var(--card2)!important;border-top:0}
+.lpprev.drill .item.dtx{background:var(--card2)!important}
+.lpmenu{position:fixed;display:flex;flex-direction:column;background:rgba(36,37,43,.92);border-radius:14px;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.5);transform-origin:top left;animation:lpmenu .22s cubic-bezier(.2,.9,.3,1.15) both}
+.lpmenu button{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);min-height:48px;padding:0 var(--s4);background:none;border:0;border-top:1px solid rgba(255,255,255,.08);color:var(--text);font-size:var(--t-body);text-align:left}
+.lpmenu button:first-child{border-top:0}
+.lpmenu button:active{background:rgba(255,255,255,.08)}
+.lpmenu button.danger{color:#FF5A5F}
+.lpov.out .lpprev,.lpov.out .lpmenu{opacity:0;transition:opacity .14s ease}
+@keyframes lpin{from{opacity:0}to{opacity:1}}
+@keyframes lpout{from{opacity:1}to{opacity:0}}
+@keyframes lpup{from{transform:scale(.97)}to{transform:scale(1.02)}}
+@keyframes lpmenu{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:scale(1)}}
+.lpprev{transform:scale(1.02)}
+@media (prefers-reduced-motion: reduce){.lpov,.lpprev,.lpmenu{animation:none}}
+
+/* Vom linken Rand zurückwischen: Schatten an der Kante der Unterseite */
+.view.popping{box-shadow:-14px 0 30px rgba(0,0,0,.6)}
+
+/* Neu gespeicherte Buchung gleitet hinein und leuchtet kurz */
+.swipe.fresh{animation:freshin .42s cubic-bezier(.2,.9,.3,1) backwards}
+.swipe.fresh .item{animation:freshglow 1.3s ease .1s backwards}
+@keyframes freshin{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:none}}
+@keyframes freshglow{0%{background-color:rgba(10,132,255,.32)}100%{background-color:var(--card)}}
+.drill .swipe.fresh .item.dtx{animation-name:freshglowd}
+@keyframes freshglowd{0%{background-color:rgba(10,132,255,.32)}100%{background-color:#08080A}}
+@media (prefers-reduced-motion: reduce){.swipe.fresh,.swipe.fresh .item{animation:none}}
+/* Randwisch: vorige Ebene liegt unter der Unterseite */
+.stage>.view.popping{position:relative;z-index:1;background:var(--bg)}
+.pageghost.under{z-index:0}

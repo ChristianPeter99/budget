@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useCountUp, catIcon, CatDetailSheet, DetailRow, PIE_SHADES, AccountSwitch, AmountInput, Back, CatBar, Chevr, Chevron, CollapseBtn, Empty, Header, MonthNav, Money, Sheet, useCollapsed } from './common';
+import { useCountUp, catIcon, CatDetailSheet, DetailRow, PIE_SHADES, AccountSwitch, AmountInput, Back, CatBar, Chevr, Chevron, Collapse, CollapseBtn, Empty, Header, MonthNav, Money, Sheet, useCollapsed } from './common';
 import { Icon } from './icons';
 import { useStore } from '../state/store';
 import { budgetStatus, childrenOf, filterTransactions, jointMonth, monthAvailable, salaryStartMonth, sortTransactions, topLevel, totalsByCategory } from '../domain/calc';
@@ -12,6 +12,8 @@ import type { Category, Transaction } from '../domain/types';
 import { isHouseholdCat } from '../domain/types';
 import { centsToGroupedInput, formatEUR, parseCents } from '../domain/money';
 import type { TxPreset } from './TxSheet';
+import { duplicatePreset } from './TxSheet';
+import { isFresh } from './fresh';
 
 export function Alltag({ onAdd, onOpenTx }: { onAdd: (p: TxPreset) => void; onOpenTx: (t: Transaction) => void }) {
   const { data, month, setMonth, acct, run, flash } = useStore();
@@ -129,9 +131,10 @@ function AlltagCard({ t, drag, collapsed, onFold, isJoint, open, toggle, byCat, 
         </button>
         <CollapseBtn name={t.name} collapsed={collapsed} onClick={onFold} />
       </div>
+      <Collapse open={!collapsed}>
       {!collapsed && (kids.length === 0 ? [{ id: t.id, name: 'Buchungen' }] : kids).map((c) => {
         const isOpen = open.has(c.id);
-        const list = isOpen ? txOf(c.id) : [];
+        const list = txOf(c.id);
         const amount = byCat.get(c.id) ?? 0;
         const si = kids.length > 1 ? subDrag.item(c.id) : null;
         return (
@@ -140,19 +143,21 @@ function AlltagCard({ t, drag, collapsed, onFold, isJoint, open, toggle, byCat, 
               <button className="tog" aria-expanded={isOpen} aria-label={`Buchungen ${c.name} ${isOpen ? 'zuklappen' : 'aufklappen'}`} onClick={() => toggle(c.id)}><Chevron open={isOpen} /></button>
               <button className="sub" onClick={() => onAdd(isJoint ? { categoryId: c.id, account: 'joint' } : { categoryId: c.id })}><span>{c.name}</span><span className="num" style={{ color: amount === 0 ? 'var(--mut)' : undefined }}>{formatEUR(amount)}</span></button>
             </div>
-            {isOpen && (
+            <Collapse open={isOpen}>
               <div className="drill">
                 {list.length === 0 && <div className="none">Keine Buchungen in diesem Monat.</div>}
                 {list.map((x) => (
-                  <SwipeRow key={x.id} className="dtx" disabled={false} label={`${x.description || c.name} löschen`} onTap={() => onOpenTx(x)} onDelete={() => void remove(x.id)}>
+                  <SwipeRow key={x.id} className="dtx" fresh={isFresh(x.id)} onTap={() => onOpenTx(x)}
+                    menu={{ onEdit: () => onOpenTx(x), onDuplicate: () => onAdd(duplicatePreset(x)), onDelete: () => void remove(x.id) }}>
                     <span><small>{x.date.slice(8, 10)}.{x.date.slice(5, 7)}.</small>{x.description || c.name}</span><span>{formatEUR(x.amountCents)}</span>
                   </SwipeRow>
                 ))}
               </div>
-            )}
+            </Collapse>
           </div>
         );
       })}
+      </Collapse>
     </div>
   );
 }
