@@ -61,12 +61,8 @@ export function App() {
   });
 
   if (status === 'loading') return (
-    <div className="loading" aria-busy="true" aria-label="Lade">
-      <div className="skel" style={{ height: 56, background: 'transparent' }} />
-      <div className="skel" style={{ height: 248 }} />
-      <div className="skel" style={{ height: 168 }} />
-      <div className="skel" style={{ height: 220 }} />
-    </div>
+    // Beim Start nur schwarz (kein graues Aufblitzen); die Daten sind in Sekundenbruchteilen geladen
+    <div className="loading" aria-busy="true" aria-label="Lade" />
   );
   if (status === 'error') return <div className="splash" role="alert">{fatal}</div>;
 

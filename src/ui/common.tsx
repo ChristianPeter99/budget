@@ -64,11 +64,69 @@ export function Sheet({ title, onClose, left = 'Abbrechen', right, children }: {
     return () => window.removeEventListener('keydown', k);
   }, [onClose]);
   useEffect(() => { lockBackground(true); return () => lockBackground(false); }, []);
+  // Nach unten wegziehen wie bei iOS: Das Blatt folgt dem Finger (nur wenn es ganz oben steht),
+  // loslassen nach ~110 px oder mit Schwung schließt, sonst federt es zurück.
+  const panelRef = useRef<HTMLDivElement>(null);
+  const bdRef = useRef<HTMLDivElement>(null);
+  const drag = useRef<{ y: number; x: number; lock?: 'v' | 'x'; dy: number; ly: number; lt: number; v: number } | null>(null);
+  const closing = useRef(false);
+  const setPos = (dy: number, animate: boolean) => {
+    const p = panelRef.current, b = bdRef.current;
+    const t = animate ? 'transform .26s cubic-bezier(.22,.9,.3,1)' : 'none';
+    if (p) { p.style.transition = t; p.style.transform = dy ? `translate3d(0,${dy}px,0)` : ''; }
+    if (b) { b.style.transition = animate ? 'opacity .26s ease' : 'none'; b.style.opacity = dy ? String(Math.max(0.15, 1 - dy / 600)) : ''; }
+  };
+  const canStart = (e: { target: EventTarget | null }) => {
+    const p = panelRef.current;
+    if (!p || closing.current || !(e.target instanceof Element)) return false;
+    if (e.target.closest('input, select, textarea, .keydock, .chips, .fchips, [data-nodrag]')) return false;
+    return p.scrollTop <= 0 || !!e.target.closest('.ph');
+  };
+  useEffect(() => {
+    const p = panelRef.current;
+    if (!p) return;
+    // iOS: während des Ziehens kein Scrollen/Nachfedern des Blatts
+    const stop = (e: TouchEvent) => { if (drag.current?.lock === 'v') e.preventDefault(); };
+    p.addEventListener('touchmove', stop, { passive: false });
+    return () => p.removeEventListener('touchmove', stop);
+  }, []);
+  const dragHandlers = {
+    onPointerDown: (e: React.PointerEvent) => {
+      if ((e.pointerType === 'mouse' && e.button !== 0) || !canStart(e)) { drag.current = null; return; }
+      drag.current = { y: e.clientY, x: e.clientX, dy: 0, ly: e.clientY, lt: e.timeStamp, v: 0 };
+    },
+    onPointerMove: (e: React.PointerEvent) => {
+      const d = drag.current;
+      if (!d) return;
+      const dy = e.clientY - d.y, dx = e.clientX - d.x;
+      if (!d.lock) {
+        if (dy > 8 && dy > Math.abs(dx) * 1.2 && (panelRef.current?.scrollTop ?? 0) <= 0) { d.lock = 'v'; d.y = e.clientY; try { (e.currentTarget as Element).setPointerCapture(e.pointerId); } catch { /* egal */ } }
+        else if (Math.abs(dx) > 8 || dy < -8) { drag.current = null; return; } else return;
+      }
+      const dt = e.timeStamp - d.lt;
+      if (dt > 0) d.v = 0.6 * ((e.clientY - d.ly) / dt) + 0.4 * d.v;
+      d.ly = e.clientY; d.lt = e.timeStamp;
+      d.dy = Math.max(0, e.clientY - d.y);
+      setPos(d.dy, false);
+    },
+    onPointerUp: () => {
+      const d = drag.current; drag.current = null;
+      if (!d || d.lock !== 'v') return;
+      if (d.dy > 110 || (d.v > 0.6 && d.dy > 60)) {
+        closing.current = true;
+        setPos(panelRef.current?.offsetHeight ?? 800, true);
+        window.setTimeout(onClose, 230);
+      } else setPos(0, true);
+    },
+    onPointerCancel: () => { if (drag.current?.lock === 'v') setPos(0, true); drag.current = null; },
+    onClickCapture: (e: React.MouseEvent) => { if (closing.current) { e.preventDefault(); e.stopPropagation(); } }
+  };
   // Außerhalb des scrollenden Inhalts (direkt in .app), damit nichts das Blatt beschneidet oder mitbewegt; Meldungen bleiben darüber
   return createPortal(
     <div className="sheetwrap" role="dialog" aria-modal="true" aria-label={title}>
-      <div className="bd" onClick={onClose} />
-      <div className="panel">
+      <div className="bd" ref={bdRef} onClick={onClose} />
+      <div className="panel" ref={panelRef} {...dragHandlers}>
+        <div className="grab" aria-hidden="true" />
         <div className="ph">
           <button className="lnk" onClick={onClose}>{left}</button>
           <h2>{title}</h2>
@@ -83,6 +141,18 @@ export function Sheet({ title, onClose, left = 'Abbrechen', right, children }: {
 
 export function Empty({ children }: { children: ReactNode }) { return <div className="empty">{children}</div>; }
 
+/** Ruhiger leerer Zustand direkt auf Schwarz: leerer Ring, ein Satz, optional ein Textknopf. */
+export function EmptyState({ title, text, action }: { title: string; text?: string; action?: { label: string; onClick: () => void } }) {
+  return (
+    <div className="emptystate" role="status">
+      <svg width="56" height="56" viewBox="0 0 56 56" aria-hidden="true"><circle cx="28" cy="28" r="21" fill="none" stroke="var(--ring-track)" strokeWidth="9" /></svg>
+      <b>{title}</b>
+      {text && <span>{text}</span>}
+      {action && <button className="pillbtn addtx" onClick={action.onClick}>{action.label}</button>}
+    </div>
+  );
+}
+
 export function Back({ onClick, label = 'Mehr' }: { onClick: () => void; label?: string }) {
   return <button className="back" onClick={onClick}><Icon name="left" size={16} w={2.2} />{label}</button>;
 }
@@ -93,9 +163,9 @@ export const ANIM_MS = 600;
 export const COUNT_MS = 380;
 
 /** Animiert eine Zahlenliste weich zum neuen Stand (wie „Noch verfügbar“). Bei „Bewegung reduzieren“ sofort. */
-function useTweenList(target: number[], ms = ANIM_MS): number[] {
-  const [v, setV] = useState(target);
-  const cur = useRef(target);
+function useTweenList(target: number[], ms = ANIM_MS, initial?: number[]): number[] {
+  const [v, setV] = useState(initial ?? target);
+  const cur = useRef(initial ?? target);
   const key = target.join('|');
   useEffect(() => {
     const from = cur.current, to = target;
@@ -122,10 +192,14 @@ function useTweenList(target: number[], ms = ANIM_MS): number[] {
  * Ring der Übersicht: Anteile (z. B. Fix/Alltag/Sparen) am Ganzen (Einnahmen) als ein Bogen ab 12 Uhr.
  * Gerade Übergänge zwischen den Abschnitten, abgerundet nur an Anfang und Ende. Wechselt weich (ANIM_MS).
  */
+let ringIntro = true;
 export function SpendRing({ parts, total, size = 132, label }: { parts: { value: number; color: string }[]; total: number; size?: number; label: string }) {
   // Außenkante wie bisher (63,5), Ring nach innen dicker – im Verhältnis wie die Kreisdiagramme der Detailansicht
   const R = 51.5, W = 24, C = 2 * Math.PI * R;
-  const vals = useTweenList([...parts.map((p) => Math.max(0, p.value)), Math.max(0, total)]);
+  // Beim ersten Öffnen der App füllt sich der Ring einmal sanft (danach nur bei Monatswechseln)
+  const [intro] = useState(() => { const first = ringIntro; ringIntro = false; return first; });
+  const vals = useTweenList([...parts.map((p) => Math.max(0, p.value)), Math.max(0, total)], intro ? 900 : ANIM_MS,
+    intro ? [...parts.map(() => 0), Math.max(0, total)] : undefined);
   const tot = Math.max(vals[vals.length - 1] ?? 0, vals.slice(0, -1).reduce((a, x) => a + x, 0), 1);
   let off = 0;
   const segs = parts.map((p, i) => { const len = ((vals[i] ?? 0) / tot) * C; const seg = { len, off, color: p.color }; off += len; return seg; }).filter((x) => x.len > 0.2);
@@ -446,7 +520,7 @@ export function CatDetailSheet({ title, segs, shades, sub, onClose, renderDetail
   const centerCents = selSlice ? selSlice.cents : restSel ? small.reduce((a, s) => a + s.cents, 0) : total;
   return (
     <Sheet title={title} onClose={onClose} left="Schließen">
-      {total === 0 ? <div className="card"><Empty>In diesem Zeitraum gibt es noch keine Ausgaben.</Empty></div> : (
+      {total === 0 ? <EmptyState title="Noch keine Ausgaben" text="Sobald du etwas buchst, erscheint es hier." /> : (
         <>
           <div className="piewrap">
             <svg viewBox={`0 0 ${PIE.W} ${PIE.H}`} role="group" aria-label={`${title}: ${shown.map((s) => `${s.name} ${formatEUR(s.cents)} (${pct(s.cents)} %)`).join(', ')}`}>

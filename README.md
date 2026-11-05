@@ -2,6 +2,14 @@
 
 Haushaltsbuch als Progressive Web App. Alle Daten bleiben auf dem Gerät (IndexedDB). Keine Server, kein Tracking, keine externen Schriften oder Skripte.
 
+## Neu in Version 1.28
+- Fenster (Neue Buchung, Filter, Detailansicht …) lassen sich mit dem Finger nach unten wegziehen, mit Griff oben
+- Buchungen: Tagesüberschrift bleibt beim Scrollen oben stehen, bis der nächste Tag sie wegschiebt
+- Einheitliche Schrift- und Abstandsstufen (Schrift 40 · 28 · 18 · 17 · 15 · 13 · 11, Abstände 4 · 8 · 12 · 16 · 24 · 32)
+- Neues App-Symbol: der Ring der Übersicht in Orange, Blau und Grün auf Schwarz (wird nach erneutem „Zum Home-Bildschirm“ übernommen)
+- Start ohne graues Aufblitzen; der Ring der Übersicht füllt sich beim Öffnen einmal sanft
+- Leere Zustände ruhig auf Schwarz mit leerem Ring, einem Satz und passender Aktion
+
 ## Neu in Version 1.27.1
 - Farbschema: Alltag einheitlich iOS-Blau (#0A84FF), Fixkosten einheitlich Orange (#F0902E) – Text, Ring, Kacheln, Symbole und Balken in derselben Farbe; nur die Detailkreise nutzen Abstufungen davon
 

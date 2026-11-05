@@ -1,11 +1,11 @@
 import { memo, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { AccountSwitch, Empty, Header, MonthHeader, MonthNav, Sheet, GROUP_TILE, TxAmount, catIcon } from './common';
+import { AccountSwitch, EmptyState, Header, MonthHeader, MonthNav, Sheet, GROUP_TILE, TxAmount, catIcon } from './common';
 import { Icon } from './icons';
 import { useStore } from '../state/store';
 import { deleteTransactions, restoreTransactions } from '../db/repo';
 import { categoryName, filterTransactions, sortTransactions, topLevel } from '../domain/calc';
-import { dayLabel, isValidISODate, monthRange, shiftMonth, yearRange } from '../domain/dates';
+import { dayLabel, isValidISODate, monthLabel, monthRange, shiftMonth, yearRange } from '../domain/dates';
 import { formatEUR } from '../domain/money';
 import type { CatGroup, Transaction, TxType } from '../domain/types';
 import { isHouseholdCat } from '../domain/types';
@@ -137,11 +137,13 @@ export function Bookings({ onOpenTx, back, onAdd }: { onOpenTx: (t: Transaction)
         <button className={'ib filterbtn' + (filtered ? ' on' : '')} aria-label={filtered ? 'Filter (aktiv)' : 'Filter'} onClick={() => setFilterOpen(true)}><Icon name="filter" size={20} w={2} /></button>
       </div>
       <label className="search"><Icon name="search" size={18} /><input type="search" placeholder="Suchen" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Suchen" /></label>
-      <div className="fline">
+      {(list.length > 0 || filterText) && <div className="fline">
         <span className="cap num">{list.length === 1 ? '1 Buchung' : `${list.length} Buchungen`}</span>
         {filterText && <button className="freset" onClick={resetFilter} aria-label={`Filter zurücksetzen: ${filterText}`}>{filterText}<span aria-hidden="true"> ✕</span></button>}
-      </div>
-      {days.length === 0 && <div className="card"><Empty>Keine Buchungen für diese Auswahl.</Empty></div>}
+      </div>}
+      {days.length === 0 && (filtered || dq
+        ? <EmptyState title="Keine Buchungen gefunden" text="Für diese Auswahl gibt es nichts." action={{ label: 'Filter zurücksetzen', onClick: () => { resetFilter(); setQ(''); } }} />
+        : <EmptyState title={`Noch keine Buchungen im ${monthLabel(month).split(' ')[0]}`} text="Ein neuer Monat – noch alles offen." action={onAdd ? { label: 'Neue Buchung', onClick: onAdd } : undefined} />)}
       {days.map(([d, ts]) => (
         <div key={d}>
           <div className="dayh"><span>{dayLabel(d)}</span><span className="num">{formatEUR(daySums.get(d) ?? 0)}</span></div>

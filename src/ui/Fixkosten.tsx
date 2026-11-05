@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useCountUp, MonthNav, catIcon, CatDetailSheet, DetailRow, PIE_SHADES, Back, Bar, CatBar, Money, CollapseBtn, Empty, Header, useCollapsed } from './common';
+import { useCountUp, MonthNav, catIcon, CatDetailSheet, DetailRow, PIE_SHADES, Back, Bar, CatBar, Money, CollapseBtn, EmptyState, Header, useCollapsed } from './common';
 import { CategoriesPage } from './More';
 import { Icon } from './icons';
 import { useStore } from '../state/store';
@@ -98,8 +98,8 @@ export function Fixkosten({ onEdit, onNew }: { onEdit: (r: Recurring) => void; o
           return items.sort((a, b) => b.cents - a.cents).map((i) => i.node);
         }} />}
       {fixRecs.length === 0 && (laterStart
-        ? <div className="card"><Empty>In diesem Monat sind keine Fixkosten gebucht. Deine Fixkosten gelten ab {monthLabel(laterStart)}. Den Beginn änderst du in der jeweiligen Vorlage unter „Gilt ab“.</Empty></div>
-        : <div className="card"><Empty>Noch keine Fixkosten.<button className="btn sec2" onClick={onNew}>Fixkosten anlegen</button></Empty></div>)}
+        ? <EmptyState title="Keine Fixkosten in diesem Monat" text={`Deine Fixkosten gelten ab ${monthLabel(laterStart)}. Den Beginn änderst du in der Vorlage unter „Gilt ab“.`} />
+        : <EmptyState title="Noch keine Fixkosten" text="Miete, Versicherungen, Abos – einmal anlegen, jeden Monat gebucht." action={{ label: 'Fixkosten anlegen', onClick: onNew }} />)}
       {shownTops.map((t) => <FixCard key={t.id} t={t} drag={topDrag} collapsed={fold.isCollapsed(t.id)} onFold={() => fold.toggle(t.id)} recs={fixRecs.filter((r) => topOf(r.categoryId) === t.id)} onEdit={onEdit} />)}
       {fixRecs.length > 0 && <button className="addfix" onClick={onNew}><Icon name="plus" size={16} w={2.2} />Fixkosten hinzufügen</button>}
     </>
