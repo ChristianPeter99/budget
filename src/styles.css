@@ -803,3 +803,9 @@ html{background:#000}
 .calsec .calcell.future .calnum{color:#3A3C44}
 .calsec .calcell.today .calnum{color:#fff}
 .calsec .calcell .calamt{font-size:14px;font-weight:700;line-height:1;margin-top:8px;color:#fff;letter-spacing:-.01em}
+/* Kalender: Tage wieder als dezente Kacheln (wie vorher), vergangene gefüllt, kommende nur umrandet */
+.calsec .calcell{background:var(--card)}
+.calsec .calcell.future{background:transparent;box-shadow:inset 0 0 0 1px var(--line)}
+.calsec .calcell.future .calnum{color:#4A4D57}
+.calsec .calcell.today{box-shadow:inset 0 0 0 1.5px #fff}
+.calsec .calcell.empty{background:transparent;box-shadow:none}
