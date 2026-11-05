@@ -796,3 +796,10 @@ html{background:#000}
 /* Wie eine App: Beschriftungen nicht markierbar (sonst stört eine Markierung das Wischen); Eingabefelder schon */
 .view,.pageghost{-webkit-user-select:none;user-select:none}
 .view input,.view textarea,[role="dialog"] input,[role="dialog"] textarea{-webkit-user-select:text;user-select:text}
+/* Kalender: Tageszahl klein oben links, Betrag groß in der Mitte */
+.calsec .calcell{position:relative;height:46px;justify-content:center;align-items:center}
+.calsec .calcell .calnum{position:absolute;top:4px;left:6px;font-size:10.5px;font-weight:600;line-height:1;color:var(--mut)}
+.calsec .calcell.t-low .calnum,.calsec .calcell.t-ok .calnum,.calsec .calcell.t-high .calnum{color:rgba(255,255,255,.6)}
+.calsec .calcell.future .calnum{color:#3A3C44}
+.calsec .calcell.today .calnum{color:#fff}
+.calsec .calcell .calamt{font-size:14px;font-weight:700;line-height:1;margin-top:8px;color:#fff;letter-spacing:-.01em}
