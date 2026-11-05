@@ -70,6 +70,7 @@ export function Sheet({ title, onClose, left = 'Abbrechen', right, children }: {
   const bdRef = useRef<HTMLDivElement>(null);
   const drag = useRef<{ y: number; x: number; lock?: 'v' | 'x'; dy: number; ly: number; lt: number; v: number } | null>(null);
   const closing = useRef(false);
+  const moved = useRef(false);
   const setPos = (dy: number, animate: boolean) => {
     const p = panelRef.current, b = bdRef.current;
     const t = animate ? 'transform .26s cubic-bezier(.22,.9,.3,1)' : 'none';
@@ -79,7 +80,9 @@ export function Sheet({ title, onClose, left = 'Abbrechen', right, children }: {
   const canStart = (e: { target: EventTarget | null }) => {
     const p = panelRef.current;
     if (!p || closing.current || !(e.target instanceof Element)) return false;
-    if (e.target.closest('input, select, textarea, .keydock, .chips, .fchips, [data-nodrag]')) return false;
+    // Überall startbar (auch auf Feldern und Kategorie-Reihen); nur Zahlenfeld und Textfelder bleiben ausgenommen.
+    // Wer seitlich wischt (z. B. durch die Kategorien), sperrt das Wegziehen für diese Geste.
+    if (e.target.closest('textarea, .keydock, [data-nodrag]')) return false;
     return p.scrollTop <= 0 || !!e.target.closest('.ph');
   };
   useEffect(() => {
@@ -92,6 +95,7 @@ export function Sheet({ title, onClose, left = 'Abbrechen', right, children }: {
   }, []);
   const dragHandlers = {
     onPointerDown: (e: React.PointerEvent) => {
+      moved.current = false;
       if ((e.pointerType === 'mouse' && e.button !== 0) || !canStart(e)) { drag.current = null; return; }
       drag.current = { y: e.clientY, x: e.clientX, dy: 0, ly: e.clientY, lt: e.timeStamp, v: 0 };
     },
@@ -102,6 +106,7 @@ export function Sheet({ title, onClose, left = 'Abbrechen', right, children }: {
       if (!d.lock) {
         if (dy > 8 && dy > Math.abs(dx) * 1.2 && (panelRef.current?.scrollTop ?? 0) <= 0) { d.lock = 'v'; d.y = e.clientY; try { (e.currentTarget as Element).setPointerCapture(e.pointerId); } catch { /* egal */ } }
         else if (Math.abs(dx) > 8 || dy < -8) { drag.current = null; return; } else return;
+        moved.current = true;
       }
       const dt = e.timeStamp - d.lt;
       if (dt > 0) d.v = 0.6 * ((e.clientY - d.ly) / dt) + 0.4 * d.v;
@@ -119,7 +124,8 @@ export function Sheet({ title, onClose, left = 'Abbrechen', right, children }: {
       } else setPos(0, true);
     },
     onPointerCancel: () => { if (drag.current?.lock === 'v') setPos(0, true); drag.current = null; },
-    onClickCapture: (e: React.MouseEvent) => { if (closing.current) { e.preventDefault(); e.stopPropagation(); } }
+    // Nach einem Zug keinen Tipp auf Kategorie oder Knopf auslösen
+    onClickCapture: (e: React.MouseEvent) => { if (closing.current || moved.current) { e.preventDefault(); e.stopPropagation(); moved.current = false; } }
   };
   // Außerhalb des scrollenden Inhalts (direkt in .app), damit nichts das Blatt beschneidet oder mitbewegt; Meldungen bleiben darüber
   return createPortal(

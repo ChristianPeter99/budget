@@ -649,3 +649,11 @@ html{background:#000}
 .emptystate b{font-size:var(--t-section);font-weight:700}
 .emptystate span{font-size:var(--t-note);color:var(--mut);max-width:280px;line-height:1.4}
 .emptystate .pillbtn{margin-top:var(--s1)}
+/* v1.28.1: Abstand oben als erstes Element statt als Innenabstand der Scrollfläche –
+   Safari rechnet den Innenabstand sonst in „position: sticky“ ein (Tageszeile blieb mitten im Bild stehen) */
+.view{padding-top:0}
+.view::before{content:'';display:block;flex:none;height:calc(env(safe-area-inset-top) + var(--s5) + var(--edge, 0px) - var(--s4))}
+/* Klebende Köpfe: direkt unter der Statusleiste; ein schwarzer Streifen darüber deckt die Lücke zur Unschärfe ab */
+.dayh{top:calc(env(safe-area-inset-top) + var(--edge, 0px));box-shadow:0 calc(-1 * var(--edge, 0px) - 1px) 0 var(--bg)}
+.card.flush{overflow:hidden;overflow:clip}
+.card.flush>.ghead.ghx{position:sticky;top:calc(env(safe-area-inset-top) + var(--edge, 0px));z-index:3;background:var(--card);box-shadow:0 calc(-1 * var(--edge, 0px) - 1px) 0 var(--bg)}

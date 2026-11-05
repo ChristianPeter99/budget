@@ -2,6 +2,11 @@
 
 Haushaltsbuch als Progressive Web App. Alle Daten bleiben auf dem Gerät (IndexedDB). Keine Server, kein Tracking, keine externen Schriften oder Skripte.
 
+## Neu in Version 1.28.1
+- Fix: klebende Tageszeile in Safari stand mitten im Bild statt oben (Abstand oben ist jetzt ein eigenes Element statt Innenabstand)
+- Alltag und Fixkosten: Kopf einer aufgeklappten Kategorie bleibt beim Scrollen durch ihre Unterkategorien oben stehen
+- Fenster wegziehen funktioniert jetzt auch auf Feldern und Kategorie-Reihen; wer seitlich wischt, sperrt es für diese Geste; nach einem Zug löst kein versehentlicher Tipp aus
+
 ## Neu in Version 1.28
 - Fenster (Neue Buchung, Filter, Detailansicht …) lassen sich mit dem Finger nach unten wegziehen, mit Griff oben
 - Buchungen: Tagesüberschrift bleibt beim Scrollen oben stehen, bis der nächste Tag sie wegschiebt

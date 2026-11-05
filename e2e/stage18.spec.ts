@@ -28,3 +28,29 @@ test('Buchungen: Tagesüberschrift klebt oben; leerer Monat zeigt ruhigen leeren
   await page.locator('.emptystate').getByRole('button', { name: 'Neue Buchung' }).click();
   await expect(page.getByRole('dialog')).toBeVisible();
 });
+
+test('Fenster: Ziehen auch auf Kategorie-Reihen; seitliches Wischen sperrt das Wegziehen', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('nav').getByRole('button', { name: 'Buchungen' }).click();
+  await page.getByRole('button', { name: 'Neue Buchung' }).click();
+  const dlg = page.getByRole('dialog');
+  const chips = dlg.locator('.chips').first();
+  const b = (await chips.boundingBox())!;
+  // seitlich, dann nach unten → bleibt offen
+  await page.mouse.move(b.x + 300, b.y + b.height / 2); await page.mouse.down();
+  for (let i = 1; i <= 4; i++) await page.mouse.move(b.x + 300 - i * 15, b.y + b.height / 2);
+  for (let i = 1; i <= 10; i++) await page.mouse.move(b.x + 240, b.y + b.height / 2 + i * 25);
+  await page.mouse.up(); await page.waitForTimeout(400);
+  await expect(dlg).toBeVisible();
+  // senkrecht auf der Reihe nach unten → schließt
+  await page.mouse.move(b.x + 150, b.y + b.height / 2); await page.mouse.down();
+  for (let i = 1; i <= 10; i++) await page.mouse.move(b.x + 150, b.y + b.height / 2 + i * 25);
+  await page.mouse.up();
+  await expect(dlg).toHaveCount(0);
+});
+
+test('Fixkosten: Kopf einer langen Kategorie bleibt beim Scrollen oben stehen', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('nav').getByRole('button', { name: 'Fixkosten' }).click();
+  await expect(page.locator('.card.flush > .ghead.ghx').first()).toHaveCSS('position', 'sticky');
+});
