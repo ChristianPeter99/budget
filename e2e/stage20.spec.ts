@@ -286,3 +286,27 @@ test('Kategorien: Bereiche in einer Leiste, Wischen wechselt den Bereich, ganz l
   await expect(page.getByRole('tab', { name: 'Alltag' })).toHaveCount(0);
   await expect(page.getByRole('button', { name: /^Kategorien/ }).first()).toBeVisible();
 });
+
+test('Röhrenfernseher-Effekt: Zurücksetzen und langes Drücken auf die Version, danach ist alles wieder bedienbar', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('nav').getByRole('button', { name: 'Mehr' }).click();
+  await page.getByRole('button', { name: /Daten & Backup/ }).click();
+  // Extra: lange auf „Installiert“ drücken
+  const v = page.locator('[data-crt]');
+  await v.scrollIntoViewIfNeeded();
+  const b = (await v.boundingBox())!;
+  await page.mouse.move(b.x + 20, b.y + b.height / 2);
+  await page.mouse.down();
+  await expect(page.locator('.crt')).toHaveCount(1, { timeout: 3000 });
+  await page.mouse.up();
+  await expect(page.locator('.crt')).toHaveCount(0, { timeout: 4000 });
+  await expect.poll(() => page.evaluate(() => { const r = document.getElementById('root')!; return r.style.transform + r.style.opacity + r.style.pointerEvents + r.getAnimations().length; })).toBe('0');
+  // Zurücksetzen: Bild geht aus, Daten werden ersetzt, Bild geht wieder an
+  await page.getByRole('button', { name: 'Auf Startdaten zurücksetzen' }).click();
+  await page.getByRole('button', { name: 'Ja, zurücksetzen' }).click();
+  await expect(page.locator('.toast')).toContainText('Zurückgesetzt', { timeout: 5000 });
+  await expect(page.locator('.crt')).toHaveCount(0, { timeout: 4000 });
+  await expect.poll(() => page.evaluate(() => document.getElementById('root')!.style.pointerEvents)).toBe('');
+  await page.locator('nav').getByRole('button', { name: 'Übersicht' }).click();
+  await expect(page.locator('.ovcenter')).toBeVisible();
+});

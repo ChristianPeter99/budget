@@ -199,3 +199,26 @@ test('WebKit: Service Worker und Update-Prüfung', async () => {
   results.updateCheck = await msg.getText();
   assert.match(results.updateCheck, /neueste Version|bereit/);
 });
+
+test('WebKit: Röhrenfernseher-Effekt läuft und hinterlässt nichts', async () => {
+  // Wir sind auf „Daten & Backup“: lange auf die Versionsnummer drücken (per Pointer-Ereignis)
+  const r = await d.executeAsyncScript(`const done = arguments[arguments.length - 1];
+    const el = document.querySelector('[data-crt]');
+    if (!el) { done('kein Element'); return; }
+    el.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 1, pointerType: 'touch', isPrimary: true }));
+    let seen = 0, line = false;
+    const log = []; const t0 = performance.now(); const t = setInterval(() => { seen = Math.max(seen, document.querySelectorAll('.crt').length); if (document.querySelector('.crt-line')) line = true; const s = document.getElementById('root').style.opacity + '|' + document.querySelectorAll('.crt').length; if (log[log.length-1]?.[1] !== s) log.push([Math.round(performance.now()-t0), s]); }, 20);
+    setTimeout(() => {
+      el.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 1, pointerType: 'touch', isPrimary: true }));
+      clearInterval(t);
+      const root = document.getElementById('root');
+      done(JSON.stringify({ log, seen, line, waapi: typeof root.animate, style: root.style.cssText, anims: root.getAnimations().length, left: document.querySelectorAll('.crt').length }));
+    }, 6000);`);
+  results.crt = r;
+  const o = JSON.parse(r);
+  assert.equal(o.waapi, 'function');
+  assert.ok(o.seen >= 1 && o.line, r);
+  assert.equal(o.style, '', r);
+  assert.equal(o.anims, 0, r);
+  assert.equal(o.left, 0, r);
+});

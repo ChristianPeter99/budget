@@ -15,6 +15,7 @@ import { TxSheet } from './ui/TxSheet';
 import { ErrorBoundary } from './ui/ErrorBoundary';
 import type { TxPreset } from './ui/TxSheet';
 import type { CatGroup, Recurring, Transaction } from './domain/types';
+import { CRT_ON_START, crtOn } from './ui/crt';
 
 type Tab = 'home' | 'alltag' | 'bookings' | 'fix' | 'more';
 const TABS: Tab[] = ['home', 'alltag', 'bookings', 'fix', 'more'];
@@ -44,6 +45,13 @@ export function App() {
   const popMode = useRef(false);
   const layerRef = useRef<HTMLDivElement>(null);
   const clones = useRef<{ main?: HTMLElement; ghost?: HTMLElement; ghostFor?: Element }>({});
+  // Röhrenfernseher-Effekt beim Start (abschaltbar über CRT_ON_START in ui/crt.ts); vor dem ersten Bild, damit nichts aufblitzt
+  const crtStarted = useRef(false);
+  useLayoutEffect(() => {
+    if (status !== 'ready' || crtStarted.current) return;
+    crtStarted.current = true;
+    if (CRT_ON_START && !navigator.webdriver) void crtOn();
+  }, [status]);
   // Nach dem Umblättern: Verschiebung zurücksetzen, bevor der Browser zeichnet (kein Aufblitzen der alten Seite)
   useLayoutEffect(() => {
     if (!resetAfterCommit.current) return;

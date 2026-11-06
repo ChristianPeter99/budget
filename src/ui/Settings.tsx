@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Sheet } from './common';
 import { useStore } from '../state/store';
 import { resetToSeed, saveSettings } from '../db/repo';
@@ -7,6 +7,7 @@ import { currentMonthKey } from '../domain/dates';
 import { formatEUR } from '../domain/money';
 import { APP_VERSION } from '../version';
 import { checkForUpdate, isNewer, reinstallApp, usePwa } from '../pwa';
+import { crtOff, crtOn } from './crt';
 
 const REMIND = [0, 7, 14, 30];
 
@@ -43,7 +44,13 @@ export function DataSections() {
           {reset === 1 && (
             <>
               <p className="note">Alle Buchungen, Depot-Einträge und Änderungen werden durch die Startdaten ersetzt. Der jetzige Stand wird vorher lokal gesichert und lässt sich hier über „Vorherigen Stand zurückholen“ wiederherstellen. Erstelle trotzdem vorher ein Backup.</p>
-              <button className="btn danger" onClick={async () => { if (await run((db) => resetToSeed(db, currentMonthKey()).then(() => true), 'Zurückgesetzt')) setReset(0); }}>Ja, zurücksetzen</button>
+              <button className="btn danger" onClick={async () => {
+                // Röhrenfernseher aus → zurücksetzen → wieder an
+                await crtOff();
+                const ok = await run((db) => resetToSeed(db, currentMonthKey()).then(() => true), 'Zurückgesetzt');
+                if (ok) setReset(0);
+                await crtOn();
+              }}>Ja, zurücksetzen</button>
               <button className="btn sec2" onClick={() => setReset(0)}>Abbrechen</button>
             </>
           )}
@@ -93,6 +100,15 @@ function AppVersionCard() {
   const [reErr, setReErr] = useState('');
   const [busy, setBusy] = useState(false);
   const newer = !!pwa.serverVersion && isNewer(pwa.serverVersion, APP_VERSION);
+  // Kleines Extra: lange auf die Versionsnummer drücken → Bildschirm wie ein alter Röhrenfernseher aus und wieder an
+  const egg = useRef<number | null>(null);
+  const stopEgg = () => { if (egg.current !== null) { window.clearTimeout(egg.current); egg.current = null; } };
+  const easterEgg = {
+    onPointerDown: () => { stopEgg(); egg.current = window.setTimeout(() => { egg.current = null; void crtOff().then(() => new Promise((r) => setTimeout(r, 350))).then(crtOn); }, 700); },
+    onPointerUp: stopEgg, onPointerLeave: stopEgg, onPointerCancel: stopEgg,
+    onContextMenu: (e: React.MouseEvent) => e.preventDefault(),
+    'data-crt': ''
+  };
   const msg: Record<string, string> = {
     idle: '', checking: 'Suche nach Updates …', none: 'Du hast die neueste Version.',
     available: 'Eine neue Version ist bereit.',
@@ -111,7 +127,7 @@ function AppVersionCard() {
   return (
     <div className="card flush">
       <div className="sec"><h2>App-Version</h2></div>
-      <div className="kv"><span>Installiert</span><b>{APP_VERSION}</b></div>
+      <div className="kv" {...easterEgg}><span>Installiert</span><b>{APP_VERSION}</b></div>
       {pwa.serverVersion && <div className="kv"><span>Auf dem Server</span><b>{pwa.serverVersion}</b></div>}
       <div className="pad stack">
         {pwa.check !== 'idle' && <span className={'cap' + (available || pwa.check === 'pending' ? ' warn' : '')} role="status">{msg[pwa.check]}</span>}

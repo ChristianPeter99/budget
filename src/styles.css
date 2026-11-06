@@ -996,3 +996,7 @@ html{background:#000}
 .catseg button.on{color:var(--c);font-weight:700}
 .catseg button.on::after{opacity:1;transform:none}
 .catbody{display:flex;flex-direction:column;gap:16px;touch-action:pan-y;min-height:60vh}
+/* Röhrenfernseher-Effekt (crt.ts) */
+.crt{position:fixed;inset:0;z-index:9999;background:#000;pointer-events:none}
+.crt-line{position:absolute;left:0;right:0;top:50%;height:3px;margin-top:-1.5px;background:#fff;box-shadow:0 0 14px 3px rgba(255,255,255,.7);transform-origin:50% 50%}
+.crt-dot{position:absolute;left:50%;top:50%;width:8px;height:8px;border-radius:50%;background:#fff;opacity:0;transform:translate(-50%,-50%)}
