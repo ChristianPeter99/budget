@@ -257,3 +257,32 @@ test('Sparkonto: Betrag antippen öffnet Eingabe; alter Bankstand meldet sich or
   await expect(page.getByRole('dialog').locator('.wcap')).toHaveText('In einem Jahr · ohne Zinsen');
   await expect(page.getByRole('dialog').locator('.wbigval')).toContainText('≈');
 });
+
+test('Kategorien: Bereiche in einer Leiste, Wischen wechselt den Bereich, ganz links zurück zu Mehr', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('nav').getByRole('button', { name: 'Mehr' }).click();
+  await page.getByRole('button', { name: /^Kategorien/ }).first().click();
+  const tab = (n: string) => page.getByRole('tab', { name: n });
+  await expect(tab('Alltag')).toHaveAttribute('aria-selected', 'true');
+  await page.waitForTimeout(400); // Seite fertig hereingeglitten
+  const swipe = async (dx: number) => {
+    const b = (await page.locator('.catbody').boundingBox())!;
+    const y = b.y + 120, x0 = b.x + b.width / 2 - dx / 2;
+    await page.mouse.move(x0, y); await page.mouse.down();
+    for (let i = 1; i <= 8; i++) await page.mouse.move(x0 + (dx * i) / 8, y + i);
+    await page.mouse.up();
+    await page.waitForTimeout(450);
+  };
+  await swipe(-200);
+  await expect(tab('Fixkosten')).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('.catname', { hasText: 'Wohnen' })).toBeVisible();
+  await swipe(-200);
+  await expect(tab('Sparen')).toHaveAttribute('aria-selected', 'true');
+  await swipe(200);
+  await swipe(200);
+  await expect(tab('Alltag')).toHaveAttribute('aria-selected', 'true');
+  // ganz links nach rechts wischen → zurück zu Mehr
+  await swipe(220);
+  await expect(page.getByRole('tab', { name: 'Alltag' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /^Kategorien/ }).first()).toBeVisible();
+});

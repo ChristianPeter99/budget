@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AmountInput, Back, Bar, Chevr, Header, Money, Sheet, GROUP_LABEL, GROUP_TILE, barColor, catIcon } from './common';
 import { Icon } from './icons';
 import { useStore } from '../state/store';
@@ -94,16 +94,89 @@ export function CategoriesPage({ back, group, scope }: { back: React.ReactNode; 
   const area: CatArea = scope === 'joint' ? 'joint' : group ? (group === 'alltag' ? 'alltag' : group === 'spar' ? 'spar' : 'fix') : areaView;
   const tops = topLevel(data.categories).filter((c) => catArea(c) === area);
   const areas: [CatArea, string][] = [['alltag', 'Alltag'], ['fix', 'Fixkosten'], ['spar', 'Sparen'], ['einnahme', 'Einnahmen'], ...(jset?.enabled ? [['joint', jset.name] as [CatArea, string]] : [])];
+  const tabbed = !group && !scope;
+  const idx = Math.max(0, areas.findIndex(([a]) => a === areaView));
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const segRef = useRef<HTMLDivElement>(null);
+  // Aktiven Reiter in der Leiste sichtbar halten (sie scrollt, wenn nicht alles hineinpasst)
+  useEffect(() => {
+    const b = segRef.current?.querySelector<HTMLElement>(`[data-area="${areaView}"]`);
+    const bar = segRef.current;
+    if (b && bar) bar.scrollTo({ left: Math.max(0, b.offsetLeft - (bar.clientWidth - b.offsetWidth) / 2), behavior: 'smooth' });
+  }, [areaView]);
+  /** Bereich wechseln; beim Wischen gleitet der Inhalt in Wischrichtung hinaus und von der anderen Seite herein. */
+  const goArea = (a: CatArea, dir?: 1 | -1) => {
+    const el = bodyRef.current;
+    if (!dir || !el || matchMedia('(prefers-reduced-motion: reduce)').matches) { if (el) { el.style.transition = ''; el.style.transform = ''; el.style.opacity = ''; } setAreaView(a); return; }
+    const w = el.clientWidth || 360;
+    el.style.transition = 'transform .16s ease-in, opacity .16s ease-in';
+    el.style.transform = `translate3d(${-dir * w * 0.35}px,0,0)`; el.style.opacity = '0';
+    window.setTimeout(() => {
+      setAreaView(a);
+      el.style.transition = 'none'; el.style.transform = `translate3d(${dir * w * 0.35}px,0,0)`;
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        el.style.transition = 'transform .24s cubic-bezier(.22,.9,.3,1), opacity .2s ease-out';
+        el.style.transform = ''; el.style.opacity = '';
+      }));
+    }, 160);
+  };
+  // Wischen im Inhalt: nach links → nächster Bereich, nach rechts → voriger; ganz links nach rechts übernimmt die App (zurück zu Mehr)
+  const asw = useRef<{ x: number; y: number; lock?: 'h' | 'v'; d: number; lx: number; lt: number; v: number } | null>(null);
+  const swipedArea = useRef(false);
+  const areaSwipe = {
+    onPointerDown: (e: React.PointerEvent) => {
+      swipedArea.current = false;
+      const t = e.target as Element;
+      if ((e.pointerType === 'mouse' && e.button !== 0) || t.closest('input, textarea, select, [role="dialog"], [data-noswipe]')) { asw.current = null; return; }
+      asw.current = { x: e.clientX, y: e.clientY, d: 0, lx: e.clientX, lt: e.timeStamp, v: 0 };
+    },
+    onPointerMove: (e: React.PointerEvent) => {
+      const st = asw.current, el = bodyRef.current;
+      if (!st || !el) return;
+      const dx = e.clientX - st.x, dy = e.clientY - st.y;
+      if (!st.lock) {
+        if (Math.abs(dx) > 8 && Math.abs(dx) > 1.2 * Math.abs(dy)) {
+          if (dx > 0 && idx === 0) { asw.current = null; return; }
+          st.lock = 'h'; st.x = e.clientX;
+          try { (e.currentTarget as Element).setPointerCapture(e.pointerId); } catch { /* egal */ }
+        } else if (Math.abs(dy) > 10) { asw.current = null; return; } else return;
+      }
+      const d = e.clientX - st.x;
+      const dt = e.timeStamp - st.lt;
+      if (dt > 0) st.v = 0.6 * ((e.clientX - st.lx) / dt) + 0.4 * st.v;
+      st.lx = e.clientX; st.lt = e.timeStamp;
+      const edge = (d < 0 && idx === areas.length - 1) || (d > 0 && idx === 0);
+      st.d = d;
+      el.style.transition = 'none';
+      el.style.transform = `translate3d(${edge ? d * 0.2 : d}px,0,0)`;
+      el.style.opacity = String(edge ? 1 : Math.max(0.4, 1 - Math.abs(d) / (el.clientWidth || 360)));
+    },
+    onPointerUp: () => {
+      const st = asw.current, el = bodyRef.current; asw.current = null;
+      if (!st || st.lock !== 'h' || !el) return;
+      swipedArea.current = true;
+      const w = el.clientWidth || 360;
+      const fling = Math.abs(st.v) > 0.35 && Math.sign(st.v) === Math.sign(st.d) && performance.now() - st.lt < 100;
+      const dir: 1 | -1 = st.d < 0 ? 1 : -1;
+      const target = areas[idx + dir];
+      if (target && (Math.abs(st.d) > w * 0.22 || fling)) { goArea(target[0], dir); return; }
+      el.style.transition = 'transform .22s cubic-bezier(.22,.9,.3,1), opacity .2s ease';
+      el.style.transform = ''; el.style.opacity = '';
+    },
+    onPointerCancel: () => { const el = bodyRef.current; asw.current = null; if (el) { el.style.transition = 'transform .2s ease'; el.style.transform = ''; el.style.opacity = ''; } },
+    onClickCapture: (e: React.MouseEvent) => { if (swipedArea.current) { e.preventDefault(); e.stopPropagation(); swipedArea.current = false; } }
+  };
   return (
     <>
       {back}
       <Header kicker={scope === 'joint' ? (data.settings.joint?.name ?? 'Haushaltskonto') : group ? GROUP_LABEL[group] : undefined} title="Kategorien" right={<div className="mn">
         <button className="pillbtn" onClick={() => setSheet({ parentId: null })}>Neu</button>
       </div>} />
-      {!group && !scope && <div className={"catseg" + (areas.length > 4 ? " five" : "")} role="tablist" aria-label="Bereich" style={{ gridTemplateColumns: `repeat(${areas.length}, minmax(0, 1fr))` }}>
-        {areas.map(([a, l]) => <button key={a} role="tab" aria-selected={areaView === a} className={areaView === a ? 'on' : ''} style={{ ['--c' as string]: AREA_COLOR[a] }} onClick={() => setAreaView(a)}>{l}</button>)}
+      {!group && !scope && <div className="catseg" role="tablist" aria-label="Bereich" data-noswipe ref={segRef}>
+        {areas.map(([a, l]) => <button key={a} role="tab" aria-selected={areaView === a} className={areaView === a ? 'on' : ''} style={{ ['--c' as string]: AREA_COLOR[a] }} data-area={a} onClick={() => goArea(a)}>{l}</button>)}
       </div>}
-      {tops.map((t) => {
+      <div className="catbody" ref={bodyRef} {...(tabbed ? { 'data-areas': '', 'data-first': idx === 0 ? '1' : '0', ...areaSwipe } : {})}>
+        {tops.map((t) => {
         const kids = childrenOf(data.categories, t.id);
         return (
           <div className="card flush" key={t.id}>
@@ -124,6 +197,7 @@ export function CategoriesPage({ back, group, scope }: { back: React.ReactNode; 
           </div>
         );
       })}
+      </div>
       {pick && <IconPickerSheet id={pick} onClose={() => setPick(null)} />}
       {sheet && <CategorySheet {...sheet} group={group ?? (area === 'fix' || area === 'alltag' || area === 'spar' ? area : undefined)} {...(area === 'joint' ? { scope: 'joint' as const } : {})} {...(area === 'einnahme' ? { kind: 'income' as const } : {})} onClose={() => setSheet(null)} run={run} />}
     </>

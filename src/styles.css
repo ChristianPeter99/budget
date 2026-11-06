@@ -989,9 +989,10 @@ html{background:#000}
 .ttip{position:absolute;top:-6px;white-space:nowrap;font-size:var(--t-note);color:var(--mut);background:#0B0B0D;padding:2px 6px;border-radius:8px;pointer-events:none}
 .ttip b{color:var(--text);font-weight:700}
 /* Kategorien: Bereiche in einer Zeile, aktiver Bereich in seiner Farbe unterstrichen */
-.catseg{display:grid;margin:2px 0 var(--s3);border-bottom:1px solid var(--line)}
-.catseg button{position:relative;height:44px;padding:0 2px;border:0;background:transparent;color:var(--mut);font-size:var(--t-body);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:color .15s ease}
-.catseg button::after{content:'';position:absolute;left:18%;right:18%;bottom:-1px;height:3px;border-radius:2px;background:var(--c);opacity:0;transform:scaleX(.4);transition:opacity .18s ease,transform .18s ease}
+.catseg{display:flex;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none;margin:2px 0 var(--s3);border-bottom:1px solid var(--line)}
+.catseg::-webkit-scrollbar{display:none}
+.catseg button{position:relative;flex:1 0 auto;height:44px;padding:0 12px;border:0;background:transparent;color:var(--mut);font-size:var(--t-body);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:color .15s ease}
+.catseg button::after{content:'';position:absolute;left:18%;right:18%;bottom:0;height:3px;border-radius:2px;background:var(--c);opacity:0;transform:scaleX(.4);transition:opacity .18s ease,transform .18s ease}
 .catseg button.on{color:var(--c);font-weight:700}
 .catseg button.on::after{opacity:1;transform:none}
-.catseg.five button{font-size:var(--t-note)}
+.catbody{display:flex;flex-direction:column;gap:16px;touch-action:pan-y;min-height:60vh}

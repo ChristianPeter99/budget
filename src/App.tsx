@@ -35,7 +35,7 @@ export function App() {
   const ghostRef = useRef<HTMLDivElement | null>(null);
   const navRef = useRef<HTMLElement>(null);
   const pillRef = useRef<HTMLSpanElement>(null);
-  const sw = useRef<{ x: number; y: number; month: boolean; pop: boolean; lock?: 'h' | 'v'; lx: number; lt: number; v: number; next: Tab | null; dx: number } | null>(null);
+  const sw = useRef<{ x: number; y: number; month: boolean; pop: boolean; lock?: 'h' | 'v'; lx: number; lt: number; v: number; next: Tab | null; dx: number; areas?: Element | null } | null>(null);
   const swiped = useRef(false);
   const busy = useRef(false);
   const pos = useRef({ dx: 0, side: 1 as 1 | -1, frame: 0 });
@@ -211,7 +211,7 @@ export function App() {
     onPointerDown: (e: React.PointerEvent) => {
       swiped.current = false;
       if (busy.current || (e.pointerType === 'mouse' && e.button !== 0) || noSwipe(e.target)) { sw.current = null; return; }
-      sw.current = { x: e.clientX, y: e.clientY, month: !!(e.target as Element).closest('[data-swipe="month"]'), pop: !!popBtn(), lx: e.clientX, lt: e.timeStamp, v: 0, next: null, dx: 0 };
+      sw.current = { x: e.clientX, y: e.clientY, month: !!(e.target as Element).closest('[data-swipe="month"]'), pop: !!popBtn(), lx: e.clientX, lt: e.timeStamp, v: 0, next: null, dx: 0, areas: (e.target as Element).closest('[data-areas]') };
     },
     onPointerMove: (e: React.PointerEvent) => {
       const st = sw.current;
@@ -221,6 +221,8 @@ export function App() {
       const ddx = e.clientX - st.x, ddy = e.clientY - st.y;
       if (!st.lock) {
         if (Math.abs(ddx) > 8 && Math.abs(ddx) > 1.2 * Math.abs(ddy)) {
+          // Seite mit eigenen Bereichen (Kategorien): Sie blättert selbst – nur ganz links nach rechts geht es zurück
+          if (st.areas && (ddx < 0 || st.areas.getAttribute('data-first') !== '1')) { sw.current = null; return; }
           st.lock = 'h';
           // Auf einer Unterseite (mit „Zurück“) heißt Wischen nach rechts: eine Ebene zurück, wie bei iOS
           st.pop = st.pop && ddx > 0;
