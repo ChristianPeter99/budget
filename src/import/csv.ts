@@ -37,6 +37,22 @@ export interface RawInfo { type: string; time: string; payee: string; iban: stri
 
 export interface ParseResult { candidates: Candidate[]; skippedLines: number; format: 'c24' | 'hvb' | 'generic' }
 
+/**
+ * Datei-Bytes in Text: UTF-16 (mit BOM, z. B. aus Excel „Unicode-Text“), UTF-8,
+ * bei kaputten Umlauten Windows-1252 (ältere Bank-Exporte).
+ */
+export function decodeBytes(buf: ArrayBuffer): string {
+  const b = new Uint8Array(buf);
+  if (b[0] === 0xff && b[1] === 0xfe) return new TextDecoder('utf-16le').decode(buf);
+  if (b[0] === 0xfe && b[1] === 0xff) return new TextDecoder('utf-16be').decode(buf);
+  // UTF-16 ohne BOM: viele Nullbytes an ungeraden Stellen
+  let zeros = 0;
+  for (let i = 1; i < Math.min(b.length, 400); i += 2) if (b[i] === 0) zeros++;
+  if (b.length > 8 && zeros > Math.min(b.length, 400) / 4) return new TextDecoder('utf-16le').decode(buf);
+  const utf = new TextDecoder('utf-8').decode(buf);
+  return utf.includes('\uFFFD') ? new TextDecoder('windows-1252').decode(buf) : utf;
+}
+
 /** RFC-4180-ähnlicher Parser: Anführungszeichen, doppelte Anführungszeichen, Zeilenumbrüche in Feldern. */
 export function parseCsvText(text: string, sep: string): string[][] {
   const rows: string[][] = [];
@@ -165,14 +181,45 @@ const HEADER_ALIASES: Record<string, string[]> = {
 
 /** Liest eine Kontoauszug-CSV und klassifiziert jede Zeile. Ungültige Zeilen werden gezählt, nicht importiert. */
 export async function parseStatement(text: string): Promise<ParseResult> {
-  const clean = text.replace(/^﻿/, '');
-  const firstLine = clean.slice(0, clean.indexOf('\n') >>> 0 || clean.length);
-  const count = (re: RegExp) => firstLine.match(re)?.length ?? 0;
-  // Trennzeichen: Tabulator (z. B. HypoVereinsbank/UniCredit), Semikolon oder Komma – je nachdem, was in der Kopfzeile überwiegt
-  const sep = count(/\t/g) > Math.max(count(/;/g), count(/,/g)) ? '\t' : count(/;/g) > count(/,/g) ? ';' : ',';
-  const rows = parseCsvText(clean, sep);
+  const clean = text.replace(/^\uFEFF/, '').replace(/\u0000/g, '');
+  const lines = clean.split(/\r?\n/).slice(0, 40);
+  const count = (line: string, re: RegExp) => line.match(re)?.length ?? 0;
+  /** Trennzeichen einer Zeile: Tabulator, Semikolon oder Komma – je nachdem, was überwiegt */
+  const sepOf = (line: string) => count(line, /\t/g) > Math.max(count(line, /;/g), count(line, /,/g)) ? '\t' : count(line, /;/g) > count(line, /,/g) ? ';' : ',';
+  const known = (cells: string[]) => {
+    const h = cells.map(norm);
+    const has = (k: keyof typeof HEADER_ALIASES) => h.some((x) => (HEADER_ALIASES[k] as string[]).includes(x));
+    return has('booking') && has('amount');
+  };
+  // Kopfzeile suchen (manche Banken schreiben vorher Kontoinfos o. Ä.)
+  let headAt = -1, sep = sepOf(lines[0] ?? '');
+  for (let i = 0; i < lines.length; i++) {
+    const l = lines[i] as string;
+    if (!l.trim()) continue;
+    const sp = sepOf(l);
+    if (known(parseCsvText(l, sp)[0] ?? [])) { headAt = i; sep = sp; break; }
+  }
+  let rows: string[][];
+  let header: string[];
+  if (headAt >= 0) {
+    rows = parseCsvText(clean.split(/\r?\n/).slice(headAt).join('\n'), sep);
+    header = (rows[0] as string[]).map(norm);
+  } else {
+    // Ohne Kopfzeile: Aufbau der HypoVereinsbank/UniCredit erkennen –
+    // Kontonummer | Buchungsdatum | Valuta | Verwendungszweck | Betrag | Währung
+    const first = lines.find((l) => l.trim()) ?? '';
+    sep = sepOf(first);
+    const body = parseCsvText(clean, sep);
+    const looksHvb = (r: string[]) => r.length >= 5 && !!parseDate(r[1] ?? '') && !!parseDate(r[2] ?? '') && parseSignedAmount(r[4] ?? '') !== null;
+    if (!body.some(looksHvb)) {
+      // Nur Spaltennamen der ersten Zeile nennen (keine Beträge oder Texte aus Buchungen)
+      const names = (body[0] ?? []).slice(0, 8).map((c) => c.trim().slice(0, 20)).filter((c) => c && !/\d/.test(c));
+      throw new AppError(`Spalten für Datum und Betrag wurden nicht gefunden. Ist das ein Kontoauszug als CSV?${names.length ? ` Erkannte Spalten: ${names.join(', ')}.` : ''}`);
+    }
+    header = ['kontonummer', 'buchungsdatum', 'valuta', 'verwendungszweck', 'betrag', 'waehrung'];
+    rows = [header, ...body];
+  }
   if (rows.length < 2) throw new AppError('Die Datei enthält keine Buchungen.');
-  const header = (rows[0] as string[]).map(norm);
   const col = (k: keyof typeof HEADER_ALIASES) => header.findIndex((h) => (HEADER_ALIASES[k] as string[]).includes(h));
   const idx = { type: col('type'), booking: col('booking'), card: col('card'), amount: col('amount'), payee: col('payee'), zweck: col('zweck'), desc: col('desc'), bankCat: col('bankCat'), bankSub: col('bankSub'), iban: col('iban'), cash: col('cash') };
   if (idx.booking < 0 || idx.amount < 0) throw new AppError('Spalten für Datum und Betrag wurden nicht gefunden. Ist das ein Kontoauszug als CSV?');

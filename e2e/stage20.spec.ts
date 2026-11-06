@@ -349,3 +349,15 @@ test('Alle Daten löschen: alles auf 0, Standard-Kategorien bleiben', async ({ p
   await page.locator('nav').getByRole('button', { name: 'Übersicht' }).click();
   await expect(page.locator('.ovcenter')).toContainText('0');
 });
+
+test('CSV-Import: HypoVereinsbank als UTF-16 ohne Kopfzeile wird ebenfalls gelesen', async ({ page }) => {
+  const fs = await import('node:fs');
+  const lines = fs.readFileSync(new URL('../tests/fixtures/hvb-beispiel.csv', import.meta.url), 'utf8').trim().split('\n').slice(1).join('\r\n');
+  const buf = Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from(lines, 'utf16le')]);
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Mehr', exact: true }).click();
+  await page.getByRole('button', { name: /CSV-Import/ }).click();
+  await page.getByLabel('CSV-Datei').setInputFiles({ name: 'umsaetze.txt', mimeType: 'text/plain', buffer: buf });
+  await expect(page.getByRole('heading', { name: 'Prüfen & zuordnen' })).toBeVisible();
+  await expect(page.getByText('Rossmann').first()).toBeVisible();
+});

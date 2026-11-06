@@ -5,7 +5,7 @@ import { Icon } from './icons';
 import { toMessage, useStore } from '../state/store';
 import { addCategory, deleteCategory, getMeta, importTransactions, setMeta, undoImport } from '../db/repo';
 import type { ImportItem } from '../db/repo';
-import { MAX_IMPORT_BYTES, assignBlocks, bookable, findDuplicates, findReturns, parseStatement, suggestCategory } from '../import/csv';
+import { MAX_IMPORT_BYTES, assignBlocks, decodeBytes, bookable, findDuplicates, findReturns, parseStatement, suggestCategory } from '../import/csv';
 import type { Block, Candidate, DupState } from '../import/csv';
 import { categoryName, topLevel } from '../domain/calc';
 import { formatDateDE } from '../domain/dates';
@@ -23,11 +23,9 @@ const KIND_LABEL: Record<Candidate['kind'], string> = { expense: 'Ausgabe', cred
 const short = (iso: string) => formatDateDE(iso).slice(0, 6);
 const tabOf = (r: Row): Tab => (r.ret ? 'weitere' : r.dup !== 'none' ? 'erfasst' : r.c.kind === 'expense' ? 'ausgaben' : 'weitere');
 
-/** Datei lesen: UTF-8, bei kaputten Umlauten Windows-1252 (ältere Bank-Exporte). */
+/** Datei lesen: UTF-16, UTF-8 oder Windows-1252 (siehe decodeBytes). */
 async function readText(file: File): Promise<string> {
-  const buf = await file.arrayBuffer();
-  const utf = new TextDecoder('utf-8').decode(buf);
-  return utf.includes('�') ? new TextDecoder('windows-1252').decode(buf) : utf;
+  return decodeBytes(await file.arrayBuffer());
 }
 
 /** Mehr › CSV-Import: Datei einlesen, prüfen, zuordnen, übernehmen. Bis „Übernehmen“ wird nichts gespeichert. */
@@ -166,7 +164,7 @@ export function ImportPage({ back }: { back: ReactNode }) {
         )}
         <label className={'btn' + (busy ? ' busy' : '')} role="button" aria-disabled={busy}>
           {busy ? 'Wird gelesen …' : 'CSV-Datei auswählen'}
-          <input ref={fileRef} type="file" accept=".csv,text/csv,text/comma-separated-values,text/plain" aria-label="CSV-Datei" className="vh" disabled={busy} onChange={(e) => void onFile(e.target.files?.[0])} />
+          <input ref={fileRef} type="file" accept=".csv,.txt,.tsv,text/csv,text/comma-separated-values,text/tab-separated-values,text/plain" aria-label="CSV-Datei" className="vh" disabled={busy} onChange={(e) => void onFile(e.target.files?.[0])} />
         </label>
         {err && <div className="err-text" role="alert">{err}</div>}
         <div className="card flush">
