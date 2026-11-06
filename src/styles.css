@@ -977,11 +977,13 @@ html{background:#000}
 .tmlabel{position:absolute;transform:translate(-50%,-26px);font-size:var(--t-micro);font-weight:700;color:var(--goal);white-space:nowrap;pointer-events:none;max-width:140px;overflow:hidden;text-overflow:ellipsis}
 /* Hilfslinien und Antippen im Verlaufsdiagramm */
 .tplot{touch-action:pan-y;cursor:crosshair;-webkit-user-select:none;user-select:none}
-.tgrid{position:absolute;left:0;height:0;border-top:1px dotted rgba(255,255,255,.1);pointer-events:none}
-.tgrid span{position:absolute;left:100%;padding-left:6px;top:-.62em;white-space:nowrap;font-size:var(--t-micro);color:var(--faint);font-variant-numeric:tabular-nums;line-height:1.2}
-.tgrid{right:58px}
-.tarea{position:absolute;left:0;top:0;bottom:0;right:58px}
-.tchart .wlabels{padding-right:58px}
+.tgrid{position:absolute;left:0;height:0;border-top:1px dotted rgba(255,255,255,.07);pointer-events:none}
+.tgrid span{position:absolute;left:0;bottom:3px;white-space:nowrap;transition:color .2s ease;font-size:var(--t-micro);color:var(--faint);font-variant-numeric:tabular-nums;line-height:1.2}
+.tgrid{right:0;transition:border-color .2s ease}
+.tplot.active .tgrid{border-top-color:rgba(255,255,255,.16)}
+.tplot.active .tgrid span{color:var(--mut)}
+.tarea{position:absolute;inset:0}
+
 .tscrub{position:absolute;top:18px;bottom:0;width:0;border-left:1px solid rgba(255,255,255,.35);pointer-events:none}
 .tsdot{position:absolute;width:12px;height:12px;border-radius:50%;background:#0B0B0D;border:2.5px solid;box-sizing:border-box;transform:translate(-50%,-50%);pointer-events:none}
 .ttip{position:absolute;top:-6px;white-space:nowrap;font-size:var(--t-note);color:var(--mut);background:#0B0B0D;padding:2px 6px;border-radius:8px;pointer-events:none}

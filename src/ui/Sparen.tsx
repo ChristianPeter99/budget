@@ -305,14 +305,29 @@ function TrendChart({ past, future = [], markers = [], color, labels, aria }: { 
     setHover(best);
   };
   const hp = hover !== null ? pts[hover] : undefined;
+  // Beschriftung links über der Linie weglassen, wenn die Kurve dort genau durchläuft (Linie bleibt)
+  const crowded = (v: number) => {
+    const ly = y(v) - 9;
+    const near = (p: Pt) => x(p.d) < W * 0.26 && Math.abs(y(p.c) - ly) < 13;
+    if (all.some(near)) return true;
+    // auch zwischen zwei Punkten am linken Rand prüfen
+    for (let i = 1; i < all.length; i++) {
+      const a = all[i - 1] as Pt, b = all[i] as Pt;
+      if (x(a.d) > W * 0.26) break;
+      const xm = Math.min(W * 0.26, x(b.d));
+      const f = x(b.d) > x(a.d) ? (xm - x(a.d)) / (x(b.d) - x(a.d)) : 0;
+      if (Math.abs(y(a.c + (b.c - a.c) * f) - ly) < 13) return true;
+    }
+    return false;
+  };
   const hl = hp ? (x(hp.d) / W) * 100 : 0;
   return (
     <div className="tchart">
-      <div className="tplot" ref={plotRef} style={{ height: H }} data-nodrag
+      <div className={'tplot' + (hover !== null ? ' active' : '')} ref={plotRef} style={{ height: H }} data-nodrag
         onPointerDown={(e) => pick(e.clientX)} onPointerMove={(e) => { if (e.pointerType !== 'mouse' || e.buttons || hover !== null) pick(e.clientX); }}
         onPointerUp={(e) => { if (e.pointerType !== 'mouse') setHover(null); }} onPointerLeave={() => setHover(null)} onPointerCancel={() => setHover(null)}>
         {ticks.map((v) => (
-          <div key={v} className="tgrid" style={{ top: y(v) }} aria-hidden="true"><span>{formatEUR0(v)}</span></div>
+          <div key={v} className="tgrid" style={{ top: y(v) }} aria-hidden="true">{!crowded(v) && <span>{formatEUR0(v)}</span>}</div>
         ))}
         <div className="tarea">
         <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label={aria}>
