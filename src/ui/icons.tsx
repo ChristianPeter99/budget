@@ -82,6 +82,7 @@ const P = {
   // Alltag: Geldbörse
   wallet: '<path d="M17 8V5.5A1.5 1.5 0 0 0 15.5 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h13a1 1 0 0 0 1-1V9a1 1 0 0 0-1-1H6a2 2 0 0 1-2-2"/><path d="M20 12h-3.5a1.5 1.5 0 0 0 0 3H20"/>',
   warn: '<path d="M12 3.5l9 16H3z"/><path d="M12 10v4M12 17h.01"/>',
+  trend: '<path d="M4 19h16"/><path d="M5 15l4-4 3 3 7-7"/><path d="M15 7h4v4"/>',
   sort: '<path d="M8 4v16M4.5 7.5L8 4l3.5 3.5M16 20V4M12.5 16.5L16 20l3.5-3.5"/>',
   filter: '<path d="M4 6.5h16M7 12h10M10 17.5h4"/>',
   dots: '<path d="M5 12h.01M12 12h.01M19 12h.01" stroke-width="3"/>'

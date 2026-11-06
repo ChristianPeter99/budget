@@ -841,3 +841,26 @@ html{background:#000}
 .ovcenter .ovsub{font-size:12px;color:var(--mut);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ovcenter .ovopen{pointer-events:auto;position:relative;margin-top:6px;display:flex;align-items:center;gap:2px;min-height:32px;padding:0 6px;border:0;background:transparent;font-size:var(--t-note);font-weight:700}
 .ovhint{margin:0;text-align:center;font-size:var(--t-note);color:var(--mut)}
+
+/* ───── 1.41: Sparen & Depot (Variante B) ───── */
+:root{--depot:#A9B2FF}
+.whero{display:flex;flex-direction:column;gap:2px;padding:4px 4px 0}
+.whero .mid34{font-size:min(2.6rem,11vw);font-weight:800;letter-spacing:-.03em;line-height:1.05}
+.wchart{margin-top:10px}
+.wchart svg{display:block;width:100%;height:90px;overflow:visible}
+.wlabels{display:flex;justify-content:space-between;font-size:11px;color:var(--mut);margin-top:4px}
+.wtiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.wtile{border:0;text-align:left;background:var(--card);border-radius:18px;padding:14px;color:var(--text);display:flex;flex-direction:column;gap:6px;min-width:0;transition:transform .14s ease}
+.wtile:active{transform:scale(.97)}
+.wname{display:flex;align-items:center;gap:6px;font-size:var(--t-note);font-weight:700}
+.wval{font-size:1.4rem;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wsub{font-size:12px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wsub.pos{color:var(--pos);font-weight:600}.wsub.neg{color:var(--neg);font-weight:600}
+.wdetail{display:flex;flex-direction:column;align-items:center;gap:4px;padding:4px 0 2px;text-align:center}
+.wdetail .mid34{font-size:2.4rem;font-weight:800;letter-spacing:-.03em}
+.bigamt{display:flex;flex-direction:column;align-items:center;gap:6px;padding:6px 0}
+.bigamt>span{font-size:var(--t-note);font-weight:600;color:var(--text2)}
+.bigamt input{width:100%;border:0;background:transparent;color:var(--text);text-align:center;font-size:2.6rem;font-weight:800;letter-spacing:-.02em;outline:none;font-variant-numeric:tabular-nums}
+.bigamt input::placeholder{color:#3A3C44}
+.whero .mini.pos{color:var(--pos);font-weight:600}.whero .mini.neg{color:var(--neg);font-weight:600}
+.wdetail .mini.pos{color:var(--pos);font-weight:600}.wdetail .mini.neg{color:var(--neg);font-weight:600}

@@ -99,10 +99,12 @@ test('Depot erfassen mit Tausenderpunkten und Verlauf in der Auswertung', async 
   await page.goto('/');
   await page.getByRole('button', { name: 'Mehr', exact: true }).click();
   await page.getByRole('button', { name: /Sparen & Depot/ }).click();
+  await page.locator('.wtile', { hasText: 'Depot' }).click();
+  await page.getByRole('button', { name: 'Stand aktualisieren' }).click();
   await page.getByLabel('Neuer Depotstand').fill('123456');
   await expect(page.getByLabel('Neuer Depotstand')).toHaveValue('123.456');
-  await page.locator('.card', { hasText: 'Depot' }).getByRole('button', { name: 'Mit heutigem Datum erfassen' }).click();
-  await expect(page.locator('.mid34', { hasText: '123.456 €' })).toBeVisible();
+  await page.getByRole('dialog').getByRole('button', { name: 'Speichern' }).click();
+  await expect(page.locator('.whero .mid34', { hasText: '123.456 €' })).toBeVisible();
   await page.getByRole('button', { name: 'Zurück' }).or(page.getByRole('button', { name: 'Mehr' }).first()).first().click();
   await page.getByRole('button', { name: /Auswertung/ }).click();
   await page.getByRole('button', { name: /^Depot: Verlauf/ }).click();
@@ -141,5 +143,5 @@ test('Update von Schema 2 im echten Browser: Daten bleiben, Depotwert wird Verla
   await expect(page.getByText('47,11 €').first()).toBeVisible();
   await page.getByRole('button', { name: 'Mehr', exact: true }).click();
   await page.getByRole('button', { name: /Sparen & Depot/ }).click();
-  await expect(page.locator('.mid34', { hasText: '100.000 €' })).toBeVisible();
+  await expect(page.locator('.wtile', { hasText: 'Depot' })).toContainText('100.000 €');
 });

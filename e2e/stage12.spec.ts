@@ -48,15 +48,16 @@ test('Sparkonto: Stand mit heutigem Datum erfassen, auch mit gemeinsamem Konto (
   await page.getByRole('button', { name: 'Einrichten' }).click();
   await page.locator('.back').click();
   await page.getByRole('button', { name: /Sparen & Depot/ }).click();
+  await page.locator('.wtile', { hasText: 'Sparkonto' }).click();
+  await page.getByRole('button', { name: 'Stand aktualisieren' }).click();
   await page.getByLabel('Kontostand Sparkonto').fill('12.345');
-  await page.getByRole('button', { name: 'Mit heutigem Datum erfassen' }).first().click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Speichern' }).click();
   await expect(page.locator('.toast')).toContainText('Kontostand erfasst');
-  await expect(page.locator('.card', { hasText: 'Sparrate' })).toContainText('12.345 €');
-  await expect(page.locator('.card', { hasText: 'Sparrate' })).toContainText('Voraussichtlich in 12 Monaten');
-  // nur der letzte Eintrag; Tipp öffnet die Liste aller Einträge
-  await expect(page.locator('.card', { hasText: 'Sparrate' }).locator('.lastentry')).toContainText('12.345 €');
-  await page.getByRole('button', { name: /Alle 1 Kontostände anzeigen/ }).click();
-  await expect(page.getByRole('dialog', { name: /Kontostände Sparkonto/ }).or(page.getByRole('dialog'))).toContainText('12.345 €');
+  await expect(page.locator('.wtile', { hasText: 'Sparkonto' })).toContainText('12.345 €');
+  // Kachel öffnet Details mit Prognose und Verlauf
+  await page.locator('.wtile', { hasText: 'Sparkonto' }).click();
+  await expect(page.getByRole('dialog')).toContainText('In 12 Monaten');
+  await expect(page.getByRole('dialog').locator('.lastentry')).toContainText('12.345 €');
   await page.getByRole('dialog').getByRole('button', { name: 'Schließen' }).click();
   // Verlauf auch in der Auswertung
   await page.locator('.back').click();

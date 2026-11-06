@@ -66,18 +66,30 @@ test('Fixkosten: optionale Kündigungsfrist wird in der Zeile angezeigt', async 
   await expect(page.locator('.card.flush .sub', { hasText: 'Spotify' })).toContainText('Kündigungsfrist: 1 Monat');
 });
 
-test('Gesamtvermögen: Sparkonto + Depot', async ({ page }) => {
+test('Sparen & Depot: Gesamt aus Sparkonto + Depot, Aktualisieren im Fenster mit Datum und Unterschied', async ({ page }) => {
   await page.goto('/');
   await page.locator('nav').getByRole('button', { name: 'Mehr' }).click();
+  await expect(page.getByRole('button', { name: /^Gesamtvermögen/ })).toHaveCount(0);
   await page.getByRole('button', { name: /^Sparen & Depot/ }).click();
+  await page.locator('.wtile', { hasText: 'Sparkonto' }).click();
+  await page.getByRole('button', { name: 'Stand aktualisieren' }).click();
   await page.getByLabel('Kontostand Sparkonto').fill('8500');
-  await page.getByRole('button', { name: 'Mit heutigem Datum erfassen' }).first().click();
-  await page.getByLabel('Neuer Depotstand').fill('12400');
-  await page.getByRole('button', { name: 'Mit heutigem Datum erfassen' }).nth(1).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Speichern' }).click();
+  await expect(page.locator('.toast')).toContainText('Kontostand erfasst');
+  await page.locator('.wtile', { hasText: 'Depot' }).click();
+  await page.getByRole('button', { name: 'Stand aktualisieren' }).click();
+  await page.getByLabel('Neuer Depotstand').fill('12000');
+  await page.getByLabel('Stand vom').fill(await page.evaluate(() => { const d = new Date(); d.setDate(d.getDate() - 20); return d.toISOString().slice(0, 10); }));
+  await page.getByRole('dialog').getByRole('button', { name: 'Speichern' }).click();
   await expect(page.locator('.toast')).toContainText('Depotstand erfasst');
-  await page.locator('.back').click();
-  await page.getByRole('button', { name: /^Gesamtvermögen/ }).click();
-  await expect(page.locator('.mid34')).toHaveText(/20\.900\s€/);
+  await page.locator('.wtile', { hasText: 'Depot' }).click();
+  await page.getByRole('button', { name: 'Stand aktualisieren' }).click();
+  await page.getByLabel('Neuer Depotstand').fill('12400');
+  await expect(page.getByRole('dialog').locator('.kv', { hasText: 'Unterschied' })).toContainText('+400 €');
+  await page.getByRole('dialog').getByRole('button', { name: 'Speichern' }).click();
+  await expect(page.locator('.whero .mid34')).toHaveText(/20\.900\s€/);
+  await expect(page.locator('.wtile', { hasText: 'Depot' })).toContainText('+3,3 %');
+  await expect(page.getByRole('img', { name: /Verlauf Sparkonto und Depot/ })).toBeVisible();
 });
 
 test('Ausgaben-Kalender: Tag zeigt Betrag, Tipp zeigt Buchungen, Erfassen für den Tag', async ({ page }) => {

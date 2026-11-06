@@ -12,7 +12,6 @@ import type { CatArea } from '../domain/types';
 import type { TxPreset } from './TxSheet';
 import { CAT_ICONS } from '../domain/catIcons';
 import { Sparen } from './Sparen';
-import { WealthPage } from './Wealth';
 import { Bookings } from './Bookings';
 import { Stats } from './Stats';
 import { BackupScreen } from './BackupScreen';
@@ -20,7 +19,7 @@ import { RecurringPage } from './Recurring';
 import { JointPage } from './Joint';
 import { ImportPage } from './Import';
 
-export type MorePage = 'menu' | 'wealth' | 'joint' | 'spar' | 'bookings' | 'stats' | 'recurring' | 'categories' | 'budgets' | 'settings' | 'backup' | 'import';
+export type MorePage = 'menu' | 'joint' | 'spar' | 'bookings' | 'stats' | 'recurring' | 'categories' | 'budgets' | 'settings' | 'backup' | 'import';
 type Page = MorePage;
 
 export interface MoreProps {
@@ -38,7 +37,6 @@ export function More({ initial = 'menu', onExit, onOpenTx, onAdd, onEditRec }: M
   const direct = initial !== 'menu' && page === initial;
   const back = <Back label={direct ? 'Zurück' : 'Mehr'} onClick={() => (direct ? onExit() : setPage('menu'))} />;
   if (page === 'joint') return <JointPage back={back} />;
-  if (page === 'wealth') return <WealthPage back={back} />;
   if (page === 'spar') return <Sparen back={back} onAdd={onAdd} onEditRec={onEditRec} />;
   if (page === 'bookings') return <Bookings back={back} onOpenTx={onOpenTx} onDuplicate={onAdd} />;
   if (page === 'stats') return <Stats back={back} />;
@@ -52,7 +50,6 @@ export function More({ initial = 'menu', onExit, onOpenTx, onAdd, onEditRec }: M
   const groups: [string, [Page, string, string, string][]][] = [
     ['Geld', [
       ['spar', 'piggy', 'Sparen & Depot', ''],
-      ['wealth', 'bank', 'Gesamtvermögen', ''],
       ['joint', 'Gemeinsames Konto', 'Gemeinsames Konto', data.settings.joint?.enabled ? data.settings.joint.name : 'aus'],
       ['stats', 'chart', 'Auswertung', '']
     ]],
