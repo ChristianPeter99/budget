@@ -46,7 +46,7 @@ test('Sparziel im Sparkonto anlegen, auf der Übersicht sehen, einzahlen, lösch
   await dlg.getByRole('button', { name: 'Speichern' }).click();
   // zurück im Sparkonto; die erste Monatsrate ist sofort automatisch gebucht
   await expect(page.getByRole('dialog', { name: 'Sparkonto' })).toBeVisible();
-  await expect(page.locator('.goalrow', { hasText: 'Urlaub' })).toContainText('200 € / 1.200 €');
+  await expect(page.locator('.goalrow', { hasText: 'Urlaub' })).toContainText('200 / 1.200 €');
   await expect(page.locator('.goalrow', { hasText: 'Urlaub' }).locator('> b')).toHaveText(/200\s€/);
   await page.getByRole('dialog').getByRole('button', { name: 'Schließen' }).click();
   await expect(page.locator('.wtile', { hasText: 'Sparkonto' })).toContainText('/ Monat');
@@ -58,7 +58,7 @@ test('Sparziel im Sparkonto anlegen, auf der Übersicht sehen, einzahlen, lösch
   await page.locator('.goalrow', { hasText: 'Urlaub' }).click();
   await page.getByRole('dialog').getByLabel('Betrag einzahlen').fill('300');
   await page.getByRole('button', { name: 'Zum angesparten Betrag hinzufügen' }).click();
-  await expect(page.locator('.goalrow', { hasText: 'Urlaub' })).toContainText('500 € / 1.200 €');
+  await expect(page.locator('.goalrow', { hasText: 'Urlaub' })).toContainText('500 / 1.200 €');
   await page.getByRole('dialog').getByRole('button', { name: 'Schließen' }).click();
   await page.locator('nav').getByRole('button', { name: 'Übersicht' }).click();
   await expect(page.locator('.ovcorner.bl')).toContainText('Urlaub');
@@ -237,7 +237,11 @@ test('Sparkonto: Betrag antippen öffnet Eingabe; alter Bankstand meldet sich or
   await page.getByLabel('Kontostand Sparkonto').fill('5100');
   await page.getByRole('dialog').getByRole('button', { name: 'Speichern' }).click();
   await expect(page.getByRole('dialog').locator('.wchip')).toHaveCount(0);
-  await expect(page.getByRole('img', { name: /^Sparkonto bis heute, gestrichelt die Prognose/ })).toBeVisible();
-  await page.getByRole('button', { name: '5 J' }).click();
-  await expect(page.getByRole('dialog')).toContainText('Prognose in 5 Jahren');
+  // zwei Stände: „Bisher“ zeigt den Verlauf, „Nächstes Jahr“ die Prognose
+  await expect(page.getByRole('img', { name: /^Sparkonto seit / })).toBeVisible();
+  await expect(page.getByRole('dialog').locator('.wsubline')).toContainText('+100 € seit');
+  await page.getByRole('button', { name: 'Nächstes Jahr' }).click();
+  await expect(page.getByRole('img', { name: /^Prognose Sparkonto bis / })).toBeVisible();
+  await expect(page.getByRole('dialog').locator('.wcap')).toHaveText('In einem Jahr · ohne Zinsen');
+  await expect(page.getByRole('dialog').locator('.wbigval')).toContainText('≈');
 });

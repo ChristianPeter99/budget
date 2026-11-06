@@ -54,8 +54,10 @@ test('Sparkonto: Stand mit heutigem Datum erfassen, auch mit gemeinsamem Konto (
   await page.getByRole('dialog').getByRole('button', { name: 'Speichern' }).click();
   await expect(page.locator('.toast')).toContainText('Kontostand erfasst');
   // Details bleiben offen: neuer Stand, Prognose und Verlauf
-  await expect(page.getByRole('dialog').locator('.mid34')).toHaveText(/12\.345\s€/);
-  await expect(page.getByRole('dialog')).toContainText('Prognose in 1 Jahr');
+  await page.getByRole('button', { name: 'Bisher' }).click();
+  await expect(page.getByRole('dialog').locator('.wbigval')).toHaveText(/12\.345\s€/);
+  await page.getByRole('button', { name: 'Nächstes Jahr' }).click();
+  await expect(page.getByRole('dialog')).toContainText('In einem Jahr · ohne Zinsen');
   await page.getByRole('dialog').getByRole('button', { name: /^Verlauf/ }).click();
   await expect(page.getByRole('dialog').locator('.lastentry')).toContainText('12.345 €');
   await page.getByRole('dialog').getByRole('button', { name: 'Schließen' }).click();

@@ -940,3 +940,38 @@ html{background:#000}
 .wadd{color:var(--spar);min-height:46px}
 .wadd .wrowtxt b{color:var(--spar)}
 .wadd svg{color:var(--spar)!important;margin-left:-3px}
+/* Sparkonto (J1 + J3): linksbündig, Liste ohne Kästen */
+.hdricon{width:44px;height:44px;border:0;background:transparent;color:var(--text2);display:inline-flex;align-items:center;justify-content:flex-end;padding:0}
+.wleft{align-items:flex-start;text-align:left;gap:4px;padding:6px 2px 0}
+.wleft .wamt{min-height:0;padding:2px 0}
+.wcap{font-size:var(--t-note);color:var(--mut)}
+.wbigval{font-size:2.9rem;font-weight:800;letter-spacing:-.04em;line-height:1.05}
+.wsubline{font-size:var(--t-body);font-weight:600}
+.wsubline.pos{color:var(--pos)}.wsubline.neg{color:var(--neg)}
+.wleft .wchip{margin-top:8px}
+.wleft.wedit{align-items:stretch}
+.wbleed{margin:6px calc(-1 * var(--s4)) 0}
+.wbleed .tchart{margin:0}
+.wbleed .wlabels{padding:0 var(--s4)}
+.wempty{margin:18px var(--s4);text-align:center}
+.wmode{display:flex;justify-content:center;gap:8px;margin-top:-4px}
+.wmode button{height:40px;padding:0 14px;border:0;background:transparent;color:var(--faint);font-size:var(--t-body);font-weight:700}
+.wmode button[aria-pressed=true]{color:var(--text)}
+.wlist{display:flex;flex-direction:column;margin-top:6px}
+.wli{display:flex;align-items:center;gap:12px;width:100%;min-height:54px;padding:8px 0;border:0;border-top:1px solid var(--line);background:transparent;color:var(--text);text-align:left;font-size:var(--t-body)}
+.wli > svg,.wli .whchev svg{color:var(--faint);flex:none}
+.wli > b{font-weight:700}
+.wlitxt{flex:1;min-width:0;display:flex;flex-direction:column;gap:7px}
+.wlitxt b{font-weight:600}
+.wlitxt b.pos{color:var(--pos)}
+.wlitop{display:flex;justify-content:space-between;align-items:baseline;gap:8px;min-width:0}
+.wlitop b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wlitop small{font-size:var(--t-note);color:var(--mut);white-space:nowrap}
+.wlitop small.warn{color:var(--warn)}.wlitop small.pos{color:var(--pos)}
+.wli .wgbar{max-width:none;height:3px}
+.wli.wadd{color:var(--pos);font-weight:600;min-height:50px}
+.wli.whead{color:var(--text2)}
+.wli.whead small{color:var(--mut);font-size:var(--t-note)}
+.wlist .whrow{padding-left:0}
+.wbleed .tplot{margin:0 14px}
+.tmlabel{position:absolute;transform:translate(-50%,-26px);font-size:var(--t-micro);font-weight:700;color:var(--goal);white-space:nowrap;pointer-events:none;max-width:140px;overflow:hidden;text-overflow:ellipsis}
