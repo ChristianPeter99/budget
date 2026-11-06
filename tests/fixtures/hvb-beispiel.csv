@@ -1,0 +1,4 @@
+Kontonummer	Buchungsdatum	Valuta	Verwendungszweck	Betrag	Waehrung
+12345678	02.01.2026	30.12.2025	EC-GAA/POS Rossmann 1111 Musterstadt      DEU10001 Belegdatum 30.12.2025     -15,96 EUR Bezahlung mit Unicredit Card PAN 123456******7890 H11111 30.12.2025       -15,96 EUR Musterstadt	-15,96	EUR
+12345678	02.01.2026	30.12.2025	EC-GAA/POS Alnatura Produktions u Beispielort    DEU10002DEU Belegdatum 30.12.2025      -1,29 EUR Bezahlung mit Unicredit Card PAN 123456******7890 H22222 30.12.2025        -1,29 EUR Beispielort	-1,29	EUR
+12345678	05.01.2026	05.01.2026	Gutschrift Muster Arbeitgeber GmbH  Lohn Gehalt 12/2025	2.500,00	EUR

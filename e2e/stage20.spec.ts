@@ -302,9 +302,9 @@ test('Röhrenfernseher-Effekt: Zurücksetzen und langes Drücken auf die Version
   await expect(page.locator('.crt')).toHaveCount(0, { timeout: 4000 });
   await expect.poll(() => page.evaluate(() => { const r = document.getElementById('root')!; return r.style.transform + r.style.opacity + r.style.pointerEvents + r.getAnimations().length; })).toBe('0');
   // Zurücksetzen: Bild geht aus, Daten werden ersetzt, Bild geht wieder an
-  await page.getByRole('button', { name: 'Auf Startdaten zurücksetzen' }).click();
-  await page.getByRole('button', { name: 'Ja, zurücksetzen' }).click();
-  await expect(page.locator('.toast')).toContainText('Zurückgesetzt', { timeout: 5000 });
+  await page.getByRole('button', { name: 'Alle Daten löschen' }).click();
+  await page.getByRole('button', { name: 'Ja, alles löschen' }).click();
+  await expect(page.locator('.toast')).toContainText('Alle Daten gelöscht', { timeout: 5000 });
   await expect(page.locator('.crt')).toHaveCount(0, { timeout: 4000 });
   await expect.poll(() => page.evaluate(() => document.getElementById('root')!.style.pointerEvents)).toBe('');
   await page.locator('nav').getByRole('button', { name: 'Übersicht' }).click();
@@ -316,4 +316,36 @@ test('Übersicht scrollt nur, wenn der Inhalt nicht passt', async ({ page }) => 
   await expect(page.locator('.ovcenter')).toBeVisible();
   const r = await page.evaluate(() => { const v = document.querySelector('.view')!; return [v.scrollHeight, v.clientHeight]; });
   expect(r[0]).toBeLessThanOrEqual(r[1] + 1);
+});
+
+test('CSV-Import: HypoVereinsbank-Format (Tabulator) wird erkannt, Händler aus dem Verwendungszweck', async ({ page }) => {
+  const fs = await import('node:fs');
+  const csv = fs.readFileSync(new URL('../tests/fixtures/hvb-beispiel.csv', import.meta.url));
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Mehr', exact: true }).click();
+  await page.getByRole('button', { name: /CSV-Import/ }).click();
+  await page.getByLabel('CSV-Datei').setInputFiles({ name: 'hvb.csv', mimeType: 'text/csv', buffer: csv });
+  await expect(page.getByRole('heading', { name: 'Prüfen & zuordnen' })).toBeVisible();
+  await expect(page.getByText('Rossmann').first()).toBeVisible();
+  await expect(page.getByText('Alnatura').first()).toBeVisible();
+  await expect(page.locator('body')).not.toContainText('******');
+});
+
+test('Alle Daten löschen: alles auf 0, Standard-Kategorien bleiben', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('nav').getByRole('button', { name: 'Mehr' }).click();
+  await page.getByRole('button', { name: /Daten & Backup/ }).click();
+  await page.getByRole('button', { name: 'Alle Daten löschen' }).click();
+  await page.getByRole('button', { name: 'Ja, alles löschen' }).click();
+  await expect(page.locator('.toast')).toContainText('Alle Daten gelöscht', { timeout: 5000 });
+  await expect(page.getByRole('button', { name: 'Vorherigen Stand zurückholen' })).toBeVisible();
+  await page.locator('.back', { hasText: 'Mehr' }).click();
+  await page.getByRole('button', { name: /^Kategorien/ }).first().click();
+  await page.getByRole('tab', { name: 'Fixkosten' }).click();
+  await expect(page.locator('.catname', { hasText: 'Wohnen' })).toBeVisible();
+  await page.getByRole('tab', { name: 'Alltag' }).click();
+  await expect(page.locator('.catname', { hasText: 'Unterwegs' })).toBeVisible();
+  await expect(page.locator('.catname', { hasText: 'Motorrad' })).toHaveCount(0);
+  await page.locator('nav').getByRole('button', { name: 'Übersicht' }).click();
+  await expect(page.locator('.ovcenter')).toContainText('0');
 });

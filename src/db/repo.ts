@@ -6,7 +6,7 @@ import { AppError, DEFAULT_SETTINGS, isHouseholdCat, newId } from '../domain/typ
 import { currentMonthKey, isValidISODate, isValidMonthKey, shiftMonth, todayISO } from '../domain/dates';
 import { validateAmountCents, validateBackupData, validateName } from '../domain/validate';
 import { yearlyShare } from '../domain/calc';
-import { buildSeed } from '../domain/seed';
+import { buildEmpty, buildSeed } from '../domain/seed';
 import { MAX_CENTS } from '../domain/money';
 
 /** Bricht eine Transaktion ab, ohne dass daraus eine unbehandelte Promise-Ablehnung entsteht. */
@@ -871,4 +871,10 @@ export async function seedIfEmpty(db: Db, startMonth: string): Promise<boolean> 
 /** Setzt die App auf die Startdaten zurück (alle eigenen Daten gehen verloren; die Sicherung vor dem Löschen bleibt lokal erhalten). */
 export async function resetToSeed(db: Db, startMonth: string): Promise<void> {
   await replaceAll(db, buildSeed(startMonth));
+}
+
+/** Alle Daten löschen: leere App mit Standard-Kategorien. Der bisherige Stand bleibt als lokale Sicherung zum Zurückholen. */
+export async function wipeAll(db: Db): Promise<void> {
+  await replaceAll(db, buildEmpty());
+  await db.delete('meta', 'lastImport');
 }

@@ -35,7 +35,7 @@ export interface Candidate {
 
 export interface RawInfo { type: string; time: string; payee: string; iban: string; zweck: string; desc: string; cash: string; amountText: string }
 
-export interface ParseResult { candidates: Candidate[]; skippedLines: number; format: 'c24' | 'generic' }
+export interface ParseResult { candidates: Candidate[]; skippedLines: number; format: 'c24' | 'hvb' | 'generic' }
 
 /** RFC-4180-ähnlicher Parser: Anführungszeichen, doppelte Anführungszeichen, Zeilenumbrüche in Feldern. */
 export function parseCsvText(text: string, sep: string): string[][] {
@@ -124,6 +124,26 @@ function cleanDetail(zweck: string, desc: string, payee: string): string {
   return t.slice(0, 80);
 }
 
+/** Kartennummern-Reste („PAN 540929******8726“) unkenntlich machen – nie anzeigen oder speichern */
+function maskCard(s: string): string {
+  return s.replace(/\bPAN\s+\S+/gi, 'PAN ••••').replace(/\b\d{4,6}\*{2,}\d{2,4}\b/g, '••••');
+}
+
+const PAYEE_STOP = new Set(['produktions', 'handels', 'vertriebs', 'und', 'gmbh', 'filiale', 'ag', 'kg', 'co', 'se', 'ohg', 'mbh', 'deu', 'de']);
+/**
+ * Händler aus dem Verwendungszweck, wenn die Bank keine eigene Spalte liefert (z. B. HypoVereinsbank):
+ * „EC-GAA/POS Rossmann 3029 Tutzing      DEU82327 Belegdatum …  Tutzing“ → „Rossmann“.
+ * Erster Block bis zu mehreren Leerzeichen, ohne Zahlen, Rechtsform-Reste und Ort (der steht am Ende des Zwecks).
+ */
+export function payeeFromZweck(zweck: string): string {
+  const z = zweck.replace(/\s+$/, '');
+  const first = (z.replace(/^(EC-GAA\/POS|EC-POS|EC-GAA|POS|Kartenzahlung|SEPA[-\s]?\S*|Lastschrift|Gutschrift|Überweisung|Dauerauftrag)\s+/i, '').split(/\s{2,}/)[0] ?? '').trim();
+  const town = /\s([A-ZÄÖÜ][A-Za-zÄÖÜäöüß-]{2,})$/.exec(z)?.[1];
+  const words = first.split(/\s+/).filter((w) => w.length > 1 && !/\d/.test(w) && w !== town && !PAYEE_STOP.has(w.toLowerCase().replace(/[.,]/g, '')));
+  const name = words.slice(0, 3).join(' ');
+  return shortName(name || first || 'Unbekannt').slice(0, 60);
+}
+
 async function hashKey(s: string): Promise<string> {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
   return Array.from(new Uint8Array(buf).slice(0, 12), (b) => b.toString(16).padStart(2, '0')).join('');
@@ -147,14 +167,17 @@ const HEADER_ALIASES: Record<string, string[]> = {
 export async function parseStatement(text: string): Promise<ParseResult> {
   const clean = text.replace(/^﻿/, '');
   const firstLine = clean.slice(0, clean.indexOf('\n') >>> 0 || clean.length);
-  const sep = (firstLine.match(/;/g)?.length ?? 0) > (firstLine.match(/,/g)?.length ?? 0) ? ';' : ',';
+  const count = (re: RegExp) => firstLine.match(re)?.length ?? 0;
+  // Trennzeichen: Tabulator (z. B. HypoVereinsbank/UniCredit), Semikolon oder Komma – je nachdem, was in der Kopfzeile überwiegt
+  const sep = count(/\t/g) > Math.max(count(/;/g), count(/,/g)) ? '\t' : count(/;/g) > count(/,/g) ? ';' : ',';
   const rows = parseCsvText(clean, sep);
   if (rows.length < 2) throw new AppError('Die Datei enthält keine Buchungen.');
   const header = (rows[0] as string[]).map(norm);
   const col = (k: keyof typeof HEADER_ALIASES) => header.findIndex((h) => (HEADER_ALIASES[k] as string[]).includes(h));
   const idx = { type: col('type'), booking: col('booking'), card: col('card'), amount: col('amount'), payee: col('payee'), zweck: col('zweck'), desc: col('desc'), bankCat: col('bankCat'), bankSub: col('bankSub'), iban: col('iban'), cash: col('cash') };
   if (idx.booking < 0 || idx.amount < 0) throw new AppError('Spalten für Datum und Betrag wurden nicht gefunden. Ist das ein Kontoauszug als CSV?');
-  const format = header.includes('transaktionstyp') && header.includes('karteneinsatz') ? 'c24' : 'generic';
+  const format = header.includes('transaktionstyp') && header.includes('karteneinsatz') ? 'c24'
+    : header.includes('kontonummer') && header.includes('valuta') && header.includes('verwendungszweck') && idx.payee < 0 ? 'hvb' : 'generic';
   const get = (r: string[], i: number) => (i >= 0 ? (r[i] ?? '').trim() : '');
   const seen = new Map<string, number>();
   const candidates: Candidate[] = [];
@@ -164,10 +187,14 @@ export async function parseStatement(text: string): Promise<ParseResult> {
     const booking = parseDate(get(r, idx.booking));
     const signed = parseSignedAmount(get(r, idx.amount));
     if (!booking || signed === null || signed === 0) { skipped++; continue; }
-    const card = parseDate(get(r, idx.card));
     const type = get(r, idx.type), zweck = get(r, idx.zweck), desc = get(r, idx.desc);
+    // Kaufdatum: „Belegdatum“ im Verwendungszweck (Kartenzahlung), sonst Karteneinsatz/Valuta, sonst Buchungsdatum
+    const beleg = /Belegdatum\s+(\d{1,2}\.\d{1,2}\.\d{2,4})/i.exec(zweck)?.[1];
+    const card = (beleg ? parseDate(beleg) : null) ?? parseDate(get(r, idx.card));
     const bankCat = get(r, idx.bankCat), bankSub = get(r, idx.bankSub);
-    const payee = cleanPayee(get(r, idx.payee), zweck, desc);
+    const payeeCol = get(r, idx.payee);
+    const payee = idx.payee < 0 && zweck ? payeeFromZweck(zweck) : cleanPayee(payeeCol, zweck, desc);
+    const cardPay = /^(EC-GAA\/POS|EC-POS|POS|EC-GAA)\b/i.test(zweck);
     let kind: RowKind;
     if (/^sparen$/i.test(type) || /aufrundung/i.test(zweck)) kind = 'roundup';
     else if (/umbuchung/i.test(type) || /^umbuchung$/i.test(bankSub)) kind = 'transfer';
@@ -178,10 +205,10 @@ export async function parseStatement(text: string): Promise<ParseResult> {
     candidates.push({
       key: await hashKey(`${base}#${n}`), date: card ?? booking, bookingDate: booking, amountCents: Math.abs(signed), kind,
       payee, payeeKey: norm(payee).split(' ').slice(0, 3).join(' ') || 'unbekannt', bankCategory: bankCat, bankSub,
-      detail: cleanDetail(zweck, desc, payee),
+      detail: cardPay ? '' : cleanDetail(maskCard(zweck), desc, payee),
       raw: {
         type, time: /\b(\d{1,2}:\d{2})\b/.exec(get(r, idx.card))?.[1] ?? '', payee: get(r, idx.payee).slice(0, 140), iban: get(r, idx.iban).slice(0, 40),
-        zweck: zweck.slice(0, 300), desc: desc.slice(0, 200), cash: get(r, idx.cash).slice(0, 40), amountText: get(r, idx.amount).slice(0, 30)
+        zweck: maskCard(zweck).slice(0, 300), desc: desc.slice(0, 200), cash: get(r, idx.cash).slice(0, 40), amountText: get(r, idx.amount).slice(0, 30)
       }
     });
   }

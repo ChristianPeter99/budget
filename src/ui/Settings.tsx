@@ -1,9 +1,8 @@
 import { useRef, useState } from 'react';
 import { Sheet } from './common';
 import { useStore } from '../state/store';
-import { resetToSeed, saveSettings } from '../db/repo';
+import { saveSettings, wipeAll } from '../db/repo';
 import { groupTargets } from '../domain/calc';
-import { currentMonthKey } from '../domain/dates';
 import { formatEUR } from '../domain/money';
 import { APP_VERSION } from '../version';
 import { checkForUpdate, isNewer, reinstallApp, usePwa } from '../pwa';
@@ -40,17 +39,17 @@ export function DataSections() {
       <div className="card flush">
         <div className="sec"><h2>Daten</h2></div>
         <div className="pad stack">
-          {reset === 0 && <button className="btn danger" onClick={() => setReset(1)}>Auf Startdaten zurücksetzen</button>}
+          {reset === 0 && <button className="btn danger" onClick={() => setReset(1)}>Alle Daten löschen</button>}
           {reset === 1 && (
             <>
-              <p className="note">Alle Buchungen, Depot-Einträge und Änderungen werden durch die Startdaten ersetzt. Der jetzige Stand wird vorher lokal gesichert und lässt sich hier über „Vorherigen Stand zurückholen“ wiederherstellen. Erstelle trotzdem vorher ein Backup.</p>
+              <p className="note">Alles geht auf 0: Buchungen, Fixkosten und Gehalt, Sparrate, Sparziele, Sparkonto- und Depotstände, Budgets und eigene Kategorien. Übrig bleibt eine leere App mit Standard-Kategorien. Der jetzige Stand wird vorher lokal gesichert und lässt sich über „Vorherigen Stand zurückholen“ wiederherstellen. Erstelle trotzdem vorher ein Backup.</p>
               <button className="btn danger" onClick={async () => {
-                // Röhrenfernseher aus → zurücksetzen → wieder an
+                // Röhrenfernseher aus → alles löschen → wieder an
                 await crtOff();
-                const ok = await run((db) => resetToSeed(db, currentMonthKey()).then(() => true), 'Zurückgesetzt');
+                const ok = await run((db) => wipeAll(db).then(() => true), 'Alle Daten gelöscht');
                 if (ok) setReset(0);
                 await crtOn();
-              }}>Ja, zurücksetzen</button>
+              }}>Ja, alles löschen</button>
               <button className="btn sec2" onClick={() => setReset(0)}>Abbrechen</button>
             </>
           )}

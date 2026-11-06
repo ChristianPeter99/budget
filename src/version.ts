@@ -1,2 +1,2 @@
 /** Bei jedem Release zusammen mit package.json und public/version.json erhöhen (ein Test prüft das). */
-export const APP_VERSION = '1.54.0';
+export const APP_VERSION = '1.55.0';
