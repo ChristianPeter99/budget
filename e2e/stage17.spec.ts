@@ -57,10 +57,13 @@ test('Übersicht: vor „Gilt ab“ des Gehalts kein „Gehalt (erwartet)“', a
   await expect(page.locator('.ovfacts')).toContainText('Einnahmen');
 });
 
-test('Sparen & Depot: Sparrate zeigt „Gilt ab“ und öffnet die Vorlage', async ({ page }) => {
+test('Sparkonto: Sparrate-Zeile öffnet die Vorlage mit „Gilt ab“, danach zurück zum Sparkonto', async ({ page }) => {
   await page.goto('/');
   await page.locator('nav').getByRole('button', { name: 'Mehr' }).click();
   await page.getByRole('button', { name: /Sparen & Depot/ }).click();
-  await page.getByRole('button', { name: 'Sparrate gilt ab – ändern' }).click();
+  await page.locator('.wtile', { hasText: 'Sparkonto' }).click();
+  await page.getByRole('button', { name: /^Sparrate .* pro Monat – ändern$/ }).click();
   await expect(page.getByRole('dialog').getByLabel('Gilt ab (Monat)')).toBeVisible();
+  await page.getByRole('dialog').getByRole('button', { name: /Abbrechen|Schließen/ }).first().click();
+  await expect(page.getByRole('dialog', { name: 'Sparkonto' })).toBeVisible();
 });

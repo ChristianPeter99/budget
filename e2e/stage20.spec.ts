@@ -28,38 +28,45 @@ test('Budgets: nur Alltag-Kategorien; Limit erscheint im Alltag als Balken unter
   await expect(page.locator('.gbar')).toHaveCount(1);
 });
 
-test('Sparziel anlegen, auf der Übersicht sehen, einzahlen, löschen mit Rückgängig', async ({ page }) => {
+test('Sparziel im Sparkonto anlegen, auf der Übersicht sehen, einzahlen, löschen mit Rückgängig', async ({ page }) => {
+  const openSpar = async () => {
+    await page.locator('.wtile', { hasText: 'Sparkonto' }).click();
+    await expect(page.getByRole('dialog', { name: 'Sparkonto' })).toBeVisible();
+  };
   await page.goto('/');
   await page.locator('nav').getByRole('button', { name: 'Mehr' }).click();
   await page.getByRole('button', { name: /^Sparen & Depot/ }).click();
-  await page.getByRole('button', { name: 'Neues Ziel' }).click();
+  await openSpar();
+  await page.getByRole('button', { name: 'Sparziel hinzufügen' }).click();
   const dlg = page.getByRole('dialog');
   await dlg.locator('input').first().fill('Urlaub');
   await dlg.getByLabel('Zielbetrag').fill('1200');
   await dlg.getByLabel('Zielmonat').fill(await page.evaluate(() => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() + 5); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; }));
   await expect(dlg.locator('.goalprev')).toContainText('200 € pro Monat');
   await dlg.getByRole('button', { name: 'Speichern' }).click();
-  // Automatisch angespart: die erste Monatsrate ist sofort als Sparen gebucht
-  await expect(page.locator('.goalrow', { hasText: 'Urlaub' })).toContainText('200 € pro Monat');
-  await expect(page.locator('.goalrow .sp', { hasText: 'Urlaub' })).toContainText('200 €');
-  await expect(page.locator('.wtile', { hasText: 'Sparkonto' })).toContainText('/ Monat');
-  await page.locator('.wtile', { hasText: 'Sparkonto' }).click();
-  await expect(page.getByRole('dialog').locator('.wleg', { hasText: 'Urlaub' })).toContainText('200 €');
+  // zurück im Sparkonto; die erste Monatsrate ist sofort automatisch gebucht
+  await expect(page.getByRole('dialog', { name: 'Sparkonto' })).toBeVisible();
+  await expect(page.locator('.goalrow', { hasText: 'Urlaub' })).toContainText('200 € / 1.200 €');
+  await expect(page.locator('.goalrow', { hasText: 'Urlaub' }).locator('> b')).toHaveText(/200\s€/);
   await page.getByRole('dialog').getByRole('button', { name: 'Schließen' }).click();
+  await expect(page.locator('.wtile', { hasText: 'Sparkonto' })).toContainText('/ Monat');
   await page.locator('nav').getByRole('button', { name: 'Buchungen' }).click();
   await expect(page.getByText('Sparziel: Urlaub').first()).toBeVisible();
   await page.locator('nav').getByRole('button', { name: 'Mehr' }).click();
   if (await page.getByRole('button', { name: /^Sparen & Depot/ }).isVisible()) await page.getByRole('button', { name: /^Sparen & Depot/ }).click();
+  await openSpar();
   await page.locator('.goalrow', { hasText: 'Urlaub' }).click();
   await page.getByRole('dialog').getByLabel('Betrag einzahlen').fill('300');
   await page.getByRole('button', { name: 'Zum angesparten Betrag hinzufügen' }).click();
-  await expect(page.locator('.goalrow', { hasText: 'Urlaub' })).toContainText('500 €');
+  await expect(page.locator('.goalrow', { hasText: 'Urlaub' })).toContainText('500 € / 1.200 €');
+  await page.getByRole('dialog').getByRole('button', { name: 'Schließen' }).click();
   await page.locator('nav').getByRole('button', { name: 'Übersicht' }).click();
   await expect(page.locator('.ovcorner.bl')).toContainText('Urlaub');
   await page.locator('.ovcorner.bl').click();
   await expect(page.locator('.ovcenter')).toContainText('Urlaub: 500 € / 1.200 €');
   await page.getByRole('button', { name: /Sparen öffnen/ }).click();
   await expect(page.getByRole('heading', { name: 'Sparen & Depot' })).toBeVisible();
+  await openSpar();
   await page.locator('.goalrow', { hasText: 'Urlaub' }).click();
   await page.getByRole('button', { name: 'Sparziel löschen' }).click();
   await expect(page.locator('.goalrow')).toHaveCount(0);
@@ -76,7 +83,7 @@ test('Fixkosten: optionale Kündigungsfrist wird in der Zeile angezeigt', async 
   await expect(page.locator('.card.flush .sub', { hasText: 'Spotify' })).toContainText('Kündigungsfrist: 1 Monat');
 });
 
-test('Sparen & Depot: Gesamt aus Sparkonto + Depot, Aktualisieren direkt im Detail mit Datum und Unterschied', async ({ page }) => {
+test('Sparen & Depot: Gesamt aus Sparkonto + Depot, Aktualisieren direkt im Detail (Depot mit Datum) und Unterschied', async ({ page }) => {
   await page.goto('/');
   await page.locator('nav').getByRole('button', { name: 'Mehr' }).click();
   await expect(page.getByRole('button', { name: /^Gesamtvermögen/ })).toHaveCount(0);
@@ -213,8 +220,15 @@ test('Sparkonto: Betrag antippen öffnet Eingabe; alter Bankstand meldet sich or
   await page.locator('.wtile', { hasText: 'Sparkonto' }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Stand eintragen' }).click();
   await page.getByLabel('Kontostand Sparkonto').fill('5000');
-  await page.getByLabel('Stand vom').fill(await page.evaluate(() => { const d = new Date(); d.setDate(d.getDate() - 40); return d.toISOString().slice(0, 10); }));
+  await expect(page.getByLabel('Stand vom')).toHaveCount(0); // Sparkonto: immer der Stand von heute
   await page.getByRole('dialog').getByRole('button', { name: 'Speichern' }).click();
+  await expect(page.getByRole('dialog').locator('.wchip')).toHaveCount(0);
+  // 40 Tage später: der Bankstand meldet sich orange
+  await page.clock.install({ time: new Date(Date.now() + 40 * 86400000) });
+  await page.reload();
+  await page.locator('nav').getByRole('button', { name: 'Mehr' }).click();
+  if (await page.getByRole('button', { name: /^Sparen & Depot/ }).isVisible()) await page.getByRole('button', { name: /^Sparen & Depot/ }).click();
+  await page.locator('.wtile', { hasText: 'Sparkonto' }).click();
   await expect(page.getByRole('dialog').locator('.wchip.warn')).toContainText('Tage alt · abgleichen');
   await page.getByRole('button', { name: /^Sparkonto .* antippen zum Aktualisieren/ }).click();
   await expect(page.getByLabel('Kontostand Sparkonto')).toBeFocused();

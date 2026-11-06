@@ -144,7 +144,7 @@ export function RecurringSheet({ rec, onClose, run, presetGroup }: { rec: Recurr
     if (r) onClose();
   }
   return (
-    <Sheet title={rec ? 'Vorlage' : presetGroup === 'fix' ? 'Neue Fixkosten' : 'Neue Vorlage'} onClose={onClose}>
+    <Sheet title={rec ? (presetGroup === 'spar' ? 'Sparrate' : 'Vorlage') : presetGroup === 'fix' ? 'Neue Fixkosten' : presetGroup === 'spar' ? 'Sparrate festlegen' : 'Neue Vorlage'} onClose={onClose}>
       {presetGroup !== 'fix' && (
         <div className="fseg"><button className={type === 'expense' ? 'on' : ''} onClick={() => { setType('expense'); setCat(''); }}>Ausgabe</button><button className={type === 'income' ? 'on' : ''} onClick={() => { setType('income'); setCat(''); setInterval('monthly'); }}>Einnahme</button></div>
       )}

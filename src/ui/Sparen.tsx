@@ -8,7 +8,9 @@ import { currentMonthKey, formatDateDE, monthLabel, isValidISODate, monthRange, 
 import { formatEUR0, parseCents } from '../domain/money';
 import type { Recurring } from '../domain/types';
 import type { TxPreset } from './TxSheet';
-import { GoalsCard, effectiveGoals } from './Goals';
+import { GoalSheet, effectiveGoals, goalLine, sortGoals } from './Goals';
+import { RecurringSheet } from './Recurring';
+import { goalPlan } from '../domain/calc';
 import type { EffGoal } from './Goals';
 
 /** Sparkonto heute geschätzt: letzter erfasster Kontostand plus seitdem gebuchte Sparraten (bis heute). */
@@ -61,7 +63,7 @@ function AreaChart({ points, label }: { points: { date: string; cents: number }[
  * Sparen & Depot (Variante B): oben die Gesamtsumme mit Verlauf, darunter zwei Kacheln für Sparkonto und Depot
  * (Tipp: Details, Verlauf, „Stand aktualisieren“), dann Sparziele und Sparrate. Eingaben nur noch im Fenster.
  */
-export function Sparen({ back, onEditRec }: { back: ReactNode; onAdd?: (p: TxPreset) => void; onEditRec: (r: Recurring) => void }) {
+export function Sparen({ back }: { back: ReactNode; onAdd?: (p: TxPreset) => void; onEditRec?: (r: Recurring) => void }) {
   const { data, run } = useStore();
   const cats = data.categories;
   const s = data.settings;
@@ -83,6 +85,7 @@ export function Sparen({ back, onEditRec }: { back: ReactNode; onAdd?: (p: TxPre
   const first = shown[0];
   const diff = first && shown.length > 1 ? total - first.cents : null;
   const [detail, setDetail] = useState<'' | 'spar' | 'depot'>('');
+  const [sub, setSub] = useState<{ goal: EffGoal | null } | { rate: true } | null>(null);
   const depotPct = last && prev && prev.valueCents > 0 ? ((last.valueCents - prev.valueCents) / prev.valueCents) * 100 : null;
   const pctText = (p: number) => `${p >= 0 ? '+' : '−'}${Math.abs(p).toLocaleString('de-DE', { maximumFractionDigits: 1 })} %`;
 
@@ -113,21 +116,14 @@ export function Sparen({ back, onEditRec }: { back: ReactNode; onAdd?: (p: TxPre
         </button>
       </div>
 
-      <GoalsCard />
-
-      {sparRecs[0] && (
-        <div className="card flush">
-          <button className="link" onClick={() => onEditRec(sparRecs[0] as Recurring)} aria-label="Sparrate gilt ab – ändern">
-            <span>Sparrate</span><small>{formatEUR0(rate)} / Monat · ab {shortMonth(sparRecs[0].startMonth)}<Chevr /></small>
-          </button>
-        </div>
-      )}
-
-      {detail === 'spar' && (
+      {detail === 'spar' && !sub && (
         <Sheet title="Sparkonto" left="Schließen" onClose={() => setDetail('')}>
-          <SparDetail sav={sav} rate={rate} goals={goals} />
+          <SparDetail sav={sav} rate={rate} goals={goals} rec={sparRecs[0] ?? null} onGoal={(g) => setSub({ goal: g })} onRate={() => setSub({ rate: true })} />
         </Sheet>
       )}
+      {/* Sparziel bzw. Sparrate bearbeiten: ersetzt kurz die Sparkonto-Details, danach geht es dorthin zurück */}
+      {sub && 'goal' in sub && <GoalSheet goal={sub.goal} onClose={() => setSub(null)} />}
+      {sub && 'rate' in sub && <RecurringSheet rec={sparRecs[0] ?? null} presetGroup="spar" onClose={() => setSub(null)} run={run} />}
       {detail === 'depot' && (
         <Sheet title="Depot" left="Schließen" onClose={() => setDetail('')}>
           <DepotDetail entries={entries} />
@@ -136,11 +132,6 @@ export function Sparen({ back, onEditRec }: { back: ReactNode; onAdd?: (p: TxPre
       )}
     </>
   );
-}
-
-/** „Nov. 2026“ */
-function shortMonth(m: string): string {
-  return new Date(Number(m.slice(0, 4)), Number(m.slice(5, 7)) - 1, 1).toLocaleDateString('de-DE', { month: 'short', year: 'numeric' });
 }
 
 /** Monate von a bis b (b − a). */
@@ -152,7 +143,7 @@ function monthsBetween(a: string, b: string): number {
  * Sparkonto-Details (Variante „Kompakt“): Stand, Zusammensetzung pro Monat (Sparrate + Sparziele),
  * Prognose mit Zeitraum-Umschalter, Verlauf zum Aufklappen und unten „Stand aktualisieren“.
  */
-function SparDetail({ sav, rate, goals }: { sav: { cents: number; known: boolean }; rate: number; goals: EffGoal[] }) {
+function SparDetail({ sav, rate, goals, rec, onGoal, onRate }: { sav: { cents: number; known: boolean }; rate: number; goals: EffGoal[]; rec: Recurring | null; onGoal: (g: EffGoal | null) => void; onRate: () => void }) {
   const { data, run } = useStore();
   const s = data.settings;
   const [years, setYears] = useState<1 | 3 | 5>(1);
@@ -178,7 +169,7 @@ function SparDetail({ sav, rate, goals }: { sav: { cents: number; known: boolean
   const markers = goals.map((g) => ({ g, left: monthsBetween(month, g.dueMonth) })).filter((x) => x.left > 0 && x.left <= n)
     .map(({ g, left }) => ({ d: (future[left] as Pt).d, c: at(left), label: `${g.name} erreicht · ${monthShort(g.dueMonth)} ${g.dueMonth.slice(2, 4)}` }));
   const items = savingsEntries(s).map((e) => ({ key: e.date, date: e.date, cents: e.cents, del: () => run((db) => deleteSavingsEntry(db, e.date), 'Eintrag gelöscht') }));
-  const solo = rate === 0 && goals.length > 0 ? goals.reduce((a, g) => (g.dueMonth > a ? g.dueMonth : a), '') : '';
+  const all = sortGoals(effectiveGoals(s.savingsGoals ?? [], data.transactions));
   return (
     <>
       <StandHead kind="spar" cents={sav.known ? sav.cents : null} date={sav.known ? (s.savingsBalanceDate as string) : null}
@@ -199,18 +190,37 @@ function SparDetail({ sav, rate, goals }: { sav: { cents: number; known: boolean
         </>
       )}
 
-      {perMonth > 0 && (
-        <div className="card wmix">
-          <div className="wmixhead"><span>Pro Monat</span><b className="num">{formatEUR0(perMonth)}</b></div>
+      {/* Sparrate und Sparziele in einer Karte: oben die Summe pro Monat, darunter je eine Zeile zum Antippen */}
+      <div className="card flush wplan">
+        <div className="wmixhead"><span>Pro Monat</span><b className="num">{formatEUR0(perMonth)}</b></div>
+        {perMonth > 0 && (
           <div className="wbar" aria-hidden="true">
             {rate > 0 && <i style={{ flex: rate, background: 'var(--spar)' }} />}
             {goals.map((g) => <i key={g.id} style={{ flex: g.monthly, background: 'var(--goal)' }} />)}
           </div>
-          {rate > 0 && <div className="wleg"><span><i style={{ background: 'var(--spar)' }} />Sparrate · fest</span><b className="num">{formatEUR0(rate)}</b></div>}
-          {goals.map((g) => <div className="wleg" key={g.id}><span><i style={{ background: 'var(--goal)' }} />{g.name} · bis {monthShort(g.dueMonth)} {g.dueMonth.slice(2, 4)}</span><b className="num">{formatEUR0(g.monthly)}</b></div>)}
-          {solo && <p className="note" style={{ margin: 0 }}>Keine feste Sparrate – das Sparziel wirkt bis {monthLabel(solo)} wie eine Sparrate auf Zeit.</p>}
-        </div>
-      )}
+        )}
+        <button className="wrow" onClick={onRate} aria-label={rec ? `Sparrate ${formatEUR0(rate)} pro Monat – ändern` : 'Sparrate festlegen'}>
+          <i style={{ background: 'var(--spar)' }} />
+          <span className="wrowtxt"><b>Sparrate</b><small>{rec ? 'fest, jeden Monat' : 'noch keine – festlegen'}</small></span>
+          <b className="num">{rec ? formatEUR0(rate) : ''}</b><Chevr />
+        </button>
+        {all.map((g) => {
+          const p = goalPlan(g, month);
+          const line = goalLine(g, month);
+          return (
+            <button className="wrow goalrow" key={g.id} onClick={() => onGoal(g)} aria-label={`Sparziel ${g.name}: ${formatEUR0(g.savedCents)} von ${formatEUR0(g.targetCents)}, ${line.text}`}>
+              <i style={{ background: p.done ? 'var(--spar)' : 'var(--goal)' }} />
+              <span className="wrowtxt">
+                <b>{g.name}</b>
+                <span className="wgbar" aria-hidden="true"><span style={{ width: `${Math.min(100, p.ratio * 100)}%` }} /></span>
+                <small className={line.tone}>{formatEUR0(g.savedCents)} / {formatEUR0(g.targetCents)} · {p.done ? 'erreicht' : p.overdue ? 'Zielmonat vorbei' : `bis ${monthShort(g.dueMonth)} ${g.dueMonth.slice(2, 4)}`}</small>
+              </span>
+              <b className="num">{!p.done && !p.overdue && g.auto !== false && g.monthly > 0 ? formatEUR0(g.monthly) : ''}</b><Chevr />
+            </button>
+          );
+        })}
+        <button className="wrow wadd" onClick={() => onGoal(null)}><Icon name="plus" size={15} w={2.6} /><span className="wrowtxt"><b>Sparziel hinzufügen</b></span></button>
+      </div>
 
       <EntryList items={items} />
     </>
@@ -357,7 +367,7 @@ function StandHead({ kind, cents, date, bank, sub }: { kind: 'spar' | 'depot'; c
           <span className="wbigin"><AmountInput label={kind === 'spar' ? 'Kontostand Sparkonto' : 'Neuer Depotstand'} value={val} onChange={setVal} placeholder={before ? formatEUR0(before.cents).replace(/\s?€/, '') : '0'} autoFocus /><b>€</b></span>
         </label>
         <div className="wactions">
-          <label className="wdate"><span>vom</span><input type="date" value={day} max={today} aria-label="Stand vom" onChange={(e) => setDay(e.target.value)} /></label>
+          {kind === 'depot' && <label className="wdate"><span>vom</span><input type="date" value={day} max={today} aria-label="Stand vom" onChange={(e) => setDay(e.target.value)} /></label>}
           <button className="wsave" onClick={() => void save()} disabled={!val}>Speichern</button>
           <button className="wcancel" aria-label="Abbrechen" onClick={() => setEditing(false)}>✕</button>
         </div>

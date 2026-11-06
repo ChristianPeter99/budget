@@ -922,3 +922,21 @@ html{background:#000}
 .wlegend{display:flex;flex-wrap:wrap;gap:4px 12px;color:var(--mut);margin-top:-6px}
 .wlegend span{display:inline-flex;align-items:center;gap:6px}
 .wlegend i{width:9px;height:9px;border-radius:50%;border:2px solid var(--goal);box-sizing:border-box}
+/* Sparkonto: Sparrate + Sparziele in einer Karte */
+.wplan{display:flex;flex-direction:column;padding:14px 0 4px}
+.wplan .wmixhead{padding:0 var(--s4)}
+.wplan .wbar{margin:10px var(--s4) 6px}
+.wrow{display:flex;align-items:center;gap:12px;width:100%;min-height:52px;padding:8px 10px 8px var(--s4);border:0;border-top:1px solid var(--line);background:transparent;color:var(--text);text-align:left}
+.wplan .wbar + .wrow,.wplan .wmixhead + .wrow{border-top:0}
+.wrow > i{width:8px;height:8px;border-radius:4px;flex:none}
+.wrowtxt{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.wrowtxt b{font-size:var(--t-body);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wrowtxt small{font-size:var(--t-note);color:var(--mut)}
+.wrowtxt small.warn{color:var(--warn)}.wrowtxt small.pos{color:var(--pos)}
+.wrow > b{font-weight:700;font-size:var(--t-body)}
+.wrow > svg{color:var(--faint);flex:none}
+.wgbar{display:block;height:4px;border-radius:2px;background:var(--card2);overflow:hidden;max-width:160px}
+.wgbar span{display:block;height:100%;border-radius:2px;background:var(--goal)}
+.wadd{color:var(--spar);min-height:46px}
+.wadd .wrowtxt b{color:var(--spar)}
+.wadd svg{color:var(--spar)!important;margin-left:-3px}
