@@ -105,20 +105,22 @@ export function CategoriesPage({ back, group, scope }: { back: React.ReactNode; 
     if (b && bar) bar.scrollTo({ left: Math.max(0, b.offsetLeft - (bar.clientWidth - b.offsetWidth) / 2), behavior: 'smooth' });
   }, [areaView]);
   /** Bereich wechseln; beim Wischen gleitet der Inhalt in Wischrichtung hinaus und von der anderen Seite herein. */
-  const goArea = (a: CatArea, dir?: 1 | -1) => {
+  const goArea = (a: CatArea, dir?: 1 | -1, v = 0) => {
     const el = bodyRef.current;
     if (!dir || !el || matchMedia('(prefers-reduced-motion: reduce)').matches) { if (el) { el.style.transition = ''; el.style.transform = ''; el.style.opacity = ''; } setAreaView(a); return; }
     const w = el.clientWidth || 360;
-    el.style.transition = 'transform .16s ease-in, opacity .16s ease-in';
-    el.style.transform = `translate3d(${-dir * w * 0.35}px,0,0)`; el.style.opacity = '0';
+    // Hinaus: vom aktuellen Fingerpunkt weiter in Wischrichtung, mit Schwung schneller
+    const out = Math.round(Math.min(150, Math.max(80, 120 - Math.abs(v) * 25)));
+    el.style.transition = `transform ${out}ms cubic-bezier(.4,0,1,1), opacity ${out}ms linear`;
+    el.style.transform = `translate3d(${-dir * w * 0.55}px,0,0)`; el.style.opacity = '0';
     window.setTimeout(() => {
       setAreaView(a);
-      el.style.transition = 'none'; el.style.transform = `translate3d(${dir * w * 0.35}px,0,0)`;
+      el.style.transition = 'none'; el.style.transform = `translate3d(${dir * w * 0.22}px,0,0)`; el.style.opacity = '0';
       requestAnimationFrame(() => requestAnimationFrame(() => {
-        el.style.transition = 'transform .24s cubic-bezier(.22,.9,.3,1), opacity .2s ease-out';
+        el.style.transition = 'transform .2s cubic-bezier(.2,.85,.25,1), opacity .16s ease-out';
         el.style.transform = ''; el.style.opacity = '';
       }));
-    }, 160);
+    }, out);
   };
   // Wischen im Inhalt: nach links → nächster Bereich, nach rechts → voriger; ganz links nach rechts übernimmt die App (zurück zu Mehr)
   const asw = useRef<{ x: number; y: number; lock?: 'h' | 'v'; d: number; lx: number; lt: number; v: number } | null>(null);
@@ -156,11 +158,12 @@ export function CategoriesPage({ back, group, scope }: { back: React.ReactNode; 
       if (!st || st.lock !== 'h' || !el) return;
       swipedArea.current = true;
       const w = el.clientWidth || 360;
-      const fling = Math.abs(st.v) > 0.35 && Math.sign(st.v) === Math.sign(st.d) && performance.now() - st.lt < 100;
+      const live = performance.now() - st.lt < 100;
+      const fling = live && Math.abs(st.v) > 0.3 && Math.sign(st.v) === Math.sign(st.d);
       const dir: 1 | -1 = st.d < 0 ? 1 : -1;
       const target = areas[idx + dir];
-      if (target && (Math.abs(st.d) > w * 0.22 || fling)) { goArea(target[0], dir); return; }
-      el.style.transition = 'transform .22s cubic-bezier(.22,.9,.3,1), opacity .2s ease';
+      if (target && (Math.abs(st.d) > w * 0.2 || fling)) { goArea(target[0], dir, live ? st.v : 0); return; }
+      el.style.transition = 'transform .18s cubic-bezier(.2,.85,.25,1), opacity .16s ease';
       el.style.transform = ''; el.style.opacity = '';
     },
     onPointerCancel: () => { const el = bodyRef.current; asw.current = null; if (el) { el.style.transition = 'transform .2s ease'; el.style.transform = ''; el.style.opacity = ''; } },

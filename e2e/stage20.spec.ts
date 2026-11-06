@@ -310,3 +310,10 @@ test('Röhrenfernseher-Effekt: Zurücksetzen und langes Drücken auf die Version
   await page.locator('nav').getByRole('button', { name: 'Übersicht' }).click();
   await expect(page.locator('.ovcenter')).toBeVisible();
 });
+
+test('Übersicht scrollt nur, wenn der Inhalt nicht passt', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('.ovcenter')).toBeVisible();
+  const r = await page.evaluate(() => { const v = document.querySelector('.view')!; return [v.scrollHeight, v.clientHeight]; });
+  expect(r[0]).toBeLessThanOrEqual(r[1] + 1);
+});

@@ -20,6 +20,13 @@ import { CRT_ON_START, crtOn } from './ui/crt';
 type Tab = 'home' | 'alltag' | 'bookings' | 'fix' | 'more';
 const TABS: Tab[] = ['home', 'alltag', 'bookings', 'fix', 'more'];
 
+/** Dauer des Einrastens nach dem Wischen: kurz bei Schwung oder wenig Restweg, nie träge (150–280 ms). */
+let settleMs = 260;
+function settleDuration(rest: number, v: number): number {
+  const speed = Math.max(Math.abs(v), 1.1); // px/ms – mindestens zügig
+  return Math.round(Math.min(280, Math.max(150, (rest / speed) * 1.7)));
+}
+
 export function App() {
   const { status, fatal, notice, dismissNotice, month, setMonth, run, setAcct, acct } = useStore();
   const pwa = usePwa();
@@ -92,8 +99,8 @@ export function App() {
   };
   const noSwipe = (el: EventTarget | null) => !(el instanceof Element)
     || !!el.closest('[role="dialog"], input, textarea, select, [data-noswipe]') || document.body.classList.contains('dragging');
-  const SETTLE_MS = 300;
-  const EASE = `transform ${SETTLE_MS}ms cubic-bezier(.22,.9,.3,1)`;
+  const EASE_FN = 'cubic-bezier(.2,.85,.25,1)';
+  const ease = () => `transform ${settleMs}ms ${EASE_FN}`;
   const width = () => mainRef.current?.clientWidth || window.innerWidth;
   /** Position zeichnen – höchstens einmal pro Bildschirmbild. */
   /**
@@ -141,7 +148,7 @@ export function App() {
     for (const key of new Set([...a.keys(), ...b.keys()])) {
       const x = a.get(key), y = b.get(key);
       const same = !!x && !!y && x.textContent === y.textContent;
-      const t = animate ? `opacity ${SETTLE_MS}ms ease` : 'none';
+      const t = animate ? `opacity ${settleMs}ms ease` : 'none';
       // Unterschiedliches erst aus-, dann einblenden (ohne Überlappung der Texte)
       if (x) { x.style.transition = t; x.style.opacity = same ? '1' : String(Math.max(0, 1 - 2 * prog)); }
       if (y) { y.style.transition = t; y.style.opacity = same ? '0' : String(Math.max(0, 2 * prog - 1)); }
@@ -152,7 +159,7 @@ export function App() {
     if (p.frame) cancelAnimationFrame(p.frame);
     p.frame = requestAnimationFrame(() => {
       p.frame = 0;
-      const m = mainRef.current, g = ghostRef.current, tr = animate ? EASE : 'none';
+      const m = mainRef.current, g = ghostRef.current, tr = animate ? ease() : 'none';
       if (m) { m.style.transition = tr; m.style.transform = p.dx ? `translate3d(${p.dx}px,0,0)` : ''; }
       if (g) { g.style.transition = tr; g.style.transform = `translate3d(${p.dx + p.side * width()}px,0,0)`; }
       headFx(p.dx, p.side, animate);
@@ -160,7 +167,7 @@ export function App() {
       const pill = pillRef.current;
       if (pill) {
         const frac = Math.max(-1, Math.min(1, -p.dx / width()));
-        pill.style.transition = animate ? `transform ${SETTLE_MS}ms cubic-bezier(.22,.9,.3,1)` : 'none';
+        pill.style.transition = animate ? ease() : 'none';
         pill.style.transform = `translateX(${(TABS.indexOf(tab) + frac) * 100}%)`;
       }
     });
@@ -180,14 +187,14 @@ export function App() {
   const settle = (to: number, then: () => void) => {
     busy.current = true;
     pos.current.dx = to; paint(true);
-    window.setTimeout(() => { then(); busy.current = false; if (pillRef.current) pillRef.current.style.transition = ''; }, SETTLE_MS);
+    window.setTimeout(() => { then(); busy.current = false; if (pillRef.current) pillRef.current.style.transition = ''; }, settleMs);
   };
   /** Vorige Ebene unter der Unterseite: leicht nach links versetzt und abgedunkelt, rückt mit dem Finger nach */
   const popGhost = (d: number, animate: boolean) => {
     const g = ghostRef.current, w = width();
     if (!g) return;
     const p = Math.min(1, d / w);
-    g.style.transition = animate ? `${EASE}, opacity ${SETTLE_MS}ms ease` : 'none';
+    g.style.transition = animate ? `${ease()}, opacity ${settleMs}ms ease` : 'none';
     g.style.transform = `translate3d(${-w * 0.3 * (1 - p)}px,0,0)`;
     g.style.opacity = String(0.55 + 0.45 * p);
   };
@@ -195,9 +202,10 @@ export function App() {
   const popEnd = (d: number, v: number) => {
     const m = mainRef.current, w = width();
     if (!m) return;
-    const go = d > w * 0.3 || (v > 0.35 && d > 30);
+    const go = d > w * 0.3 || (v > 0.3 && d > 24);
+    settleMs = settleDuration(go ? w - d : d, v);
     busy.current = true;
-    m.style.transition = EASE;
+    m.style.transition = ease();
     m.style.transform = go ? `translate3d(${w}px,0,0)` : '';
     popGhost(go ? w : 0, true);
     window.setTimeout(() => {
@@ -213,7 +221,7 @@ export function App() {
         setPeek(null);
         busy.current = false;
       });
-    }, SETTLE_MS);
+    }, settleMs);
   };
   const swipeHandlers = {
     onPointerDown: (e: React.PointerEvent) => {
@@ -268,9 +276,12 @@ export function App() {
       // Schwung zählt nur, wenn der Finger beim Loslassen noch in Bewegung war
       if (st.pop) { popEnd(st.dx, performance.now() - st.lt > 100 ? 0 : st.v); return; }
       const d = st.dx, w = width();
-      const fling = Math.abs(st.v) > 0.4 && Math.sign(st.v) === Math.sign(d);
+      const live = performance.now() - st.lt < 100;
+      const fling = live && Math.abs(st.v) > 0.3 && Math.sign(st.v) === Math.sign(d);
       const next = st.next;
-      if (next && (Math.abs(d) > w * 0.33 || fling)) {
+      const commit = !!next && (Math.abs(d) > w * 0.3 || fling);
+      settleMs = settleDuration(commit ? w - Math.abs(d) : Math.abs(d), live ? st.v : 0);
+      if (next && commit) {
         highlight(next); // Leiste sofort umstellen
         settle(d < 0 ? -w : w, () => { resetAfterCommit.current = true; setMorePage('menu'); setTab(next); setPeek(null); });
       } else {

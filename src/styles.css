@@ -350,7 +350,7 @@ body.dragging .view{overflow-y:hidden}
 @media (prefers-reduced-motion:reduce){.keydock{animation:none}}
 .kd-err{padding:0 var(--s2) var(--s2)}
 /* v1.13.2 Übersicht: Wischen überall */
-.ovswipe{display:flex;flex-direction:column;gap:var(--s4);touch-action:pan-y;min-height:100%}
+.ovswipe{display:flex;flex-direction:column;gap:var(--s4);touch-action:pan-y}
 .ovswipe>*{flex:none}
 
 /* v1.14 Neue Übersicht */
