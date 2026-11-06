@@ -222,5 +222,8 @@ test('Sparkonto: Betrag antippen öffnet Eingabe; alter Bankstand meldet sich or
   await page.getByRole('dialog').locator('.wchip.warn').click();
   await page.getByLabel('Kontostand Sparkonto').fill('5100');
   await page.getByRole('dialog').getByRole('button', { name: 'Speichern' }).click();
-  await expect(page.getByRole('dialog').locator('.wchip')).toHaveText(/^Bank \d\d\.\d\d\.$/);
+  await expect(page.getByRole('dialog').locator('.wchip')).toHaveCount(0);
+  await expect(page.getByRole('img', { name: /^Sparkonto bis heute, gestrichelt die Prognose/ })).toBeVisible();
+  await page.getByRole('button', { name: '5 J' }).click();
+  await expect(page.getByRole('dialog')).toContainText('Prognose in 5 Jahren');
 });

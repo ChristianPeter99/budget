@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import type { ReactNode } from 'react';
 import { AmountInput, Chevr, Header, Sheet } from './common';
 import { Icon } from './icons';
@@ -130,8 +130,7 @@ export function Sparen({ back, onEditRec }: { back: ReactNode; onAdd?: (p: TxPre
       )}
       {detail === 'depot' && (
         <Sheet title="Depot" left="Schließen" onClose={() => setDetail('')}>
-          <StandHead kind="depot" cents={last ? last.valueCents : null} date={last?.date ?? null}
-            sub={last && prev ? <span className={'mini ' + (last.valueCents >= prev.valueCents ? 'pos' : 'neg')}>{last.valueCents >= prev.valueCents ? '+' : '−'}{formatEUR0(Math.abs(last.valueCents - prev.valueCents))} seit {formatDateDE(prev.date)}</span> : null} />
+          <DepotDetail entries={entries} />
           <EntryList items={entries.map((e) => ({ key: e.id, date: e.date, cents: e.valueCents, del: () => run((db) => deleteDepotEntry(db, e.id), 'Eintrag gelöscht') }))} />
         </Sheet>
       )}
@@ -160,8 +159,7 @@ function SparDetail({ sav, rate, goals }: { sav: { cents: number; known: boolean
   const month = currentMonthKey();
   const perMonth = rate + goals.reduce((a, g) => a + g.monthly, 0);
   // Prognose ohne Zinsen: Sparrate für jeden Monat, Sparziele nur bis zu ihrem Zielmonat (bis der Rest erreicht ist)
-  const forecast = (y: number) => {
-    const n = y * 12;
+  const at = (n: number) => {
     const goalPart = goals.reduce((a, g) => {
       const rest = Math.max(0, g.targetCents - g.savedCents);
       const left = monthsBetween(month, g.dueMonth);
@@ -169,12 +167,37 @@ function SparDetail({ sav, rate, goals }: { sav: { cents: number; known: boolean
     }, 0);
     return sav.cents + rate * n + goalPart;
   };
+  const forecast = (y: number) => at(y * 12);
+  // Diagramm: erfasste Bankstände bis heute (durchgezogen), danach Monat für Monat die Prognose (gestrichelt)
+  const today = todayISO();
+  const n = years * 12;
+  const endMonth = shiftMonth(month, n);
+  const past: Pt[] = [...savingsEntries(s)].filter((e) => e.date < today).sort((a, b) => a.date.localeCompare(b.date)).map((e) => ({ d: e.date, c: e.cents }));
+  past.push({ d: today, c: sav.cents });
+  const future: Pt[] = Array.from({ length: n + 1 }, (_, k) => ({ d: k === 0 ? today : `${shiftMonth(month, k)}-${today.slice(8, 10) > '28' ? '28' : today.slice(8, 10)}`, c: at(k) }));
+  const markers = goals.map((g) => ({ g, left: monthsBetween(month, g.dueMonth) })).filter((x) => x.left > 0 && x.left <= n)
+    .map(({ g, left }) => ({ d: (future[left] as Pt).d, c: at(left), label: `${g.name} erreicht · ${monthShort(g.dueMonth)} ${g.dueMonth.slice(2, 4)}` }));
   const items = savingsEntries(s).map((e) => ({ key: e.date, date: e.date, cents: e.cents, del: () => run((db) => deleteSavingsEntry(db, e.date), 'Eintrag gelöscht') }));
   const solo = rate === 0 && goals.length > 0 ? goals.reduce((a, g) => (g.dueMonth > a ? g.dueMonth : a), '') : '';
   return (
     <>
       <StandHead kind="spar" cents={sav.known ? sav.cents : null} date={sav.known ? (s.savingsBalanceDate as string) : null}
-        bank={sav.known ? s.savingsBalanceCents : null} sub={sav.known ? <span className="mini">heute geschätzt</span> : null} />
+        bank={sav.known ? s.savingsBalanceCents : null} sub={null} />
+
+      {sav.known && (
+        <>
+          <div className="wfc">
+            <span className="wfcval"><small>Prognose {years === 1 ? 'in 1 Jahr' : `in ${years} Jahren`}</small><b className="num">≈ {formatEUR0(forecast(years))}</b></span>
+            <div className="wseg" role="group" aria-label="Zeitraum der Prognose">
+              {([1, 3, 5] as const).map((y) => <button key={y} aria-pressed={years === y} onClick={() => setYears(y)}>{y} J</button>)}
+            </div>
+          </div>
+          <TrendChart color="var(--spar)" past={past} future={future} markers={markers}
+            labels={[past.length > 1 ? monthShort((past[0] as Pt).d.slice(0, 7)) : '', 'heute', `${monthShort(endMonth)} ${endMonth.slice(2, 4)}`]}
+            aria={`Sparkonto bis heute, gestrichelt die Prognose bis ${monthLabel(endMonth)}: ungefähr ${formatEUR0(forecast(years))}`} />
+          {markers.length > 0 && <span className="mini wlegend">{markers.map((m) => <span key={m.label}><i />{m.label}</span>)}<span>ohne Zinsen</span></span>}
+        </>
+      )}
 
       {perMonth > 0 && (
         <div className="card wmix">
@@ -189,17 +212,82 @@ function SparDetail({ sav, rate, goals }: { sav: { cents: number; known: boolean
         </div>
       )}
 
-      {sav.known && (
-        <div className="card wfc">
-          <span className="wfcval"><small>Prognose {years === 1 ? 'in 1 Jahr' : `in ${years} Jahren`}</small><b className="num">≈ {formatEUR0(forecast(years))}</b></span>
-          <div className="wseg" role="group" aria-label="Zeitraum der Prognose">
-            {([1, 3, 5] as const).map((y) => <button key={y} aria-pressed={years === y} onClick={() => setYears(y)}>{y} J</button>)}
-          </div>
-        </div>
-      )}
-
       <EntryList items={items} />
     </>
+  );
+}
+
+type Pt = { d: string; c: number };
+
+/** Depot-Details: Stand, Veränderung im gewählten Zeitraum, Verlaufskurve ohne Kasten, Hoch/Tief und Zeitraum. */
+function DepotDetail({ entries }: { entries: { date: string; valueCents: number }[] }) {
+  const [range, setRange] = useState<'6M' | '1J' | 'Alles'>('6M');
+  const last = entries[0];
+  const today = todayISO();
+  const asc = [...entries].sort((a, b) => a.date.localeCompare(b.date)).map((e) => ({ d: e.date, c: e.valueCents }));
+  const cut = range === 'Alles' ? '' : `${shiftMonth(today.slice(0, 7), range === '6M' ? -6 : -12)}${today.slice(7)}`;
+  // Ein Stand vor dem Zeitraum wird als Startpunkt mitgenommen, damit die Kurve am linken Rand beginnt
+  const inRange = asc.filter((p) => p.d >= cut);
+  const before = asc.filter((p) => p.d < cut).pop();
+  const pts = before && inRange.length > 0 ? [before, ...inRange] : inRange;
+  const first = pts[0];
+  const diff = first && last && pts.length > 1 ? last.valueCents - first.c : null;
+  const pct = diff !== null && first && first.c > 0 ? (diff / first.c) * 100 : null;
+  const vals = pts.map((p) => p.c);
+  return (
+    <>
+      <StandHead kind="depot" cents={last ? last.valueCents : null} date={last?.date ?? null}
+        sub={diff !== null && first ? <span className={'mini ' + (diff >= 0 ? 'pos' : 'neg')}>{diff >= 0 ? '+' : '−'}{formatEUR0(Math.abs(diff))}{pct !== null ? ` · ${diff >= 0 ? '+' : '−'}${Math.abs(pct).toLocaleString('de-DE', { maximumFractionDigits: 1 })} %` : ''} seit {formatDateDE(first.d).slice(0, 6)}</span> : null} />
+      {asc.length > 1 && (
+        <>
+          {pts.length > 1
+            ? <TrendChart color="var(--depot)" past={pts} labels={[monthShort((pts[0] as Pt).d.slice(0, 7)), '', monthShort((pts[pts.length - 1] as Pt).d.slice(0, 7))]}
+                aria={`Depot seit ${formatDateDE((pts[0] as Pt).d)}: von ${formatEUR0((pts[0] as Pt).c)} auf ${formatEUR0((pts[pts.length - 1] as Pt).c)}`} />
+            : <p className="note" style={{ margin: 0, textAlign: 'center' }}>In diesem Zeitraum gibt es nur einen Stand.</p>}
+          <div className="wfc">
+            <span className="mini">{vals.length > 1 ? <>Hoch <b>{formatEUR0(Math.max(...vals))}</b> · Tief <b>{formatEUR0(Math.min(...vals))}</b></> : null}</span>
+            <div className="wseg" role="group" aria-label="Zeitraum">
+              {(['6M', '1J', 'Alles'] as const).map((r) => <button key={r} aria-pressed={range === r} onClick={() => setRange(r)}>{r}</button>)}
+            </div>
+          </div>
+        </>
+      )}
+    </>
+  );
+}
+
+/**
+ * Verlaufskurve ohne Kasten: Fläche + Linie bis heute, optional gestrichelte Prognose und Markierungen (Sparziele).
+ * x nach Datum, y zwischen Minimum und Maximum. Punkte als HTML, damit sie bei voller Breite rund bleiben.
+ */
+function TrendChart({ past, future = [], markers = [], color, labels, aria }: { past: Pt[]; future?: Pt[]; markers?: Pt[]; color: string; labels: [string, string, string]; aria: string }) {
+  const gid = useId().replace(/:/g, '');
+  const W = 358, H = 120;
+  const all = [...past, ...future];
+  const t = (d: string) => new Date(d + 'T00:00:00').getTime();
+  const t0 = t((all[0] as Pt).d), t1 = t((all[all.length - 1] as Pt).d);
+  const lo = Math.min(...all.map((p) => p.c)), hi = Math.max(...all.map((p) => p.c));
+  const pad = (hi - lo) * 0.12 || Math.max(100, hi * 0.05);
+  const x = (d: string) => (t1 > t0 ? ((t(d) - t0) / (t1 - t0)) * W : W / 2);
+  const y = (c: number) => H - 8 - ((c - (lo - pad)) / (hi + pad - (lo - pad))) * (H - 16);
+  const path = (ps: Pt[]) => ps.map((p, i) => `${i ? 'L' : 'M'}${x(p.d).toFixed(1)} ${y(p.c).toFixed(1)}`).join(' ');
+  const line = path(past);
+  const lp = past[past.length - 1] as Pt;
+  const dot = (p: Pt) => ({ left: `${(x(p.d) / W) * 100}%`, top: y(p.c) });
+  return (
+    <div className="tchart">
+      <div className="tplot" style={{ height: H }}>
+        <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label={aria}>
+          <defs><linearGradient id={gid} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={color} stopOpacity="0.28" /><stop offset="1" stopColor={color} stopOpacity="0" /></linearGradient></defs>
+          {past.length > 1 && <path d={`${line} L${x(lp.d).toFixed(1)} ${H} L${x((past[0] as Pt).d).toFixed(1)} ${H} Z`} fill={`url(#${gid})`} />}
+          {past.length > 1 && <path d={line} fill="none" style={{ stroke: color }} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />}
+          {future.length > 1 && <path d={path(future)} fill="none" style={{ stroke: color }} strokeWidth="2" strokeDasharray="4 5" strokeLinecap="round" opacity="0.8" vectorEffect="non-scaling-stroke" />}
+        </svg>
+        {markers.map((m) => <i key={m.d} className="tmark" style={dot(m)} aria-hidden="true" />)}
+        <i className="tnow" style={{ ...dot(lp), background: color }} aria-hidden="true" />
+      </div>
+      <div className="wlabels" aria-hidden="true"><span>{labels[0]}</span><span className="now">{labels[1]}</span><span>{labels[2]}</span></div>
+    </div>
   );
 }
 
@@ -289,9 +377,7 @@ function StandHead({ kind, cents, date, bank, sub }: { kind: 'spar' | 'depot'; c
       {sub}
       {date === null
         ? <button className="wchip" onClick={open}>Stand eintragen</button>
-        : stale
-          ? <button className="wchip warn" onClick={open}><i />{kind === 'spar' ? 'Bankstand' : 'Stand'} {age} Tage alt · abgleichen</button>
-          : <button className="wchip" onClick={open} aria-label={`${kind === 'spar' ? 'Bankstand' : 'Stand'} vom ${formatDateDE(date)} – aktualisieren`}>{kind === 'spar' ? 'Bank' : 'Stand'} {formatDateDE(date).slice(0, 6)}</button>}
+        : stale && <button className="wchip warn" onClick={open}><i />{kind === 'spar' ? 'Bankstand' : 'Stand'} {age} Tage alt · abgleichen</button>}
     </div>
   );
 }

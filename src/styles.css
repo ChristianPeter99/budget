@@ -874,13 +874,15 @@ html{background:#000}
 .wleg span{display:flex;align-items:center;gap:8px;color:var(--text2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .wleg i{width:8px;height:8px;border-radius:4px;flex:none}
 .wleg b{font-weight:600}
-.wfc{display:flex;align-items:center;justify-content:space-between;gap:var(--s2);padding:8px 8px 8px var(--s4)}
+.wfc{display:flex;align-items:center;justify-content:space-between;gap:var(--s2);padding:0 2px}
+.wfc .mini{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.wfc .mini b{color:var(--text);font-weight:700}
 .wfcval{display:flex;flex-direction:column}
 .wfcval small{font-size:var(--t-note);color:var(--mut)}
 .wfcval b{font-size:1.15rem;font-weight:800;color:var(--spar)}
-.wseg{display:flex;gap:2px;padding:3px;border-radius:16px;background:var(--bg)}
-.wseg button{height:32px;min-width:42px;border:0;border-radius:13px;background:transparent;color:var(--mut);font-size:var(--t-note);font-weight:700}
-.wseg button[aria-pressed=true]{background:var(--card2);color:var(--text)}
+.wseg{display:flex;gap:2px}
+.wseg button{height:36px;min-width:40px;padding:0 6px;border:0;border-radius:18px;background:transparent;color:var(--faint);font-size:var(--t-note);font-weight:700}
+.wseg button[aria-pressed=true]{color:var(--text)}
 .whisthead{width:100%;min-height:48px;border:0;background:transparent;color:var(--text);display:flex;align-items:center;justify-content:space-between;padding:0 var(--s4);font-size:var(--t-body);font-weight:600;text-align:left}
 .whisthead small{color:var(--mut);font-weight:500;font-size:inherit}
 .whchev{display:inline-flex;transform:rotate(90deg);transition:transform .15s ease}
@@ -910,3 +912,13 @@ html{background:#000}
 .wsave:disabled{opacity:.4}
 .wcancel{width:38px;height:38px;border:0;border-radius:19px;background:var(--card2);color:var(--text2)}
 .wdiff b{font-weight:700}
+.tchart{display:flex;flex-direction:column;gap:4px;margin:0 -2px}
+.tplot{position:relative}
+.tplot svg{display:block;width:100%;height:100%;overflow:visible}
+.tplot i{position:absolute;transform:translate(-50%,-50%);border-radius:50%;pointer-events:none}
+.tnow{width:10px;height:10px;box-shadow:0 0 0 2px #0B0B0D}
+.tmark{width:10px;height:10px;border:2px solid var(--goal);background:#0B0B0D;box-sizing:border-box}
+.tchart .wlabels .now{color:var(--text2)}
+.wlegend{display:flex;flex-wrap:wrap;gap:4px 12px;color:var(--mut);margin-top:-6px}
+.wlegend span{display:inline-flex;align-items:center;gap:6px}
+.wlegend i{width:9px;height:9px;border-radius:50%;border:2px solid var(--goal);box-sizing:border-box}
