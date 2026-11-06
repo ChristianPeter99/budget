@@ -1,12 +1,12 @@
 /**
  * Röhrenfernseher-Effekt („CRT off/on“).
  * Aus: Bild zieht sich senkrecht zu einer hellen Linie zusammen (300 ms), die Linie schrumpft zum Punkt (200 ms),
- * der Punkt leuchtet kurz auf und erlischt. An: dieselbe Folge rückwärts.
+ * der Punkt leuchtet kurz auf und erlischt. An: Aufwärmen – das Bild kommt leicht überstrahlt aus dem Schwarz.
  * Nur CSS-Transformationen über die Web Animations API – keine Bibliothek. Mit „Bewegung reduzieren“ nur Ein-/Ausblenden.
  */
 
-/** Einschalt-Effekt beim Start der App. Zum Entfernen auf false setzen (oder die Zeile in App.tsx löschen). */
-export const CRT_ON_START = true;
+/** Einschalt-Effekt beim Start der App – zurzeit aus (Christian testet erst Zurücksetzen und Version). Auf true setzen zum Einschalten. */
+export const CRT_ON_START = false;
 
 const reduced = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 const rootEl = () => document.getElementById('root');
@@ -60,39 +60,30 @@ export async function crtOff(): Promise<void> {
   busy = false;
 }
 
-/** Bildschirm „einschalten“: Punkt → Linie → Bild. Ohne vorheriges crtOff blendet es die App aus dem Schwarz ein. */
+/**
+ * Bildschirm „einschalten“ wie eine echte Röhre beim Aufwärmen: Das Bild kommt aus dem Schwarz,
+ * anfangs leicht überstrahlt, weich und minimal größer, und setzt sich in ~450 ms scharf an seinen Platz.
+ */
 export async function crtOn(): Promise<void> {
   const r = rootEl();
   if (!r || busy) return;
   busy = true;
   r.style.pointerEvents = 'none';
+  document.querySelectorAll('.crt').forEach((e) => e.remove());
+  r.style.opacity = '';
   if (reduced()) {
-    r.style.opacity = '';
     await run(r, [{ opacity: 0 }, { opacity: 1 }], { duration: 180, easing: 'ease-out' });
     crtReset();
     return;
   }
-  r.style.opacity = '0';
-  const { el, line, dot } = layer();
-  line.style.transform = 'scaleX(0.012)';
-  // 1) Punkt leuchtet auf
-  await run(dot, [
-    { opacity: 0, transform: 'translate(-50%,-50%) scale(.2)', boxShadow: '0 0 0 0 rgba(255,255,255,0)' },
-    { opacity: 1, transform: 'translate(-50%,-50%) scale(1.4)', boxShadow: '0 0 20px 8px rgba(255,255,255,.75)' }
-  ], { duration: 130, easing: 'ease-out' });
-  dot.style.display = 'none';
-  // 2) Punkt zieht sich zur Linie auf
-  await run(line, [{ transform: 'scaleX(0.012)' }, { transform: 'scaleX(1)' }], { duration: 160, easing: 'cubic-bezier(.3,0,.2,1)' });
-  // 3) Linie klappt zum Bild auf
   r.style.transformOrigin = `50% ${window.innerHeight / 2}px`;
-  r.style.opacity = '';
-  const open = run(r, [
-    { transform: 'scale(1, 0.006)', filter: 'brightness(6)' },
-    { transform: 'scale(1, 1.02)', filter: 'brightness(1.2)', offset: 0.8 },
-    { transform: 'scale(1, 1)', filter: 'brightness(1)' }
-  ], { duration: 280, easing: 'cubic-bezier(.2,.8,.3,1)' });
-  requestAnimationFrame(() => el.remove());
-  await open;
+  await run(r, [
+    { opacity: 0, transform: 'scale(1.02)', filter: 'brightness(1.9) blur(2px)' },
+    { opacity: 0.55, transform: 'scale(1.014)', filter: 'brightness(1.6) blur(1.2px)', offset: 0.3 },
+    { opacity: 0.5, transform: 'scale(1.012)', filter: 'brightness(1.5) blur(1px)', offset: 0.38 },
+    { opacity: 0.9, transform: 'scale(1.004)', filter: 'brightness(1.15) blur(.3px)', offset: 0.7 },
+    { opacity: 1, transform: 'scale(1)', filter: 'brightness(1) blur(0)' }
+  ], { duration: 460, easing: 'cubic-bezier(.25,.6,.3,1)' });
   crtReset();
 }
 
