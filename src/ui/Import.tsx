@@ -5,8 +5,10 @@ import { Icon } from './icons';
 import { toMessage, useStore } from '../state/store';
 import { addCategory, deleteCategory, getMeta, importTransactions, setMeta, undoImport } from '../db/repo';
 import type { ImportItem } from '../db/repo';
-import { MAX_IMPORT_BYTES, assignBlocks, decodeBytes, bookable, findDuplicates, findReturns, parseStatement, suggestCategory } from '../import/csv';
-import type { Block, Candidate, DupState } from '../import/csv';
+import { MAX_IMPORT_BYTES, NeedsMapping, assignBlocks, decodeBytes, bookable, detectLayout, detectRecurring, findDuplicates, findReturns, parseStatement, suggestCategory } from '../import/csv';
+import type { Block, Candidate, ColumnMap, DupState, FixFound, Layout, ParseResult } from '../import/csv';
+import { ColumnMapper } from './ColumnMapper';
+import { FixImport } from './FixImport';
 import { categoryName, topLevel } from '../domain/calc';
 import { formatDateDE } from '../domain/dates';
 import { formatEUR } from '../domain/money';
@@ -44,6 +46,12 @@ export function ImportPage({ back }: { back: ReactNode }) {
   const [last, setLast] = useState<LastImport | null>(null);
   const [blocks, setBlocks] = useState<Map<string, Block>>(new Map());
   const [detail, setDetail] = useState<string | null>(null);
+  // Was die Datei füllen soll: Buchungen (Standard) oder den Reiter Fixkosten (Vorlagen statt Buchungen)
+  const [mode, setMode] = useState<'tx' | 'fix'>('tx');
+  const [fixes, setFixes] = useState<FixFound[] | null>(null);
+  // Datei mit unbekanntem Aufbau: Spalten einmal zuordnen (wird je Bank gemerkt)
+  const [mapping, setMapping] = useState<{ layout: Layout; text: string } | null>(null);
+  const [lastFile, setLastFile] = useState<{ text: string; layout: Layout } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const cats = data.categories;
 
@@ -55,36 +63,73 @@ export function ImportPage({ back }: { back: ReactNode }) {
     if (f.size > MAX_IMPORT_BYTES) return setErr('Die Datei ist zu groß (höchstens 5 MB).');
     setBusy(true);
     try {
-      const res = await parseStatement(await readText(f));
-      const target = account === 'joint' ? data.jointTransactions : data.transactions;
-      const other = account === 'joint' ? data.transactions : data.jointTransactions;
-      const dups = findDuplicates(res.candidates, [...target, ...other.filter((t) => t.importId)]);
-      // Gemerkte Zuordnungen und Kategorien je Konto getrennt (Haushaltskonto: Schlüssel mit „j:“)
-      const joint = account === 'joint';
-      const all = data.settings.importRules ?? {};
-      const rules = Object.fromEntries(Object.entries(all).filter(([k]) => k.startsWith('j:') === joint).map(([k, v]) => [joint ? k.slice(2) : k, v]));
-      const scoped = cats.filter((c) => isHouseholdCat(c) === joint);
-      const returns = findReturns(res.candidates);
-      const list: Row[] = res.candidates.map((c) => {
-        const d = dups.get(c.key) ?? { state: 'none' as const };
-        const sug = c.kind === 'transfer' ? null : suggestCategory(c, scoped, rules);
-        const locked = d.state === 'imported' || c.kind === 'transfer' || (account === 'joint' && c.kind !== 'expense');
-        const ret = returns.get(c.key);
-        return { c, dup: d.state, ...(d.match ? { match: d.match } : {}), ...(ret ? { ret } : {}), cat: sug?.categoryId ?? null, on: !locked && !ret && d.state === 'none' && c.kind === 'expense', locked };
-      });
-      setBlocks(assignBlocks(res.candidates));
-      setRows(list);
-      setSkipped(res.skippedLines);
+      const text = await readText(f);
       setFileName(f.name);
-      setTab('ausgaben');
-      setOpen(new Set());
-      if (list.length === 0) setErr('In der Datei wurden keine Buchungen gefunden.');
+      const layout = detectLayout(text);
+      const saved = db ? (await getMeta<Record<string, ColumnMap>>(db, 'csvMaps'))?.[layout.signature] : undefined;
+      let res: ParseResult;
+      try { res = await parseStatement(text, saved); }
+      catch (e) {
+        if (e instanceof NeedsMapping) { setMapping({ layout: e.layout, text }); return; }
+        throw e;
+      }
+      setLastFile({ text, layout });
+      show(res);
     } catch (e) {
       setErr(toMessage(e));
     } finally {
       setBusy(false);
       if (fileRef.current) fileRef.current.value = '';
     }
+  }
+
+  /** Zuordnung aus „Spalten zuordnen“ übernehmen (und auf Wunsch für diese Bank merken) */
+  async function applyMapping(map: ColumnMap, remember: boolean) {
+    if (!mapping) return;
+    setErr('');
+    try {
+      const res = await parseStatement(mapping.text, map);
+      if (remember && db) {
+        const all = (await getMeta<Record<string, ColumnMap>>(db, 'csvMaps')) ?? {};
+        await setMeta(db, 'csvMaps', { ...all, [mapping.layout.signature]: map });
+      }
+      setLastFile({ text: mapping.text, layout: { ...mapping.layout, map } });
+      setMapping(null);
+      show(res);
+    } catch (e) { setErr(toMessage(e)); }
+  }
+
+  /** Ergebnis anzeigen: Prüfliste (Buchungen) oder erkannte Fixkosten */
+  function show(res: ParseResult) {
+    if (mode === 'fix') {
+      const found = detectRecurring(res.candidates);
+      setFixes(found);
+      setSkipped(res.skippedLines);
+      if (found.length === 0) setErr('In der Datei wurden keine wiederkehrenden Zahlungen gefunden. Tipp: Eine Datei über mehrere Monate hilft beim Erkennen.');
+      return;
+    }
+    const target = account === 'joint' ? data.jointTransactions : data.transactions;
+    const other = account === 'joint' ? data.transactions : data.jointTransactions;
+    const dups = findDuplicates(res.candidates, [...target, ...other.filter((t) => t.importId)]);
+    // Gemerkte Zuordnungen und Kategorien je Konto getrennt (Haushaltskonto: Schlüssel mit „j:“)
+    const joint = account === 'joint';
+    const all = data.settings.importRules ?? {};
+    const rules = Object.fromEntries(Object.entries(all).filter(([k]) => k.startsWith('j:') === joint).map(([k, v]) => [joint ? k.slice(2) : k, v]));
+    const scoped = cats.filter((c) => isHouseholdCat(c) === joint);
+    const returns = findReturns(res.candidates);
+    const list: Row[] = res.candidates.map((c) => {
+      const d = dups.get(c.key) ?? { state: 'none' as const };
+      const sug = c.kind === 'transfer' ? null : suggestCategory(c, scoped, rules);
+      const locked = d.state === 'imported' || c.kind === 'transfer' || (account === 'joint' && c.kind !== 'expense');
+      const ret = returns.get(c.key);
+      return { c, dup: d.state, ...(d.match ? { match: d.match } : {}), ...(ret ? { ret } : {}), cat: sug?.categoryId ?? null, on: !locked && !ret && d.state === 'none' && c.kind === 'expense', locked };
+    });
+    setBlocks(assignBlocks(res.candidates));
+    setRows(list);
+    setSkipped(res.skippedLines);
+    setTab('ausgaben');
+    setOpen(new Set());
+    if (list.length === 0) setErr('In der Datei wurden keine Buchungen gefunden.');
   }
 
   const groups = useMemo(() => {
@@ -149,14 +194,29 @@ export function ImportPage({ back }: { back: ReactNode }) {
     if (n !== undefined) { setLast(null); flash(`${n} importierte Buchung${n === 1 ? '' : 'en'} entfernt`); await reload(); }
   }
 
+  /* ───── Spalten zuordnen (unbekannter Aufbau) ───── */
+  if (mapping) {
+    return <ColumnMapper layout={mapping.layout} text={mapping.text} fileName={fileName} err={err} onApply={(m, r) => void applyMapping(m, r)} onCancel={() => { setMapping(null); setErr(''); }} />;
+  }
+
+  /* ───── Fixkosten erkannt ───── */
+  if (fixes && fixes.length > 0) {
+    return <FixImport found={fixes} fileName={fileName} onDone={() => setFixes(null)} onRemap={lastFile ? () => { setFixes(null); setMapping({ layout: lastFile.layout, text: lastFile.text }); } : undefined} />;
+  }
+
   /* ───── Schritt 1: Datei wählen ───── */
   if (!rows) {
     return (
       <>
         {back}
         <Header title="CSV-Import" />
-        <p className="note">Lies einen Kontoauszug als CSV ein (z. B. aus der C24-App). Du siehst danach alle Zeilen, entscheidest, was übernommen wird und in welche Kategorie. Gespeichert wird erst bei „Übernehmen“. Die Datei bleibt auf dem Gerät.</p>
-        {joint && (
+        <p className="note">Lies einen Kontoauszug als CSV ein, von jeder Bank. Kennt die App den Aufbau noch nicht, ordnest du die Spalten einmal zu. Gespeichert wird erst bei „Übernehmen“. Die Datei bleibt auf dem Gerät.</p>
+        <div className="catseg imode" role="tablist" aria-label="Was soll die Datei füllen?">
+          <button role="tab" aria-selected={mode === 'tx'} className={mode === 'tx' ? 'on' : ''} style={{ ['--c' as string]: 'var(--all)' }} onClick={() => { setMode('tx'); setErr(''); }}>Buchungen</button>
+          <button role="tab" aria-selected={mode === 'fix'} className={mode === 'fix' ? 'on' : ''} style={{ ['--c' as string]: 'var(--fix)' }} onClick={() => { setMode('fix'); setAccount('own'); setErr(''); }}>Fixkosten erkennen</button>
+        </div>
+        {mode === 'fix' && <p className="note">Für den Auszug deines Fixkosten-Kontos: Die App sucht wiederkehrende Zahlungen (Miete, Versicherungen, Abos …) und schlägt sie für den Reiter Fixkosten vor – einmal anlegen statt jeden Monat buchen. Einzelne Buchungen werden dabei nicht importiert.</p>}
+        {joint && mode === 'tx' && (
           <div className="seg" role="tablist" aria-label="Zielkonto">
             <button role="tab" aria-selected={account === 'own'} className={account === 'own' ? 'on' : ''} onClick={() => setAccount('own')}>Mein Konto</button>
             <button role="tab" aria-selected={account === 'joint'} className={account === 'joint' ? 'on' : ''} onClick={() => setAccount('joint')}>{joint.name}</button>
@@ -192,6 +252,7 @@ export function ImportPage({ back }: { back: ReactNode }) {
     <>
       <button className="back" onClick={() => setRows(null)}><Icon name="left" size={16} w={2.2} />Abbrechen</button>
       <Header kicker={fileName} title="Prüfen & zuordnen" />
+      {lastFile && <button className="linkbtn" onClick={() => { setRows(null); setMapping({ layout: lastFile.layout, text: lastFile.text }); }}>Spalten falsch erkannt? Zuordnung ändern</button>}
       <div className="seg" role="tablist" aria-label="Ansicht">
         {tabs.map(([t, l]) => <button key={t} role="tab" aria-selected={tab === t} className={tab === t ? 'on' : ''} onClick={() => setTab(t)}>{l} {counts[t]}</button>)}
       </div>

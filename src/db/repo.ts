@@ -284,7 +284,7 @@ export async function addCategory(db: Db, input: CategoryInput): Promise<Categor
     kind = p.kind; group = p.group; household = isHouseholdCat(p);
   }
   if (household) { kind = 'expense'; group = 'alltag'; }
-  if (all.some((c) => c.parentId === input.parentId && c.kind === kind && isHouseholdCat(c) === household && c.name.toLowerCase() === name.toLowerCase())) {
+  if (all.some((c) => c.parentId === input.parentId && c.kind === kind && isHouseholdCat(c) === household && (input.parentId !== null || c.group === group) && c.name.toLowerCase() === name.toLowerCase())) {
     abortTx(tx); throw new AppError('Diese Kategorie gibt es bereits.');
   }
   const c: Category = { id: newId(), name, kind, group, parentId: input.parentId, archived: false, sort: Math.max(-1, ...all.map((x) => x.sort)) + 1, createdAt: new Date().toISOString() };

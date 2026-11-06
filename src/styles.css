@@ -1000,3 +1000,52 @@ html{background:#000}
 .crt{position:fixed;inset:0;z-index:9999;background:#000;pointer-events:none}
 .crt-line{position:absolute;left:0;right:0;top:50%;height:3px;margin-top:-1.5px;background:#fff;box-shadow:0 0 14px 3px rgba(255,255,255,.7);transform-origin:50% 50%}
 .crt-dot{position:absolute;left:50%;top:50%;width:8px;height:8px;border-radius:50%;background:#fff;opacity:0;transform:translate(-50%,-50%)}
+/* Übersicht: Kategorie-Kreis nach zweitem Tipp */
+.ovring .ovcorner{transition:opacity .25s ease,transform .14s ease}
+.ovring.drilled .ovcorner{opacity:0;pointer-events:none;transform:scale(.94)}
+.ovdrill{transform-origin:160px 160px;animation:ovdrillin .42s cubic-bezier(.2,.85,.25,1) both}
+@keyframes ovdrillin{from{opacity:0;transform:rotate(-35deg) scale(.86)}to{opacity:1;transform:none}}
+.ovlegend{display:flex;flex-direction:column;margin-top:-6px;animation:fadeup .3s ease both}
+.ovlrow{display:grid;grid-template-columns:10px 1fr auto auto;align-items:center;column-gap:10px;min-height:44px;padding:0 2px;border:0;border-top:1px solid var(--line);background:transparent;color:var(--text);text-align:left;font-size:var(--t-body);transition:opacity .2s ease}
+.ovlrow:first-child{border-top:0}
+.ovlrow i{width:10px;height:10px;border-radius:50%}
+.ovlname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ovlpct{color:var(--mut);font-size:var(--t-note);font-variant-numeric:tabular-nums}
+.ovlrow b{font-weight:700;min-width:64px;text-align:right}
+.ovlrow.dim{opacity:.35}
+@media (prefers-reduced-motion: reduce){.ovdrill,.ovlegend{animation:none}}
+@keyframes fadeup{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+/* Auswertung: Kategorien im Kreis */
+.dmode{justify-content:flex-start;gap:2px;margin:0 -8px;overflow-x:auto;scrollbar-width:none}
+.dmode::-webkit-scrollbar{display:none}
+.dmode button{padding:0 10px;flex:none}
+.dmode button[aria-pressed=true]{color:var(--c)}
+.dwrap{position:relative;width:100%;max-width:300px;margin:0 auto;aspect-ratio:1}
+.dsvg{display:block;width:100%;height:100%}
+.dcenter{position:absolute;left:50%;top:50%;width:58%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;border:0;background:transparent;color:var(--text);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;text-align:center;padding:0}
+.dcard .ovlegend{margin-top:0}
+.dcenter .ovamt{font-size:min(1.9rem,7.6vw);font-weight:800;letter-spacing:-.03em;line-height:1.05;white-space:nowrap;font-variant-numeric:tabular-nums}
+.dcenter .ovsub{font-size:12px;color:var(--mut);white-space:nowrap}
+.dcenter .ovlabel{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+/* CSV: Spalten zuordnen, Modus-Wahl */
+.cmapcard{padding:6px 0}
+.field.cmap{flex-direction:column;align-items:stretch;gap:4px;padding:6px var(--s4);min-height:0;border-top:0}
+.field.cmap i{font-style:normal;font-weight:400;color:var(--faint)}
+.cmapcard .linkbtn{margin:2px var(--s4) 0}
+.field.cmap>span{font-size:var(--t-note);color:var(--mut);font-weight:600}
+.field.cmap select{width:100%;min-height:44px;border-radius:12px;border:1px solid var(--line);background:var(--card2);color:var(--text);padding:0 12px;font-weight:500;text-align:left;text-align-last:left;font-size:max(16px,1rem)}
+.field.cmapcheck{justify-content:flex-start;gap:12px;border-top:0;padding:0 var(--s1)}
+.linkbtn{align-self:flex-start;border:0;background:transparent;color:var(--all);font:inherit;font-size:var(--t-note);font-weight:600;padding:6px 0;min-height:36px}
+.imode{margin-bottom:0}
+/* Fixkosten erkannt */
+.fixrow{padding:12px var(--s1);border-top:1px solid var(--line);display:flex;flex-direction:column;gap:6px}
+.fixrow:first-child{border-top:0}
+.fixrow.known{opacity:.62}
+.fixhead{display:flex;align-items:center;gap:10px;min-height:32px}
+.fixhead input{width:20px;height:20px;accent-color:var(--fix);flex:none}
+.fixname{flex:1;min-width:0;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fixmeta{font-size:var(--t-note);color:var(--mut);padding-left:30px}
+.fixstate{font-size:var(--t-note);padding-left:30px;font-weight:600}
+.fixstate.ok{color:var(--pos)}
+.fixstate.warn{color:var(--warn)}
+.fixcat{margin-left:30px;min-height:40px;border-radius:10px;border:1px solid var(--line);background:var(--card2);color:var(--text);padding:0 8px;font:inherit;font-size:max(16px,1rem)}

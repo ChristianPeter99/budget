@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { AccountSwitch, Bar, Chevr, Chevron, Empty, MonthHeader, barColor, catIcon } from './common';
 import { Icon } from './icons';
+import { CategoryDonutCard } from './Donut';
 import { isHouseholdCat } from '../domain/types';
 import { useStore } from '../state/store';
 import { savingsEntries } from '../db/repo';
@@ -224,6 +225,8 @@ export function Stats({ back }: { back?: ReactNode }) {
 
       {!isJoint && <BalanceCard title="Sparkonto" entries={savingsEntries(data.settings).map((e) => ({ id: e.date, date: e.date, valueCents: e.cents, createdAt: e.date }))} />}
       {!isJoint && <BalanceCard title="Depot" entries={data.depotEntries} />}
+
+      <CategoryDonutCard txs={txs} cats={cats} areas={isJoint ? ['hh'] : ['alltag', 'fix', 'spar', 'inc']} period={periodLabel} />
 
       <div className="card flush">
         <div className="sec"><h2>Ausgaben nach Kategorie</h2></div>

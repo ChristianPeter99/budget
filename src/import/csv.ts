@@ -80,14 +80,23 @@ const norm = (s: string) => s.toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g
 
 /** „-34,99 €“, „1.234,56“, „-12.50“ → vorzeichenbehaftete Cent */
 export function parseSignedAmount(raw: string): number | null {
-  let s = raw.replace(/[\s€ ]|EUR/gi, '');
-  const neg = /^[-−]/.test(s) || /-$/.test(s);
+  let s = raw.replace(/[\s€ \u202f]|EUR/gi, '');
+  // „(15,96)“ = negativ (Buchhaltungsschreibweise)
+  let neg = /^\(.*\)$/.test(s);
+  s = s.replace(/^\((.*)\)$/, '$1');
+  neg = neg || /^[-−]/.test(s) || /-$/.test(s);
   s = s.replace(/^[-−+]|-$/g, '');
   if (!s) return null;
   let intPart: string, frac = '';
-  if (s.includes(',')) { const [a, b] = s.split(','); intPart = (a ?? '').replace(/\./g, ''); frac = b ?? ''; }
+  const lc = s.lastIndexOf(','), ld = s.lastIndexOf('.');
+  if (lc >= 0 && ld >= 0) {
+    // beide Zeichen: das letzte ist das Dezimalzeichen („1.234,56“ oder „1,234.56“)
+    const dec = lc > ld ? ',' : '.', th = dec === ',' ? '.' : ',';
+    const [a, b2] = s.split(dec);
+    intPart = (a ?? '').split(th).join(''); frac = b2 ?? '';
+  } else if (lc >= 0) { const [a, b2] = s.split(','); intPart = (a ?? '').replace(/\./g, ''); frac = b2 ?? ''; }
   else if (/^\d{1,3}(\.\d{3})+$/.test(s)) intPart = s.replace(/\./g, '');
-  else if (s.includes('.')) { const [a, b] = s.split('.'); intPart = a ?? ''; frac = b ?? ''; }
+  else if (ld >= 0) { const [a, b2] = s.split('.'); intPart = a ?? ''; frac = b2 ?? ''; }
   else intPart = s;
   if (!/^\d+$/.test(intPart) || !/^\d{0,2}$/.test(frac)) return null;
   const cents = Number(intPart) * 100 + Number((frac + '00').slice(0, 2));
@@ -96,7 +105,7 @@ export function parseSignedAmount(raw: string): number | null {
 }
 
 /** „27.10.2026“, „27.10.2026 16:40“, „2026-10-27“, „27.10.26“ → ISO-Datum (lokal, ohne Zeitzone) */
-export function parseDate(raw: string): string | null {
+export function parseDate(raw: string, mdy = false): string | null {
   const s = raw.trim();
   let m = /^(\d{1,2})\.(\d{1,2})\.(\d{4}|\d{2})(?!\d)/.exec(s);
   if (m) {
@@ -104,7 +113,18 @@ export function parseDate(raw: string): string | null {
     const iso = `${y}-${(m[2] as string).padStart(2, '0')}-${(m[1] as string).padStart(2, '0')}`;
     return isValidISODate(iso) ? iso : null;
   }
-  m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s);
+  m = /^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})(?!\d)/.exec(s);
+  if (m) { const iso = `${m[1]}-${(m[2] as string).padStart(2, '0')}-${(m[3] as string).padStart(2, '0')}`; return isValidISODate(iso) ? iso : null; }
+  // „30/12/2025“ oder „30-12-2025“: Tag zuerst (europäisch); ist der erste Wert > 12 nicht möglich, als Monat/Tag lesen
+  m = /^(\d{1,2})[/-](\d{1,2})[/-](\d{4}|\d{2})(?!\d)/.exec(s);
+  if (m) {
+    const y = (m[3] as string).length === 2 ? `20${m[3]}` : (m[3] as string);
+    let d = Number(m[1]), mo = Number(m[2]);
+    if (mdy || (mo > 12 && d <= 12)) [d, mo] = [mo, d];
+    const iso = `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    return isValidISODate(iso) ? iso : null;
+  }
+  m = /^(\d{4})(\d{2})(\d{2})$/.exec(s);
   if (m) { const iso = `${m[1]}-${m[2]}-${m[3]}`; return isValidISODate(iso) ? iso : null; }
   return null;
 }
@@ -113,7 +133,7 @@ export function parseDate(raw: string): string | null {
 function shortName(s: string): string {
   const t = s.replace(/\s+/g, ' ').trim();
   if (/^paypal/i.test(t)) return 'PayPal';
-  const cut = t.replace(/[,]?\s+(GmbH|AG|SE|KG|KGaA|OHG|UG|mbH|e\.\s?K\.?|Co\.?\s?KG|S\.\s?[aà]\.?\s?r\.?\s?l\.?|S\.\s?A\.?|S\.C\.A|N\.V\.|B\.V\.|Ltd\.?|Inc\.?)\b.*$/i, '').trim();
+  const cut = t.replace(/[,]?\s+(GmbH|AG|SE|KG|KGaA|OHG|UG|mbH|e\.\s?K\.?|Co\.?\s?KG|S\.\s?[aà]\.?\s?r\.?\s?l\.?|S\.\s?A\.?|S\.C\.A|S\.p\.A\.?|N\.V\.|B\.V\.|AB|A\/S|ApS|Oy|LLC|plc|Ltd\.?|Inc\.?|Limited)(?![\w]).*$/i, '').trim();
   return cut.length >= 2 ? cut : t;
 }
 
@@ -153,6 +173,9 @@ const PAYEE_STOP = new Set(['produktions', 'handels', 'vertriebs', 'und', 'gmbh'
  */
 export function payeeFromZweck(zweck: string): string {
   const z = zweck.replace(/\s+$/, '');
+  // „Auftraggeber: Rewe Markt GmbH Buchungstext: …“ (comdirect u. a.)
+  const lab = /(?:Empf(?:ä|ae)nger|Auftraggeber|Zahlungsempf(?:ä|ae)nger|Beg(?:ü|ue)nstigter)\s*:\s*(.+?)(?=\s+(?:Buchungstext|Verwendungszweck|Ref\.?|IBAN|Kto|BIC|End-to-End|Mandat)\b|\s{2,}|$)/i.exec(z);
+  if (lab?.[1]) return shortName(lab[1].trim()).slice(0, 60);
   const first = (z.replace(/^(EC-GAA\/POS|EC-POS|EC-GAA|POS|Kartenzahlung|SEPA[-\s]?\S*|Lastschrift|Gutschrift|Überweisung|Dauerauftrag)\s+/i, '').split(/\s{2,}/)[0] ?? '').trim();
   const town = /\s([A-ZÄÖÜ][A-Za-zÄÖÜäöüß-]{2,})$/.exec(z)?.[1];
   const words = first.split(/\s+/).filter((w) => w.length > 1 && !/\d/.test(w) && w !== town && !PAYEE_STOP.has(w.toLowerCase().replace(/[.,]/g, '')));
@@ -165,88 +188,217 @@ async function hashKey(s: string): Promise<string> {
   return Array.from(new Uint8Array(buf).slice(0, 12), (b) => b.toString(16).padStart(2, '0')).join('');
 }
 
-const HEADER_ALIASES: Record<string, string[]> = {
-  type: ['transaktionstyp', 'buchungstext', 'umsatzart', 'vorgang'],
-  booking: ['buchungsdatum', 'buchungstag', 'datum', 'buchung'],
-  card: ['karteneinsatz', 'belegdatum', 'wertstellung', 'valuta', 'valutadatum'],
-  amount: ['betrag', 'betrag eur', 'umsatz', 'betrag in eur'],
-  payee: ['zahlungsempfanger', 'empfanger', 'beguenstigter zahlungspflichtiger', 'begunstigter zahlungspflichtiger', 'name zahlungsbeteiligter', 'auftraggeber empfanger', 'zahlungspflichtige r'],
-  zweck: ['verwendungszweck', 'zweck'],
-  desc: ['beschreibung', 'info'],
-  bankCat: ['kategorie'],
+const HEADER_ALIASES: Record<keyof ColumnMap, string[]> = {
+  type: ['transaktionstyp', 'buchungstext', 'umsatzart', 'vorgang', 'buchungsart', 'transaktionsart', 'type', 'art'],
+  booking: ['buchungsdatum', 'buchungstag', 'datum', 'buchung', 'buchungs datum', 'booking date', 'date', 'started date', 'completed date', 'auftragsdatum'],
+  card: ['karteneinsatz', 'belegdatum', 'wertstellung', 'valuta', 'valutadatum', 'wert', 'wertstellung valuta', 'wertstellungsdatum', 'value date'],
+  amount: ['betrag', 'betrag eur', 'umsatz', 'betrag in eur', 'umsatz in eur', 'betrag euro', 'amount', 'amount eur', 'brutto', 'betrag ', 'umsatz eur'],
+  debit: ['soll', 'ausgang', 'belastung', 'lastschrift', 'debit', 'abgang', 'ausgaben'],
+  credit: ['haben', 'eingang', 'gutschrift', 'credit', 'zugang', 'einnahmen'],
+  sign: ['soll haben', 's h', 'kennzeichen', 'soll haben kennzeichen', 'debit credit', 'cr dr'],
+  payee: ['zahlungsempfanger', 'empfanger', 'beguenstigter zahlungspflichtiger', 'begunstigter zahlungspflichtiger', 'name zahlungsbeteiligter', 'auftraggeber empfanger',
+    'zahlungsempfanger in', 'begunstigter auftraggeber', 'name', 'partner name', 'empfanger auftraggeber', 'auftraggeber zahlungsempfanger', 'gegenkonto name', 'counterparty', 'payee', 'empfanger 1', 'merchant'],
+  // eigene Spalte für den Zahlenden (DKB, Postbank): bei Eingängen der passende Name
+  payer: ['zahlungspflichtige r', 'zahlungspflichtige', 'auftraggeber', 'empfanger zahlungspflichtiger'],
+  zweck: ['verwendungszweck', 'zweck', 'buchungsdetails', 'buchungsinformationen', 'reference', 'payment reference', 'description', 'vorgang verwendungszweck'],
+  desc: ['beschreibung', 'info', 'notiz', 'kommentar', 'hinweis'],
+  bankCat: ['kategorie', 'category'],
   bankSub: ['unterkategorie'],
-  iban: ['iban', 'iban zahlungsbeteiligter', 'kontonummer iban'],
+  iban: ['iban', 'iban zahlungsbeteiligter', 'kontonummer iban', 'iban auftraggeber', 'gegenkonto'],
   cash: ['bargeldabhebung']
 };
 
-/** Liest eine Kontoauszug-CSV und klassifiziert jede Zeile. Ungültige Zeilen werden gezählt, nicht importiert. */
-export async function parseStatement(text: string): Promise<ParseResult> {
+/** Welche Spalte (0-basiert) welche Angabe enthält; −1 = nicht vorhanden. */
+export interface ColumnMap {
+  booking: number; card: number; amount: number; debit: number; credit: number; sign: number;
+  payee: number; payer: number; zweck: number; desc: number; type: number; bankCat: number; bankSub: number; iban: number; cash: number;
+}
+export const EMPTY_MAP: ColumnMap = { booking: -1, card: -1, amount: -1, debit: -1, credit: -1, sign: -1, payee: -1, payer: -1, zweck: -1, desc: -1, type: -1, bankCat: -1, bankSub: -1, iban: -1, cash: -1 };
+
+/** Aufbau einer Datei: Trennzeichen, Kopfzeile, erkannte Zuordnung und Beispielzeilen (für „Spalten zuordnen“). */
+export interface Layout {
+  sep: string; headAt: number; hasHeader: boolean; header: string[]; columns: number;
+  map: ColumnMap; samples: string[][]; signature: string; confident: boolean;
+}
+
+/** Datei konnte nicht sicher gelesen werden – die Ansicht fragt nach der Zuordnung. */
+export class NeedsMapping extends AppError {
+  readonly layout: Layout;
+  constructor(layout: Layout) { super('Bitte ordne die Spalten zu.'); this.name = 'NeedsMapping'; this.layout = layout; }
+}
+
+const count = (line: string, re: RegExp) => line.match(re)?.length ?? 0;
+/** Trennzeichen einer Zeile: Tabulator, Semikolon oder Komma – je nachdem, was überwiegt */
+const sepOf = (line: string) => count(line, /\t/g) > Math.max(count(line, /;/g), count(line, /,/g)) ? '\t' : count(line, /;/g) > count(line, /,/g) ? ';' : ',';
+const isSign = (v: string) => /^(s|h|soll|haben|d|c|cr|dr|debit|credit|-|\+)$/i.test(v.trim());
+const isMoney = (v: string) => { const t = v.trim(); return /[.,]\d{2}(?!\d)|^[-−+(]/.test(t) && parseSignedAmount(t) !== null; };
+
+/**
+ * Spalten aus dem Inhalt erraten, wenn die Kopfzeile fehlt oder unbekannt ist:
+ * Datum = Werte sind fast alle Daten, Betrag = Geldbeträge mit Nachkommastellen (keine Kontonummern),
+ * Text = die längsten Textspalten (längste → Verwendungszweck, kürzere → Empfänger).
+ */
+function inferMap(rows: string[][], columns: number, base: ColumnMap): ColumnMap {
+  const map = { ...base };
+  const sample = rows.slice(0, 40);
+  const stat = Array.from({ length: columns }, (_, c) => {
+    const vals = sample.map((r) => (r[c] ?? '').trim()).filter((v) => v !== '');
+    const n = Math.max(1, vals.length);
+    return {
+      c, filled: vals.length / Math.max(1, sample.length),
+      date: vals.filter((v) => parseDate(v)).length / n,
+      money: vals.filter(isMoney).length / n,
+      sign: vals.length > 0 && vals.every(isSign) ? 1 : 0,
+      same: vals.length >= 3 && new Set(vals).size <= 1,
+      len: vals.reduce((a, v) => a + v.length, 0) / n,
+      text: vals.filter((v) => /[a-zäöü]{3,}/i.test(v)).length / n
+    };
+  });
+  // Zuordnungen aus Spaltennamen verwerfen, deren Inhalt nicht passt (z. B. „Wert“ = Betrag statt Wertstellung)
+  for (const k of ['booking', 'card'] as const) if (map[k] >= 0 && (stat[map[k]]?.date ?? 0) < 0.5) map[k] = -1;
+  for (const k of ['amount', 'debit', 'credit'] as const) if (map[k] >= 0 && (stat[map[k]]?.money ?? 0) < 0.5 && (stat[map[k]]?.filled ?? 0) > 0.5) map[k] = -1;
+  const used = new Set(Object.values(map).filter((i) => i >= 0));
+  const take = (c: number) => { used.add(c); return c; };
+  const dates = stat.filter((x) => x.date >= 0.8 && !used.has(x.c));
+  if (map.booking < 0 && dates[0]) map.booking = take(dates[0].c);
+  if (map.card < 0) { const d2 = dates.find((x) => !used.has(x.c)); if (d2) map.card = take(d2.c); }
+  if (map.amount < 0 && map.debit < 0 && map.credit < 0) {
+    const m = stat.filter((x) => x.money >= 0.8 && !used.has(x.c)).sort((a, b) => b.money - a.money || b.filled - a.filled)[0];
+    if (m) map.amount = take(m.c);
+  }
+  if (map.sign < 0) { const sg = stat.find((x) => x.sign && !used.has(x.c) && !x.same); if (sg) map.sign = take(sg.c); }
+  const texts = stat.filter((x) => !used.has(x.c) && x.text >= 0.6 && !x.same && x.date < 0.5 && x.money < 0.5).sort((a, b) => b.len - a.len);
+  if (map.zweck < 0 && texts[0]) map.zweck = take(texts[0].c);
+  if (map.payee < 0) { const p = texts.find((x) => !used.has(x.c) && x.len <= 70); if (p) map.payee = take(p.c); }
+  return map;
+}
+
+/** Zuordnung über Spaltennamen (Kopfzeile) */
+function mapFromHeader(header: string[]): ColumnMap {
+  const map = { ...EMPTY_MAP };
+  const h = header.map(norm);
+  const used = new Set<number>();
+  (Object.keys(HEADER_ALIASES) as (keyof ColumnMap)[]).forEach((k) => {
+    const i = h.findIndex((x, j) => !used.has(j) && (HEADER_ALIASES[k] as string[]).includes(x));
+    if (i >= 0) { map[k] = i; used.add(i); }
+  });
+  return map;
+}
+
+const usable = (m: ColumnMap) => m.booking >= 0 && (m.amount >= 0 || m.debit >= 0 || m.credit >= 0);
+
+/** Aufbau erkennen: Kopfzeile suchen (manche Banken schreiben vorher Kontoinfos), sonst Spalten aus dem Inhalt erraten. */
+export function detectLayout(text: string): Layout {
   const clean = text.replace(/^\uFEFF/, '').replace(/\u0000/g, '');
   const lines = clean.split(/\r?\n/).slice(0, 40);
-  const count = (line: string, re: RegExp) => line.match(re)?.length ?? 0;
-  /** Trennzeichen einer Zeile: Tabulator, Semikolon oder Komma – je nachdem, was überwiegt */
-  const sepOf = (line: string) => count(line, /\t/g) > Math.max(count(line, /;/g), count(line, /,/g)) ? '\t' : count(line, /;/g) > count(line, /,/g) ? ';' : ',';
-  const known = (cells: string[]) => {
-    const h = cells.map(norm);
-    const has = (k: keyof typeof HEADER_ALIASES) => h.some((x) => (HEADER_ALIASES[k] as string[]).includes(x));
-    return has('booking') && has('amount');
-  };
-  // Kopfzeile suchen (manche Banken schreiben vorher Kontoinfos o. Ä.)
-  let headAt = -1, sep = sepOf(lines[0] ?? '');
+  let headAt = -1, sep = sepOf(lines.find((l) => l.trim()) ?? '');
   for (let i = 0; i < lines.length; i++) {
     const l = lines[i] as string;
     if (!l.trim()) continue;
     const sp = sepOf(l);
-    if (known(parseCsvText(l, sp)[0] ?? [])) { headAt = i; sep = sp; break; }
+    if (usable(mapFromHeader(parseCsvText(l, sp)[0] ?? []))) { headAt = i; sep = sp; break; }
   }
-  let rows: string[][];
-  let header: string[];
-  if (headAt >= 0) {
-    rows = parseCsvText(clean.split(/\r?\n/).slice(headAt).join('\n'), sep);
-    header = (rows[0] as string[]).map(norm);
-  } else {
-    // Ohne Kopfzeile: Aufbau der HypoVereinsbank/UniCredit erkennen –
-    // Kontonummer | Buchungsdatum | Valuta | Verwendungszweck | Betrag | Währung
-    const first = lines.find((l) => l.trim()) ?? '';
-    sep = sepOf(first);
-    const body = parseCsvText(clean, sep);
-    const looksHvb = (r: string[]) => r.length >= 5 && !!parseDate(r[1] ?? '') && !!parseDate(r[2] ?? '') && parseSignedAmount(r[4] ?? '') !== null;
-    if (!body.some(looksHvb)) {
-      // Nur Spaltennamen der ersten Zeile nennen (keine Beträge oder Texte aus Buchungen)
-      const names = (body[0] ?? []).slice(0, 8).map((c) => c.trim().slice(0, 20)).filter((c) => c && !/\d/.test(c));
-      throw new AppError(`Spalten für Datum und Betrag wurden nicht gefunden. Ist das ein Kontoauszug als CSV?${names.length ? ` Erkannte Spalten: ${names.join(', ')}.` : ''}`);
+  if (headAt < 0) {
+    // Kopfzeile = erste Zeile mit mehreren Feldern, in der kein Datum und kein Betrag steht
+    const first = lines.findIndex((l) => l.trim() && parseCsvText(l, sepOf(l))[0]!.length >= 3);
+    if (first >= 0) {
+      sep = sepOf(lines[first] as string);
+      const cells = parseCsvText(lines[first] as string, sep)[0] ?? [];
+      if (!cells.some((c) => parseDate(c) || isMoney(c))) headAt = first;
     }
-    header = ['kontonummer', 'buchungsdatum', 'valuta', 'verwendungszweck', 'betrag', 'waehrung'];
-    rows = [header, ...body];
   }
-  if (rows.length < 2) throw new AppError('Die Datei enthält keine Buchungen.');
-  const col = (k: keyof typeof HEADER_ALIASES) => header.findIndex((h) => (HEADER_ALIASES[k] as string[]).includes(h));
-  const idx = { type: col('type'), booking: col('booking'), card: col('card'), amount: col('amount'), payee: col('payee'), zweck: col('zweck'), desc: col('desc'), bankCat: col('bankCat'), bankSub: col('bankSub'), iban: col('iban'), cash: col('cash') };
-  if (idx.booking < 0 || idx.amount < 0) throw new AppError('Spalten für Datum und Betrag wurden nicht gefunden. Ist das ein Kontoauszug als CSV?');
-  const format = header.includes('transaktionstyp') && header.includes('karteneinsatz') ? 'c24'
-    : header.includes('kontonummer') && header.includes('valuta') && header.includes('verwendungszweck') && idx.payee < 0 ? 'hvb' : 'generic';
+  const rest = headAt >= 0 ? clean.split(/\r?\n/).slice(headAt).join('\n') : clean;
+  const all = parseCsvText(rest, sep);
+  const header = headAt >= 0 ? (all[0] ?? []).map((c) => c.trim()) : [];
+  const body = headAt >= 0 ? all.slice(1) : all;
+  const columns = Math.max(header.length, ...body.slice(0, 40).map((r) => r.length), 0);
+  const fromHeader = headAt >= 0 ? mapFromHeader(header) : { ...EMPTY_MAP };
+  const map = usable(fromHeader) && fromHeader.payee + fromHeader.zweck > -2 ? fromHeader : inferMap(body, columns, fromHeader);
+  // Soll/Haben-Kennzeichen ohne (bekannten) Spaltennamen, z. B. Volksbank: letzte Spalte nur „S“ oder „H“
+  if (map.sign < 0 && map.amount >= 0) {
+    const used = new Set(Object.values(map).filter((i) => i >= 0));
+    const smp = body.slice(0, 40);
+    for (let c = 0; c < columns; c++) {
+      if (used.has(c)) continue;
+      const vals = smp.map((r) => (r[c] ?? '').trim()).filter(Boolean);
+      if (vals.length >= Math.min(3, smp.length) && vals.every((v) => /^(s|h|soll|haben)$/i.test(v)) && new Set(vals.map((v) => v[0]!.toLowerCase())).size >= 1) { map.sign = c; break; }
+    }
+  }
+  const signature = headAt >= 0 ? 'h:' + header.map(norm).join('|') : `n:${columns}`;
+  // sicher, wenn Datum und Betrag gefunden sind und die Beispielzeilen sich damit lesen lassen
+  const ok = usable(map) && body.slice(0, 20).filter((r) => parseDate((r[map.booking] ?? '').trim()) && amountOf(r, map) !== null).length >= Math.min(3, body.length) * 0.7;
+  return { sep, headAt, hasHeader: headAt >= 0, header, columns, map, samples: body.slice(0, 5), signature, confident: ok };
+}
+
+/** Vorzeichenbehafteter Betrag einer Zeile: Betragsspalte (ggf. mit Soll/Haben-Kennzeichen) oder getrennte Soll-/Haben-Spalten */
+export function amountOf(r: string[], m: ColumnMap): number | null {
+  const g = (i: number) => (i >= 0 ? (r[i] ?? '').trim() : '');
+  if (m.amount >= 0 && (g(m.amount) || (m.debit < 0 && m.credit < 0))) {
+    const v = parseSignedAmount(g(m.amount));
+    if (v === null) return null;
+    const sg = g(m.sign);
+    if (sg && /^(s|soll|d|dr|debit|-)$/i.test(sg)) return -Math.abs(v);
+    if (sg && /^(h|haben|c|cr|credit|\+)$/i.test(sg)) return Math.abs(v);
+    return v;
+  }
+  const d = g(m.debit) ? parseSignedAmount(g(m.debit)) : 0;
+  const c = g(m.credit) ? parseSignedAmount(g(m.credit)) : 0;
+  if (d === null || c === null) return null;
+  return Math.abs(c) - Math.abs(d);
+}
+
+/**
+ * Liest eine Kontoauszug-CSV und klassifiziert jede Zeile. Ungültige Zeilen werden gezählt, nicht importiert.
+ * Ohne `map` wird der Aufbau erkannt; ist das nicht sicher möglich, kommt `NeedsMapping` (die Ansicht fragt dann nach).
+ */
+export async function parseStatement(text: string, given?: ColumnMap): Promise<ParseResult> {
+  const layout = detectLayout(text);
+  if (!given && !layout.confident) {
+    if (layout.columns < 2) throw new AppError('Die Datei sieht nicht wie ein Kontoauszug als CSV aus.');
+    // Ohne ein einziges Datum hilft auch Zuordnen nicht
+    if (!layout.samples.some((r) => r.some((v) => parseDate(v.trim()) || parseDate(v.trim(), true)))) {
+      throw new AppError('In der Datei wurden keine Spalten für Datum und Betrag gefunden. Ist es ein Kontoauszug als CSV?');
+    }
+    throw new NeedsMapping(layout);
+  }
+  const map = given ?? layout.map;
+  if (!usable(map)) throw new NeedsMapping(layout);
+  const clean = text.replace(/^\uFEFF/, '').replace(/\u0000/g, '');
+  const rest = layout.headAt >= 0 ? clean.split(/\r?\n/).slice(layout.headAt).join('\n') : clean;
+  const rows = parseCsvText(rest, layout.sep);
+  if (layout.hasHeader) rows.shift();
+  if (rows.length < 1) throw new AppError('Die Datei enthält keine Buchungen.');
+  const idx = map;
+  const h = layout.header.map(norm);
+  const format: ParseResult['format'] = h.includes('transaktionstyp') && h.includes('karteneinsatz') ? 'c24'
+    : idx.payee < 0 && idx.zweck >= 0 && idx.card >= 0 && (h.includes('kontonummer') || !layout.hasHeader) ? 'hvb' : 'generic';
   const get = (r: string[], i: number) => (i >= 0 ? (r[i] ?? '').trim() : '');
+  // „12/31/2025“: Monat zuerst (US-Schreibweise), wenn in der Datei ein zweiter Wert über 12 vorkommt und nie ein erster
+  const slash = rows.slice(0, 200).flatMap((r) => [get(r, idx.booking), get(r, idx.card)]).map((v) => /^(\d{1,2})\/(\d{1,2})\//.exec(v)).filter(Boolean) as RegExpExecArray[];
+  const mdy = slash.some((m) => Number(m[2]) > 12) && !slash.some((m) => Number(m[1]) > 12);
+  const pd = (v: string) => parseDate(v, mdy);
   const seen = new Map<string, number>();
   const candidates: Candidate[] = [];
   let skipped = 0;
-  const body = rows.slice(1, MAX_IMPORT_ROWS + 1);
+  const body = rows.slice(0, MAX_IMPORT_ROWS);
   for (const r of body) {
-    const booking = parseDate(get(r, idx.booking));
-    const signed = parseSignedAmount(get(r, idx.amount));
+    const booking = pd(get(r, idx.booking));
+    const signed = amountOf(r, idx);
     if (!booking || signed === null || signed === 0) { skipped++; continue; }
     const type = get(r, idx.type), zweck = get(r, idx.zweck), desc = get(r, idx.desc);
     // Kaufdatum: „Belegdatum“ im Verwendungszweck (Kartenzahlung), sonst Karteneinsatz/Valuta, sonst Buchungsdatum
     const beleg = /Belegdatum\s+(\d{1,2}\.\d{1,2}\.\d{2,4})/i.exec(zweck)?.[1];
-    const card = (beleg ? parseDate(beleg) : null) ?? parseDate(get(r, idx.card));
+    const card = (beleg ? parseDate(beleg) : null) ?? pd(get(r, idx.card));
     const bankCat = get(r, idx.bankCat), bankSub = get(r, idx.bankSub);
-    const payeeCol = get(r, idx.payee);
-    const payee = idx.payee < 0 && zweck ? payeeFromZweck(zweck) : cleanPayee(payeeCol, zweck, desc);
+    // Eingänge: Name des Zahlenden, wenn die Bank dafür eine eigene Spalte hat
+    const payeeCol = signed > 0 && get(r, idx.payer) ? get(r, idx.payer) : get(r, idx.payee) || get(r, idx.payer);
+    const payee = !payeeCol && zweck ? payeeFromZweck(zweck) : cleanPayee(payeeCol, zweck, desc);
     const cardPay = /^(EC-GAA\/POS|EC-POS|POS|EC-GAA)\b/i.test(zweck);
     let kind: RowKind;
     if (/^sparen$/i.test(type) || /aufrundung/i.test(zweck)) kind = 'roundup';
     else if (/umbuchung/i.test(type) || /^umbuchung$/i.test(bankSub)) kind = 'transfer';
     else kind = signed < 0 ? 'expense' : 'credit';
-    const base = [get(r, idx.booking), get(r, idx.card), get(r, idx.amount), get(r, idx.payee), zweck, desc].join('|');
+    const base = [get(r, idx.booking), get(r, idx.card), idx.amount >= 0 ? get(r, idx.amount) : `${get(r, idx.debit)}/${get(r, idx.credit)}`, get(r, idx.payee), zweck, desc].join('|');
     const n = (seen.get(base) ?? 0) + 1;
     seen.set(base, n);
     candidates.push({
@@ -254,12 +406,12 @@ export async function parseStatement(text: string): Promise<ParseResult> {
       payee, payeeKey: norm(payee).split(' ').slice(0, 3).join(' ') || 'unbekannt', bankCategory: bankCat, bankSub,
       detail: cardPay ? '' : cleanDetail(maskCard(zweck), desc, payee),
       raw: {
-        type, time: /\b(\d{1,2}:\d{2})\b/.exec(get(r, idx.card))?.[1] ?? '', payee: get(r, idx.payee).slice(0, 140), iban: get(r, idx.iban).slice(0, 40),
-        zweck: maskCard(zweck).slice(0, 300), desc: desc.slice(0, 200), cash: get(r, idx.cash).slice(0, 40), amountText: get(r, idx.amount).slice(0, 30)
+        type, time: /\b(\d{1,2}:\d{2})\b/.exec(get(r, idx.card) || get(r, idx.booking))?.[1] ?? '', payee: payeeCol.slice(0, 140), iban: get(r, idx.iban).slice(0, 40),
+        zweck: maskCard(zweck).slice(0, 300), desc: desc.slice(0, 200), cash: get(r, idx.cash).slice(0, 40), amountText: (idx.amount >= 0 ? get(r, idx.amount) : `${get(r, idx.debit)} ${get(r, idx.credit)}`).trim().slice(0, 30)
       }
     });
   }
-  skipped += Math.max(0, rows.length - 1 - MAX_IMPORT_ROWS);
+  skipped += Math.max(0, rows.length - MAX_IMPORT_ROWS);
   return { candidates, skippedLines: skipped, format };
 }
 
@@ -403,4 +555,92 @@ export function findReturns(cands: Candidate[]): Map<string, string> {
     if (match) { out.set(cr.key, match.key); out.set(match.key, cr.key); }
   }
   return out;
+}
+
+/* ───────── Fixkosten erkennen ───────── */
+
+export type FixInterval = 'monthly' | 'quarterly' | 'halfyearly' | 'yearly';
+export interface FixFound {
+  key: string; name: string; payeeKey: string;
+  /** zuletzt gezahlter Betrag */
+  amountCents: number;
+  interval: FixInterval;
+  /** wie oft in der Datei gefunden */
+  count: number; first: string; last: string;
+  /** üblicher Buchungstag (1–28) */
+  day: number;
+  /** Monat 1–12 der Zahlung (für jährlich/halbjährlich/vierteljährlich) */
+  dueMonth: number;
+  /** Beträge schwanken (z. B. Strom-Abschlag geändert) */
+  varies: boolean;
+  /** Hinweistext aus der Bank (Verwendungszweck/Buchungstext) für die Kategorie-Wahl */
+  hint: string;
+}
+
+const FIX_WORDS = /miete|dauerauftrag|versicherung|beitrag|abo\b|abonnement|rundfunk|strom|gas\b|internet|mobilfunk|telekom|vodafone|o2\b|1&1|netflix|spotify|disney|leasing|kredit|darlehen|kita|verein|fitness|gym|hausgeld|nebenkosten|abschlag/i;
+
+/**
+ * Wiederkehrende Ausgaben in einem Kontoauszug finden: gleicher Empfänger in mehreren Monaten
+ * (Abstand ~1, 3, 6 oder 12 Monate). Einzelne Zahlungen nur, wenn der Text klar nach Vertrag aussieht (Miete, Versicherung, Abo …).
+ */
+export function detectRecurring(cands: Candidate[]): FixFound[] {
+  const groups = new Map<string, Candidate[]>();
+  for (const c of cands) if (c.kind === 'expense') groups.set(c.payeeKey, [...(groups.get(c.payeeKey) ?? []), c]);
+  const mIdx = (iso: string) => Number(iso.slice(0, 4)) * 12 + Number(iso.slice(5, 7)) - 1;
+  const out: FixFound[] = [];
+  for (const [k, list] of groups) {
+    const sorted = [...list].sort((a, b) => a.date.localeCompare(b.date));
+    // je Monat eine Zahlung (bei mehreren im Monat: die zum häufigsten Betrag passende)
+    const amounts = sorted.map((c) => c.amountCents);
+    const mode = [...amounts].sort((a, b) => amounts.filter((x) => x === b).length - amounts.filter((x) => x === a).length)[0] as number;
+    const byMonth = new Map<number, Candidate>();
+    for (const c of sorted) {
+      const m = mIdx(c.date);
+      const prev = byMonth.get(m);
+      if (!prev || Math.abs(c.amountCents - mode) < Math.abs(prev.amountCents - mode)) byMonth.set(m, c);
+    }
+    const months = [...byMonth.keys()].sort((a, b) => a - b);
+    const lastC = byMonth.get(months[months.length - 1] as number) as Candidate;
+    const text = `${lastC.payee} ${lastC.raw.zweck} ${lastC.raw.type} ${lastC.detail}`;
+    let interval: FixInterval | null = null;
+    if (months.length >= 2) {
+      const gaps = months.slice(1).map((m, i) => m - (months[i] as number));
+      const med = [...gaps].sort((a, b) => a - b)[Math.floor(gaps.length / 2)] as number;
+      // Nur Zahlungen in fast jedem Monat (bzw. Quartal/Jahr) gelten als Fixkosten – Einkäufe beim selben Händler nicht
+      const regular = gaps.filter((g) => Math.abs(g - med) <= (med >= 6 ? 1 : 0)).length >= gaps.length * 0.6;
+      const same = byMonth.size === sorted.length || sorted.length <= months.length * 1.5;
+      const close = [...byMonth.values()].filter((c) => Math.abs(c.amountCents - lastC.amountCents) <= Math.max(500, lastC.amountCents * 0.2)).length >= months.length * 0.6;
+      if (regular && same && close) interval = med <= 1 ? 'monthly' : med <= 3 ? 'quarterly' : med <= 7 ? 'halfyearly' : med <= 13 ? 'yearly' : null;
+    } else if (FIX_WORDS.test(text)) interval = 'monthly';
+    if (!interval) continue;
+    const vals = [...byMonth.values()];
+    const days = vals.map((c) => Number(c.date.slice(8, 10))).sort((a, b) => a - b);
+    out.push({
+      key: k, name: lastC.payee, payeeKey: k, amountCents: lastC.amountCents, interval, count: months.length,
+      first: (vals[0] as Candidate).date, last: lastC.date, day: Math.min(28, Math.max(1, days[Math.floor(days.length / 2)] ?? 1)),
+      dueMonth: Number(lastC.date.slice(5, 7)), varies: vals.some((c) => c.amountCents !== lastC.amountCents),
+      hint: `${lastC.raw.zweck} ${lastC.raw.type} ${lastC.bankCategory} ${lastC.bankSub}`.slice(0, 200)
+    });
+  }
+  return out.sort((a, b) => b.amountCents * (a.interval === 'monthly' ? 1 : 0.3) - a.amountCents * (b.interval === 'monthly' ? 1 : 0.3) || a.name.localeCompare(b.name));
+}
+
+/** Passende Fixkosten-Kategorie aus Name/Hinweis raten (Wohnen, Versicherungen, Abos & Verträge, Mobilität …) */
+export function guessFixCategory(f: FixFound, cats: Category[], rules: Record<string, string>): string | null {
+  const pool = bookable(cats, 'expense').filter((c) => c.group === 'fix' && !c.archived);
+  const learned = rules[f.payeeKey];
+  if (learned && pool.some((c) => c.id === learned)) return learned;
+  const t = norm(`${f.name} ${f.hint}`);
+  const top = (c: Category) => (c.parentId ? cats.find((x) => x.id === c.parentId)?.name ?? '' : c.name);
+  const find = (re: RegExp) => pool.find((c) => re.test(norm(c.name)) || re.test(norm(top(c))));
+  const rulesList: [RegExp, RegExp][] = [
+    [/miete|hausgeld|nebenkosten|wohnung|vermiet|strom|gas|stadtwerke|wasser|rundfunk|gez/, /wohn|miete|haus|strom|energie/],
+    [/versicher|allianz|huk|ergo|axa|devk|generali|signal iduna|debeka|barmer|tk |aok|krankenkasse/, /versicher/],
+    [/kfz|auto|leasing|tank|bahn|deutschlandticket|mvv|bvg|hvv|parken/, /mobil|auto|fahr|verkehr/],
+    [/netflix|spotify|disney|amazon prime|apple|google|icloud|abo|telekom|vodafone|o2|1 1|mobilfunk|internet|dsl|handy|fitness|gym|verein/, /abo|vertr|handy|internet|telefon|medien/]
+  ];
+  for (const [txt, cat] of rulesList) if (txt.test(t)) { const hit = find(cat); if (hit) return hit.id; }
+  // Kategoriename im Empfänger
+  const byName = pool.find((c) => { const n = norm(c.name); return n.length >= 3 && t.includes(n); });
+  return byName?.id ?? null;
 }

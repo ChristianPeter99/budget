@@ -157,7 +157,9 @@ test('WebKit: CSV-Import – Datei lesen, Duplikat-Prüfung, übernehmen', async
   await d.executeScript('document.querySelector(".selbar .btn").click()');
   await d.wait(until.elementLocated(By.xpath("//*[contains(normalize-space(.),'Buchungen übernommen')]")), 8000);
   results.csvImport = await (await d.findElement(By.css('.toast'))).getText();
-  await click(By.xpath("//button[normalize-space(.)='Letzten Import rückgängig machen']"));
+  // Der Hinweis (Toast) kann den Knopf kurz überdecken – direkt auslösen
+  const undoBtn = await d.wait(until.elementLocated(By.xpath("//button[normalize-space(.)='Letzten Import rückgängig machen']")), 8000);
+  await d.executeScript('arguments[0].click()', undoBtn);
   await d.wait(until.elementLocated(By.xpath("//*[contains(normalize-space(.),'importierte Buchungen entfernt')]")), 8000);
   await click(By.xpath("//nav//button[@aria-label='Übersicht']"));
 });
