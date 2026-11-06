@@ -46,7 +46,7 @@ test('Import: neue Hauptkategorie mit Unterkategorie anlegen, erscheint in Mehr 
   await page.locator('.back', { hasText: 'Mehr' }).click();
   await page.getByRole('button', { name: /^Kategorien/ }).click();
   await expect(page.locator('.card', { hasText: 'Haustier' })).toContainText('Futter');
-  await expect(page.locator('.card', { hasText: 'Haustier' })).toContainText('Alltag');
+  await expect(page.getByRole('tab', { name: 'Alltag' })).toHaveAttribute('aria-selected', 'true');
 });
 
 test('Untere Leiste liegt vollständig im sichtbaren Bereich', async ({ page }) => {

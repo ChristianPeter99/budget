@@ -27,7 +27,7 @@ test('Alltag und Fixkosten: neue Kategorie anlegen und Kategorien bearbeiten', a
   await dlg.locator('input').first().fill('Haustier');
   await dlg.getByRole('button', { name: 'Speichern' }).click();
   await expect(page.locator('.sheetwrap')).toHaveCount(0);
-  await expect(page.locator('.catname', { hasText: 'Haustier' })).toContainText('Alltag');
+  await expect(page.locator('.catname', { hasText: 'Haustier' })).toBeVisible();
   await page.locator('.back', { hasText: 'Alltag' }).click();
   await nav.getByRole('button', { name: 'Fixkosten' }).click();
   await page.getByRole('button', { name: 'Kategorien bearbeiten' }).click();
@@ -36,7 +36,7 @@ test('Alltag und Fixkosten: neue Kategorie anlegen und Kategorien bearbeiten', a
   await dlg.locator('input').first().fill('Garage');
   await dlg.getByRole('button', { name: 'Speichern' }).click();
   await expect(page.locator('.sheetwrap')).toHaveCount(0);
-  await expect(page.locator('.catname', { hasText: 'Garage' })).toContainText('Fixkosten');
+  await expect(page.locator('.catname', { hasText: 'Garage' })).toBeVisible();
   await expect(page.locator('.catname', { hasText: 'Haustier' })).toHaveCount(0);
 });
 

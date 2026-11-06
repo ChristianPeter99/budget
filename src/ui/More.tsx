@@ -81,6 +81,9 @@ export function More({ initial = 'menu', onExit, onOpenTx, onAdd, onEditRec }: M
 }
 
 /* ───────── Kategorien ───────── */
+/** Farbe je Bereich – dieselbe wie in Alltag, Fixkosten, Sparen und beim Haushaltskonto. */
+const AREA_COLOR: Record<CatArea, string> = { alltag: 'var(--all)', fix: 'var(--fix)', spar: 'var(--spar)', einnahme: 'var(--inc)', joint: 'var(--hh)' };
+
 export function CategoriesPage({ back, group, scope }: { back: React.ReactNode; group?: CatGroup; scope?: 'joint' }) {
   const { data, run } = useStore();
   const [sheet, setSheet] = useState<{ id?: string; parentId?: string | null } | null>(null);
@@ -97,10 +100,9 @@ export function CategoriesPage({ back, group, scope }: { back: React.ReactNode; 
       <Header kicker={scope === 'joint' ? (data.settings.joint?.name ?? 'Haushaltskonto') : group ? GROUP_LABEL[group] : undefined} title="Kategorien" right={<div className="mn">
         <button className="pillbtn" onClick={() => setSheet({ parentId: null })}>Neu</button>
       </div>} />
-      {!group && !scope && <div className="fseg" role="tablist" aria-label="Bereich">
-        {areas.map(([a, l]) => <button key={a} role="tab" aria-selected={areaView === a} className={areaView === a ? 'on' : ''} onClick={() => setAreaView(a)}>{l}</button>)}
+      {!group && !scope && <div className={"catseg" + (areas.length > 4 ? " five" : "")} role="tablist" aria-label="Bereich" style={{ gridTemplateColumns: `repeat(${areas.length}, minmax(0, 1fr))` }}>
+        {areas.map(([a, l]) => <button key={a} role="tab" aria-selected={areaView === a} className={areaView === a ? 'on' : ''} style={{ ['--c' as string]: AREA_COLOR[a] }} onClick={() => setAreaView(a)}>{l}</button>)}
       </div>}
-      <p className="note">Tippe auf eine Kategorie, um sie umzubenennen, zu verschieben, die Gruppe zu ändern oder sie mit einer anderen zusammenzuführen. Die Reihenfolge änderst du direkt in Alltag und Fixkosten: gedrückt halten und ziehen.</p>
       {tops.map((t) => {
         const kids = childrenOf(data.categories, t.id);
         return (
@@ -111,7 +113,6 @@ export function CategoriesPage({ back, group, scope }: { back: React.ReactNode; 
               </button>
               <button className="clickrow catname" onClick={() => setSheet({ id: t.id })}>
                 <b>{t.name}{t.archived ? ' (archiviert)' : ''}</b>
-                {t.kind === 'expense' && <span className="tag">{isHouseholdCat(t) ? (data.settings.joint?.name ?? 'Haushaltskonto') : GROUP_LABEL[t.group]}</span>}
               </button>
             </div>
             {kids.map((c) => (

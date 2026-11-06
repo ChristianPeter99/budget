@@ -45,7 +45,8 @@ test('Kategorien: verschieben, Gruppe ändern, zusammenführen', async ({ page }
   await page.getByRole('dialog').getByRole('button', { name: 'Speichern' }).click();
   await expect(page.locator('.catname', { hasText: 'Bargeld' })).toHaveCount(0);
   await page.getByRole('tab', { name: 'Fixkosten' }).click();
-  await expect(page.locator('.catname', { hasText: 'Bargeld' })).toContainText('Fixkosten');
+  await expect(page.locator('.catname', { hasText: 'Bargeld' })).toBeVisible();
+  await expect(page.getByRole('tab', { name: 'Fixkosten' })).toHaveAttribute('aria-selected', 'true');
   await page.getByRole('tab', { name: 'Alltag' }).click();
 
   // Bäcker in Einkaufen zusammenführen
