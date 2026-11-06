@@ -222,6 +222,7 @@ test('Sparkonto: Betrag antippen öffnet Eingabe; alter Bankstand meldet sich or
   await page.getByLabel('Kontostand Sparkonto').fill('5000');
   await expect(page.getByLabel('Stand vom')).toHaveCount(0); // Sparkonto: immer der Stand von heute
   await page.getByRole('dialog').getByRole('button', { name: 'Speichern' }).click();
+  await expect(page.locator('.toast')).toContainText('Kontostand erfasst');
   await expect(page.getByRole('dialog').locator('.wchip')).toHaveCount(0);
   // 40 Tage später: der Bankstand meldet sich orange
   await page.clock.install({ time: new Date(Date.now() + 40 * 86400000) });
@@ -240,6 +241,10 @@ test('Sparkonto: Betrag antippen öffnet Eingabe; alter Bankstand meldet sich or
   // zwei Stände: „Bisher“ zeigt den Verlauf, „Nächstes Jahr“ die Prognose
   await expect(page.getByRole('img', { name: /^Sparkonto seit / })).toBeVisible();
   await expect(page.getByRole('dialog').locator('.wsubline')).toContainText('+100 € seit');
+  // Hilfslinien mit runden Beträgen; Antippen der Kurve zeigt Betrag und Datum
+  expect(await page.getByRole('dialog').locator('.tgrid').count()).toBeGreaterThanOrEqual(2);
+  await page.getByRole('dialog').locator('.tplot').click({ position: { x: 5, y: 60 } });
+  await expect(page.getByRole('dialog').locator('.ttip')).toContainText('5.000 €');
   await page.getByRole('button', { name: 'Nächstes Jahr' }).click();
   await expect(page.getByRole('img', { name: /^Prognose Sparkonto bis / })).toBeVisible();
   await expect(page.getByRole('dialog').locator('.wcap')).toHaveText('In einem Jahr · ohne Zinsen');

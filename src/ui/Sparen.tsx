@@ -272,27 +272,59 @@ function DepotDetail({ entries }: { entries: { date: string; valueCents: number 
   );
 }
 
+/** Runde Schrittweite (1, 2, 2,5 oder 5 × 10ⁿ) für etwa zwei bis drei Hilfslinien. */
+function niceStep(range: number): number {
+  const raw = Math.max(range, 1) / 2;
+  const p = Math.pow(10, Math.floor(Math.log10(raw)));
+  const f = raw / p;
+  return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * p;
+}
+
 /**
  * Verlaufskurve ohne Kasten: Fläche + Linie bis heute, optional gestrichelte Prognose und Markierungen (Sparziele).
- * x nach Datum, y zwischen Minimum und Maximum. Punkte als HTML, damit sie bei voller Breite rund bleiben.
+ * Dezente Hilfslinien auf runden Beträgen (rechts beschriftet); Finger über die Kurve ziehen zeigt Betrag und Datum.
+ * x nach Datum. Punkte als HTML, damit sie bei voller Breite rund bleiben.
  */
 function TrendChart({ past, future = [], markers = [], color, labels, aria }: { past: Pt[]; future?: Pt[]; markers?: (Pt & { label?: string })[]; color: string; labels: [string, string, string]; aria: string }) {
   const gid = useId().replace(/:/g, '');
-  const W = 358, H = 120;
+  const plotRef = useRef<HTMLDivElement>(null);
+  const [hover, setHover] = useState<number | null>(null);
+  const W = 358, H = 140;
   const all = [...past, ...future];
   const t = (d: string) => new Date(d + 'T00:00:00').getTime();
   const t0 = t((all[0] as Pt).d), t1 = t((all[all.length - 1] as Pt).d);
-  const lo = Math.min(...all.map((p) => p.c)), hi = Math.max(...all.map((p) => p.c));
-  const pad = (hi - lo) * 0.12 || Math.max(100, hi * 0.05);
+  const vmin = Math.min(...all.map((p) => p.c)), vmax = Math.max(...all.map((p) => p.c));
+  const step = niceStep(vmax - vmin || Math.max(10000, vmax * 0.2));
+  const lo = Math.floor(vmin / step) * step, hi = Math.max(Math.ceil(vmax / step) * step, lo + step);
+  const ticks: number[] = [];
+  for (let v = lo; v <= hi + 1; v += step) ticks.push(v);
   const x = (d: string) => (t1 > t0 ? ((t(d) - t0) / (t1 - t0)) * W : W / 2);
-  const y = (c: number) => H - 8 - ((c - (lo - pad)) / (hi + pad - (lo - pad))) * (H - 16);
+  const y = (c: number) => H - 6 - ((c - lo) / (hi - lo)) * (H - 22);
   const path = (ps: Pt[]) => ps.map((p, i) => `${i ? 'L' : 'M'}${x(p.d).toFixed(1)} ${y(p.c).toFixed(1)}`).join(' ');
   const line = path(past);
   const lp = past[past.length - 1] as Pt;
   const dot = (p: Pt) => ({ left: `${(x(p.d) / W) * 100}%`, top: y(p.c) });
+  // Antippbare Punkte: alle Stände und (ohne Doppelung von heute) die Prognosemonate
+  const pts = [...past.map((p) => ({ ...p, fc: false })), ...future.filter((p) => p.d !== lp.d).map((p) => ({ ...p, fc: true }))];
+  const pick = (clientX: number) => {
+    const r = plotRef.current?.querySelector('.tarea')?.getBoundingClientRect();
+    if (!r || r.width === 0) return;
+    const px = ((clientX - r.left) / r.width) * W;
+    let best = 0;
+    pts.forEach((p, i) => { if (Math.abs(x(p.d) - px) < Math.abs(x((pts[best] as Pt).d) - px)) best = i; });
+    setHover(best);
+  };
+  const hp = hover !== null ? pts[hover] : undefined;
+  const hl = hp ? (x(hp.d) / W) * 100 : 0;
   return (
     <div className="tchart">
-      <div className="tplot" style={{ height: H }}>
+      <div className="tplot" ref={plotRef} style={{ height: H }} data-nodrag
+        onPointerDown={(e) => pick(e.clientX)} onPointerMove={(e) => { if (e.pointerType !== 'mouse' || e.buttons || hover !== null) pick(e.clientX); }}
+        onPointerUp={(e) => { if (e.pointerType !== 'mouse') setHover(null); }} onPointerLeave={() => setHover(null)} onPointerCancel={() => setHover(null)}>
+        {ticks.map((v) => (
+          <div key={v} className="tgrid" style={{ top: y(v) }} aria-hidden="true"><span>{formatEUR0(v)}</span></div>
+        ))}
+        <div className="tarea">
         <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label={aria}>
           <defs><linearGradient id={gid} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={color} stopOpacity="0.28" /><stop offset="1" stopColor={color} stopOpacity="0" /></linearGradient></defs>
           {past.length > 1 && <path d={`${line} L${x(lp.d).toFixed(1)} ${H} L${x((past[0] as Pt).d).toFixed(1)} ${H} Z`} fill={`url(#${gid})`} />}
@@ -300,8 +332,18 @@ function TrendChart({ past, future = [], markers = [], color, labels, aria }: { 
           {future.length > 1 && <path d={path(future)} fill="none" style={{ stroke: color }} strokeWidth="2" strokeDasharray="4 5" strokeLinecap="round" opacity="0.8" vectorEffect="non-scaling-stroke" />}
         </svg>
         {markers.map((m) => <i key={m.d} className="tmark" style={dot(m)} aria-hidden="true" />)}
-        {markers.map((m) => m.label && <span key={'l' + m.d} className="tmlabel" style={dot(m)} aria-hidden="true">{m.label}</span>)}
+        {hp === undefined && markers.map((m) => m.label && <span key={'l' + m.d} className="tmlabel" style={dot(m)} aria-hidden="true">{m.label}</span>)}
         <i className="tnow" style={{ ...dot(lp), background: color }} aria-hidden="true" />
+        {hp && (
+          <>
+            <div className="tscrub" style={{ left: `${hl}%` }} aria-hidden="true" />
+            <i className="tsdot" style={{ ...dot(hp), borderColor: color }} aria-hidden="true" />
+            <span className="ttip" style={{ left: `${hl}%`, transform: `translateX(${hl < 18 ? '0' : hl > 82 ? '-100%' : '-50%'})` }} aria-live="polite">
+              <b className="num">{hp.fc ? '≈ ' : ''}{formatEUR0(hp.c)}</b> {hp.d === todayISO() ? 'heute' : hp.fc ? `${monthShort(hp.d.slice(0, 7))} ${hp.d.slice(2, 4)}` : formatDateDE(hp.d).slice(0, 6) + hp.d.slice(2, 4)}
+            </span>
+          </>
+        )}
+        </div>
       </div>
       <div className="wlabels" aria-hidden="true"><span>{labels[0]}</span><span className="now">{labels[1]}</span><span>{labels[2]}</span></div>
     </div>
