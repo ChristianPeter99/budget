@@ -76,7 +76,7 @@ test('Fixkosten: optionale Kündigungsfrist wird in der Zeile angezeigt', async 
   await expect(page.locator('.card.flush .sub', { hasText: 'Spotify' })).toContainText('Kündigungsfrist: 1 Monat');
 });
 
-test('Sparen & Depot: Gesamt aus Sparkonto + Depot, Aktualisieren im Fenster mit Datum und Unterschied', async ({ page }) => {
+test('Sparen & Depot: Gesamt aus Sparkonto + Depot, Aktualisieren direkt im Detail mit Datum und Unterschied', async ({ page }) => {
   await page.goto('/');
   await page.locator('nav').getByRole('button', { name: 'Mehr' }).click();
   await expect(page.getByRole('button', { name: /^Gesamtvermögen/ })).toHaveCount(0);
@@ -86,17 +86,19 @@ test('Sparen & Depot: Gesamt aus Sparkonto + Depot, Aktualisieren im Fenster mit
   await page.getByLabel('Kontostand Sparkonto').fill('8500');
   await page.getByRole('dialog').getByRole('button', { name: 'Speichern' }).click();
   await expect(page.locator('.toast')).toContainText('Kontostand erfasst');
+  await page.getByRole('dialog').getByRole('button', { name: 'Schließen' }).click();
   await page.locator('.wtile', { hasText: 'Depot' }).click();
   await page.getByRole('button', { name: 'Stand aktualisieren' }).click();
   await page.getByLabel('Neuer Depotstand').fill('12000');
   await page.getByLabel('Stand vom').fill(await page.evaluate(() => { const d = new Date(); d.setDate(d.getDate() - 20); return d.toISOString().slice(0, 10); }));
   await page.getByRole('dialog').getByRole('button', { name: 'Speichern' }).click();
   await expect(page.locator('.toast')).toContainText('Depotstand erfasst');
-  await page.locator('.wtile', { hasText: 'Depot' }).click();
   await page.getByRole('button', { name: 'Stand aktualisieren' }).click();
   await page.getByLabel('Neuer Depotstand').fill('12400');
-  await expect(page.getByRole('dialog').locator('.kv', { hasText: 'Unterschied' })).toContainText('+400 €');
+  await expect(page.getByRole('dialog').locator('.wdiff')).toContainText('+400 €');
   await page.getByRole('dialog').getByRole('button', { name: 'Speichern' }).click();
+  await expect(page.getByRole('dialog').locator('.mid34')).toHaveText(/12\.400\s€/);
+  await page.getByRole('dialog').getByRole('button', { name: 'Schließen' }).click();
   await expect(page.locator('.whero .mid34')).toHaveText(/20\.900\s€/);
   await expect(page.locator('.wtile', { hasText: 'Depot' })).toContainText('+3,3 %');
   await expect(page.getByRole('img', { name: /Verlauf Sparkonto und Depot/ })).toBeVisible();
@@ -202,4 +204,23 @@ test('Übersicht-Ring: Haushaltskonto innen und in der Ecke, wenn eingerichtet',
   await expect(page.locator('.ovcenter')).toContainText('ausgegeben');
   await page.getByRole('button', { name: /Konto öffnen/ }).click();
   await expect(page.locator('nav').getByRole('button', { name: 'Alltag' })).toHaveAttribute('aria-current', 'page');
+});
+
+test('Sparkonto: Betrag antippen öffnet Eingabe; alter Bankstand meldet sich orange', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('nav').getByRole('button', { name: 'Mehr' }).click();
+  await page.getByRole('button', { name: /^Sparen & Depot/ }).click();
+  await page.locator('.wtile', { hasText: 'Sparkonto' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Stand eintragen' }).click();
+  await page.getByLabel('Kontostand Sparkonto').fill('5000');
+  await page.getByLabel('Stand vom').fill(await page.evaluate(() => { const d = new Date(); d.setDate(d.getDate() - 40); return d.toISOString().slice(0, 10); }));
+  await page.getByRole('dialog').getByRole('button', { name: 'Speichern' }).click();
+  await expect(page.getByRole('dialog').locator('.wchip.warn')).toContainText('Tage alt · abgleichen');
+  await page.getByRole('button', { name: /^Sparkonto .* antippen zum Aktualisieren/ }).click();
+  await expect(page.getByLabel('Kontostand Sparkonto')).toBeFocused();
+  await page.getByRole('button', { name: 'Abbrechen' }).click();
+  await page.getByRole('dialog').locator('.wchip.warn').click();
+  await page.getByLabel('Kontostand Sparkonto').fill('5100');
+  await page.getByRole('dialog').getByRole('button', { name: 'Speichern' }).click();
+  await expect(page.getByRole('dialog').locator('.wchip')).toHaveText(/^Bank \d\d\.\d\d\.$/);
 });

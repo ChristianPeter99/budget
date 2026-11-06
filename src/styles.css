@@ -891,5 +891,22 @@ html{background:#000}
 .whdiff{text-align:right;color:var(--faint);font-variant-numeric:tabular-nums}
 .whdiff.pos{color:var(--pos)}.whdiff.neg{color:var(--neg)}
 .whrow .iconx{min-width:40px;min-height:36px;color:var(--faint)}
-.wsticky{position:sticky;bottom:0;padding:8px 0 calc(8px + env(safe-area-inset-bottom));background:linear-gradient(transparent,#0B0B0D 30%);z-index:1}
-.wsticky .btn{width:100%}
+.wamtrow{display:flex;align-items:center;gap:8px;padding-left:42px}
+.wamt{border:0;background:none;color:var(--text);padding:0;min-height:48px}
+.wupd{width:34px;height:34px;border-radius:17px;border:0;background:var(--card2);color:var(--text2);display:inline-flex;align-items:center;justify-content:center;flex:none}
+.wchip{margin-top:6px;height:32px;display:inline-flex;align-items:center;gap:7px;padding:0 12px;border:1px solid var(--line);border-radius:16px;background:transparent;color:var(--text2);font-size:var(--t-note);font-weight:600}
+.wchip.warn{border:0;background:rgba(240,144,46,.16);color:#F5A85A;font-weight:700}
+.wchip.warn i{width:7px;height:7px;border-radius:4px;background:var(--fix)}
+.wedit{gap:10px}
+.wbig{display:flex;flex-direction:column;align-items:center;gap:4px}
+.wbigin{display:flex;align-items:baseline;gap:6px;border-bottom:2px solid var(--spar);padding:0 8px 2px}
+.wbigin input{width:200px;border:0;background:transparent;color:var(--text);font-size:2.4rem;font-weight:800;letter-spacing:-.03em;text-align:right;outline:none;padding:0;font-variant-numeric:tabular-nums}
+.wbigin input::placeholder{color:var(--faint)}
+.wbigin b{font-size:1.9rem;font-weight:800;color:var(--mut)}
+.wactions{display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap}
+.wdate{height:38px;display:flex;align-items:center;gap:6px;padding:0 6px 0 12px;border:1px solid var(--line);border-radius:19px;color:var(--mut);font-size:var(--t-note)}
+.wdate input{border:0;background:transparent;color:var(--text);font:inherit;font-weight:600;padding:0;min-height:36px}
+.wsave{height:38px;padding:0 16px;border:0;border-radius:19px;background:var(--spar);color:#04130C;font-size:var(--t-note);font-weight:700}
+.wsave:disabled{opacity:.4}
+.wcancel{width:38px;height:38px;border:0;border-radius:19px;background:var(--card2);color:var(--text2)}
+.wdiff b{font-weight:700}

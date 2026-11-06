@@ -83,7 +83,6 @@ export function Sparen({ back, onEditRec }: { back: ReactNode; onAdd?: (p: TxPre
   const first = shown[0];
   const diff = first && shown.length > 1 ? total - first.cents : null;
   const [detail, setDetail] = useState<'' | 'spar' | 'depot'>('');
-  const [upd, setUpd] = useState<'' | 'spar' | 'depot'>('');
   const depotPct = last && prev && prev.valueCents > 0 ? ((last.valueCents - prev.valueCents) / prev.valueCents) * 100 : null;
   const pctText = (p: number) => `${p >= 0 ? '+' : '−'}${Math.abs(p).toLocaleString('de-DE', { maximumFractionDigits: 1 })} %`;
 
@@ -126,20 +125,16 @@ export function Sparen({ back, onEditRec }: { back: ReactNode; onAdd?: (p: TxPre
 
       {detail === 'spar' && (
         <Sheet title="Sparkonto" left="Schließen" onClose={() => setDetail('')}>
-          <SparDetail sav={sav} rate={rate} goals={goals} onUpdate={() => { setDetail(''); setUpd('spar'); }} />
+          <SparDetail sav={sav} rate={rate} goals={goals} />
         </Sheet>
       )}
       {detail === 'depot' && (
         <Sheet title="Depot" left="Schließen" onClose={() => setDetail('')}>
-          <div className="wdetail">
-            <span className="mid34 num">{last ? formatEUR0(last.valueCents) : '–'}</span>
-            <span className={'mini ' + (last && prev ? (last.valueCents >= prev.valueCents ? 'pos' : 'neg') : '')}>{last && prev ? `${last.valueCents >= prev.valueCents ? '+' : '−'}${formatEUR0(Math.abs(last.valueCents - prev.valueCents))} seit ${formatDateDE(prev.date)}` : last ? `Stand vom ${formatDateDE(last.date)}` : 'Noch kein Depotstand erfasst'}</span>
-          </div>
+          <StandHead kind="depot" cents={last ? last.valueCents : null} date={last?.date ?? null}
+            sub={last && prev ? <span className={'mini ' + (last.valueCents >= prev.valueCents ? 'pos' : 'neg')}>{last.valueCents >= prev.valueCents ? '+' : '−'}{formatEUR0(Math.abs(last.valueCents - prev.valueCents))} seit {formatDateDE(prev.date)}</span> : null} />
           <EntryList items={entries.map((e) => ({ key: e.id, date: e.date, cents: e.valueCents, del: () => run((db) => deleteDepotEntry(db, e.id), 'Eintrag gelöscht') }))} />
-          <div className="wsticky"><button className="btn cta" onClick={() => { setDetail(''); setUpd('depot'); }}>Stand aktualisieren</button></div>
         </Sheet>
       )}
-      {upd && <UpdateSheet kind={upd} before={upd === 'spar' ? (sav.known ? { cents: s.savingsBalanceCents, date: s.savingsBalanceDate as string } : null) : (last ? { cents: last.valueCents, date: last.date } : null)} onClose={() => setUpd('')} />}
     </>
   );
 }
@@ -158,7 +153,7 @@ function monthsBetween(a: string, b: string): number {
  * Sparkonto-Details (Variante „Kompakt“): Stand, Zusammensetzung pro Monat (Sparrate + Sparziele),
  * Prognose mit Zeitraum-Umschalter, Verlauf zum Aufklappen und unten „Stand aktualisieren“.
  */
-function SparDetail({ sav, rate, goals, onUpdate }: { sav: { cents: number; known: boolean }; rate: number; goals: EffGoal[]; onUpdate: () => void }) {
+function SparDetail({ sav, rate, goals }: { sav: { cents: number; known: boolean }; rate: number; goals: EffGoal[] }) {
   const { data, run } = useStore();
   const s = data.settings;
   const [years, setYears] = useState<1 | 3 | 5>(1);
@@ -178,10 +173,8 @@ function SparDetail({ sav, rate, goals, onUpdate }: { sav: { cents: number; know
   const solo = rate === 0 && goals.length > 0 ? goals.reduce((a, g) => (g.dueMonth > a ? g.dueMonth : a), '') : '';
   return (
     <>
-      <div className="wdetail">
-        <span className="mid34 num">{sav.known ? formatEUR0(sav.cents) : '–'}</span>
-        <span className="mini">{sav.known ? `heute geschätzt · Bankstand vom ${formatDateDE(s.savingsBalanceDate as string).slice(0, 6)}` : 'Noch kein Stand erfasst'}</span>
-      </div>
+      <StandHead kind="spar" cents={sav.known ? sav.cents : null} date={sav.known ? (s.savingsBalanceDate as string) : null}
+        bank={sav.known ? s.savingsBalanceCents : null} sub={sav.known ? <span className="mini">heute geschätzt</span> : null} />
 
       {perMonth > 0 && (
         <div className="card wmix">
@@ -206,7 +199,6 @@ function SparDetail({ sav, rate, goals, onUpdate }: { sav: { cents: number; know
       )}
 
       <EntryList items={items} />
-      <div className="wsticky"><button className="btn cta" onClick={onUpdate}>Stand aktualisieren</button></div>
     </>
   );
 }
@@ -237,37 +229,69 @@ function EntryList({ items }: { items: { key: string; date: string; cents: numbe
   );
 }
 
-/** Fenster „… aktualisieren“: Betrag groß in der Mitte, Datum (Standard heute), bisheriger Stand und Unterschied. */
-function UpdateSheet({ kind, before, onClose }: { kind: 'spar' | 'depot'; before: { cents: number; date: string } | null; onClose: () => void }) {
+/** Tage zwischen zwei ISO-Daten. */
+function daysBetween(a: string, b: string): number {
+  return Math.round((new Date(b + 'T00:00:00').getTime() - new Date(a + 'T00:00:00').getTime()) / 86400000);
+}
+
+/**
+ * Kopf der Detailansicht: großer Betrag mit Aktualisieren-Symbol daneben, darunter ein Chip mit dem Datum des
+ * letzten Stands (ab 30 Tagen orange: „abgleichen“). Betrag, Symbol oder Chip antippen → Eingabe direkt an Ort und Stelle.
+ */
+function StandHead({ kind, cents, date, bank, sub }: { kind: 'spar' | 'depot'; cents: number | null; date: string | null; bank?: number | null; sub: ReactNode }) {
   const { run } = useStore();
   const today = todayISO();
+  const [editing, setEditing] = useState(false);
   const [val, setVal] = useState('');
-  const [date, setDate] = useState(today);
+  const [day, setDay] = useState(today);
   const [err, setErr] = useState('');
+  const name = kind === 'spar' ? 'Sparkonto' : 'Depot';
+  const before = date ? { cents: bank ?? cents ?? 0, date } : null;
   const c = val ? parseCents(val) : null;
   const diff = c !== null && before ? c - before.cents : null;
+  const age = date ? daysBetween(date, today) : null;
+  const stale = age !== null && age >= 30;
+  const open = () => { setVal(''); setDay(today); setErr(''); setEditing(true); };
   async function save() {
     if (c === null) return setErr(kind === 'spar' ? 'Bitte gib einen gültigen Kontostand ein.' : 'Bitte gib einen gültigen Depotstand ein.');
-    if (!isValidISODate(date) || date > today) return setErr('Bitte wähle ein Datum bis heute.');
+    if (!isValidISODate(day) || day > today) return setErr('Bitte wähle ein Datum bis heute.');
     setErr('');
     const r = kind === 'spar'
-      ? await run((db) => addSavingsEntry(db, date, c).then(() => true), 'Kontostand erfasst')
-      : await run((db) => addDepotEntry(db, date, c), 'Depotstand erfasst');
-    if (r) onClose();
+      ? await run((db) => addSavingsEntry(db, day, c).then(() => true), 'Kontostand erfasst')
+      : await run((db) => addDepotEntry(db, day, c), 'Depotstand erfasst');
+    if (r) setEditing(false);
+  }
+  if (editing) {
+    return (
+      <div className="wdetail wedit">
+        <label className="wbig">
+          <span className="mini">{kind === 'spar' ? 'Kontostand laut Bank' : 'Depotstand'}</span>
+          <span className="wbigin"><AmountInput label={kind === 'spar' ? 'Kontostand Sparkonto' : 'Neuer Depotstand'} value={val} onChange={setVal} placeholder={before ? formatEUR0(before.cents).replace(/\s?€/, '') : '0'} autoFocus /><b>€</b></span>
+        </label>
+        <div className="wactions">
+          <label className="wdate"><span>vom</span><input type="date" value={day} max={today} aria-label="Stand vom" onChange={(e) => setDay(e.target.value)} /></label>
+          <button className="wsave" onClick={() => void save()} disabled={!val}>Speichern</button>
+          <button className="wcancel" aria-label="Abbrechen" onClick={() => setEditing(false)}>✕</button>
+        </div>
+        {diff !== null && before && <span className="mini wdiff">Unterschied <b className={diff >= 0 ? 'pos' : 'neg'}>{diff >= 0 ? '+' : '−'}{formatEUR0(Math.abs(diff))}</b> zum {formatDateDE(before.date).slice(0, 6)}</span>}
+        {err && <div className="err-text" role="alert">{err}</div>}
+      </div>
+    );
   }
   return (
-    <Sheet title={kind === 'spar' ? 'Sparkonto aktualisieren' : 'Depot aktualisieren'} onClose={onClose}>
-      <label className="bigamt">
-        <span>{kind === 'spar' ? 'Kontostand laut Bank (€)' : 'Depotstand (€)'}</span>
-        <AmountInput label={kind === 'spar' ? 'Kontostand Sparkonto' : 'Neuer Depotstand'} value={val} onChange={setVal} placeholder={before ? formatEUR0(before.cents).replace(/\s?€/, '') : '0'} autoFocus />
-      </label>
-      <div className="card flush">
-        <label className="field"><span>Stand vom</span><input type="date" value={date} max={today} aria-label="Stand vom" onChange={(e) => setDate(e.target.value)} /></label>
-        {before && <div className="kv"><span>Bisher</span><b>{formatEUR0(before.cents)} <small className="mini">am {formatDateDE(before.date)}</small></b></div>}
-        {diff !== null && <div className="kv"><span>Unterschied</span><b className={diff >= 0 ? 'pos' : 'neg'}>{diff >= 0 ? '+' : '−'}{formatEUR0(Math.abs(diff))}</b></div>}
+    <div className="wdetail">
+      <div className="wamtrow">
+        <button className="wamt" onClick={open} aria-label={`${name} ${cents !== null ? formatEUR0(cents) : 'ohne Stand'} – antippen zum Aktualisieren`}>
+          <span className="mid34 num">{cents !== null ? formatEUR0(cents) : '–'}</span>
+        </button>
+        <button className="wupd" onClick={open} aria-label="Stand aktualisieren"><Icon name="repeat" size={16} w={2.4} /></button>
       </div>
-      {err && <div className="err-text" role="alert">{err}</div>}
-      <button className="btn cta" onClick={() => void save()} disabled={!val}>Speichern</button>
-    </Sheet>
+      {sub}
+      {date === null
+        ? <button className="wchip" onClick={open}>Stand eintragen</button>
+        : stale
+          ? <button className="wchip warn" onClick={open}><i />{kind === 'spar' ? 'Bankstand' : 'Stand'} {age} Tage alt · abgleichen</button>
+          : <button className="wchip" onClick={open} aria-label={`${kind === 'spar' ? 'Bankstand' : 'Stand'} vom ${formatDateDE(date)} – aktualisieren`}>{kind === 'spar' ? 'Bank' : 'Stand'} {formatDateDE(date).slice(0, 6)}</button>}
+    </div>
   );
 }
