@@ -9,7 +9,7 @@
   --bg:#0E0F12;--card:#1A1B20;--card2:#25262D;--raise:#1A1B20;--line:#26272E;--track:#2C2E36;--ring-track:#24262D;--hh:#5EC8F2;
   --text:#F4F4F6;--text2:#B4B8C0;--mut:#A3A7B0;--faint:#8A8E98;
   --neg:#FF7A7A;--warn:#E8B04B;--pos:#3ED598;
-  --fix:#F0902E;--all:#0A84FF;--spar:#3ED598;--bar:#A3ABB8;--inc:#D5D8DF;
+  --fix:#F0902E;--all:#0A84FF;--spar:#3ED598;--goal:#9BE8C7;--bar:#A3ABB8;--inc:#D5D8DF;
   /* Schriftstufen (bei Standard-Textgröße 17 px: 40 · 28 · 17 · 15 · 13 · 11) */
   --t-hero:2.353rem;--t-label:1.059rem;--t-title:1.647rem;--t-section:1rem;--t-body:.882rem;--t-note:.765rem;--t-micro:.647rem;
   --s1:4px;--s2:8px;--s3:12px;--s4:16px;--s5:24px;--s6:32px;
@@ -864,3 +864,32 @@ html{background:#000}
 .bigamt input::placeholder{color:#3A3C44}
 .whero .mini.pos{color:var(--pos);font-weight:600}.whero .mini.neg{color:var(--neg);font-weight:600}
 .wdetail .mini.pos{color:var(--pos);font-weight:600}.wdetail .mini.neg{color:var(--neg);font-weight:600}
+/* Sparkonto-Details „Kompakt“ */
+.wmix{display:flex;flex-direction:column;gap:10px;padding:14px var(--s4)}
+.wmixhead{display:flex;justify-content:space-between;align-items:baseline;font-weight:700}
+.wmixhead b{font-size:1.25rem;font-weight:800}
+.wbar{display:flex;height:8px;border-radius:4px;overflow:hidden;gap:2px;background:var(--card2)}
+.wbar i{display:block;min-width:4px}
+.wleg{display:flex;justify-content:space-between;align-items:center;gap:var(--s2);font-size:var(--t-note)}
+.wleg span{display:flex;align-items:center;gap:8px;color:var(--text2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wleg i{width:8px;height:8px;border-radius:4px;flex:none}
+.wleg b{font-weight:600}
+.wfc{display:flex;align-items:center;justify-content:space-between;gap:var(--s2);padding:8px 8px 8px var(--s4)}
+.wfcval{display:flex;flex-direction:column}
+.wfcval small{font-size:var(--t-note);color:var(--mut)}
+.wfcval b{font-size:1.15rem;font-weight:800;color:var(--spar)}
+.wseg{display:flex;gap:2px;padding:3px;border-radius:16px;background:var(--bg)}
+.wseg button{height:32px;min-width:42px;border:0;border-radius:13px;background:transparent;color:var(--mut);font-size:var(--t-note);font-weight:700}
+.wseg button[aria-pressed=true]{background:var(--card2);color:var(--text)}
+.whisthead{width:100%;min-height:48px;border:0;background:transparent;color:var(--text);display:flex;align-items:center;justify-content:space-between;padding:0 var(--s4);font-size:var(--t-body);font-weight:600;text-align:left}
+.whisthead small{color:var(--mut);font-weight:500;font-size:inherit}
+.whchev{display:inline-flex;transform:rotate(90deg);transition:transform .15s ease}
+.whchev.up{transform:rotate(-90deg)}
+.whrow{display:grid;grid-template-columns:1fr auto 64px 40px;align-items:center;column-gap:10px;min-height:36px;padding-left:var(--s4);border-top:1px solid var(--line);font-size:var(--t-note)}
+.whrow .lastentry{font-weight:700}
+.whdate{color:var(--mut);font-variant-numeric:tabular-nums}
+.whdiff{text-align:right;color:var(--faint);font-variant-numeric:tabular-nums}
+.whdiff.pos{color:var(--pos)}.whdiff.neg{color:var(--neg)}
+.whrow .iconx{min-width:40px;min-height:36px;color:var(--faint)}
+.wsticky{position:sticky;bottom:0;padding:8px 0 calc(8px + env(safe-area-inset-bottom));background:linear-gradient(transparent,#0B0B0D 30%);z-index:1}
+.wsticky .btn{width:100%}

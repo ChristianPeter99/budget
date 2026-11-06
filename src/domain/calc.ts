@@ -288,3 +288,20 @@ export function goalPlan(g: { targetCents: number; savedCents: number; dueMonth:
   const perMonthCents = done ? 0 : monthsLeft > 0 ? Math.ceil(remainingCents / monthsLeft) : remainingCents;
   return { remainingCents, monthsLeft, perMonthCents, ratio: g.targetCents > 0 ? Math.min(1, g.savedCents / g.targetCents) : 0, done, overdue };
 }
+
+/** Angespart eines Sparziels: eigener Betrag (Start + Extras) plus alle automatischen Buchungen für das Ziel. */
+export function goalSaved(g: { id: string; savedCents: number }, txs: Transaction[]): number {
+  return g.savedCents + txs.reduce((a, t) => (t.goalId === g.id ? a + t.amountCents : a), 0);
+}
+
+/**
+ * Monatsbetrag eines Sparziels für den Monat: die gebuchte Summe, falls schon gebucht, sonst der geplante Betrag
+ * (Rest ÷ verbleibende Monate, auf ganze Euro aufgerundet). 0, wenn erreicht oder Zielmonat vorbei.
+ */
+export function goalMonthly(g: { id: string; savedCents: number; targetCents: number; dueMonth: string; auto?: boolean }, txs: Transaction[], month: string): number {
+  const booked = txs.reduce((a, t) => (t.goalId === g.id && t.date.slice(0, 7) === month ? a + t.amountCents : a), 0);
+  if (booked > 0) return booked;
+  const p = goalPlan({ ...g, savedCents: goalSaved(g, txs) }, month);
+  if (p.done || p.overdue) return 0;
+  return Math.min(p.remainingCents, Math.ceil(p.perMonthCents / 100) * 100);
+}

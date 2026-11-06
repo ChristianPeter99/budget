@@ -56,7 +56,8 @@ test('Sparkonto: Stand mit heutigem Datum erfassen, auch mit gemeinsamem Konto (
   await expect(page.locator('.wtile', { hasText: 'Sparkonto' })).toContainText('12.345 €');
   // Kachel öffnet Details mit Prognose und Verlauf
   await page.locator('.wtile', { hasText: 'Sparkonto' }).click();
-  await expect(page.getByRole('dialog')).toContainText('In 12 Monaten');
+  await expect(page.getByRole('dialog')).toContainText('Prognose in 1 Jahr');
+  await page.getByRole('dialog').getByRole('button', { name: /^Verlauf/ }).click();
   await expect(page.getByRole('dialog').locator('.lastentry')).toContainText('12.345 €');
   await page.getByRole('dialog').getByRole('button', { name: 'Schließen' }).click();
   // Verlauf auch in der Auswertung

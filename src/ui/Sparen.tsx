@@ -4,11 +4,12 @@ import { AmountInput, Chevr, Header, Sheet } from './common';
 import { Icon } from './icons';
 import { useStore } from '../state/store';
 import { addDepotEntry, addSavingsEntry, deleteDepotEntry, deleteSavingsEntry, savingsEntries } from '../db/repo';
-import { formatDateDE, isValidISODate, monthRange, shiftMonth, todayISO } from '../domain/dates';
+import { currentMonthKey, formatDateDE, monthLabel, isValidISODate, monthRange, monthShort, shiftMonth, todayISO } from '../domain/dates';
 import { formatEUR0, parseCents } from '../domain/money';
 import type { Recurring } from '../domain/types';
 import type { TxPreset } from './TxSheet';
-import { GoalsCard } from './Goals';
+import { GoalsCard, effectiveGoals } from './Goals';
+import type { EffGoal } from './Goals';
 
 /** Sparkonto heute geschätzt: letzter erfasster Kontostand plus seitdem gebuchte Sparraten (bis heute). */
 export function savingsEstimate(data: ReturnType<typeof useStore>['data'], today = todayISO()): { cents: number; known: boolean } {
@@ -67,10 +68,10 @@ export function Sparen({ back, onEditRec }: { back: ReactNode; onAdd?: (p: TxPre
   const isSpar = (catId: string) => cats.find((c) => c.id === catId)?.group === 'spar';
   const sparRecs = data.recurring.filter((r) => r.active && r.type === 'expense' && isSpar(r.categoryId));
   const rate = sparRecs.reduce((a, r) => a + r.amountCents, 0);
+  const goals = effectiveGoals(s.savingsGoals ?? [], data.transactions).filter((g) => g.auto !== false && g.monthly > 0);
+  const perMonth = rate + goals.reduce((a, g) => a + g.monthly, 0);
   const today = todayISO();
   const sav = savingsEstimate(data, today);
-  const since = sav.known ? sav.cents - s.savingsBalanceCents : 0;
-  const savList = savingsEntries(s);
   const entries = [...data.depotEntries].sort((a, b) => b.date.localeCompare(a.date));
   const last = entries[0];
   const prev = entries[1];
@@ -104,7 +105,7 @@ export function Sparen({ back, onEditRec }: { back: ReactNode; onAdd?: (p: TxPre
         <button className="wtile" onClick={() => setDetail('spar')} aria-label={`Sparkonto ${sav.known ? formatEUR0(sav.cents) : 'noch kein Stand'} – Details und aktualisieren`}>
           <span className="wname" style={{ color: 'var(--spar)' }}><Icon name="piggy" size={16} w={2.2} />Sparkonto</span>
           <span className="wval num">{sav.known ? formatEUR0(sav.cents) : '–'}</span>
-          <span className="wsub">{rate > 0 ? `+${formatEUR0(rate)} / Monat` : sav.known ? 'keine Sparrate' : 'Stand eintragen'}</span>
+          <span className="wsub">{perMonth > 0 ? `+${formatEUR0(perMonth)} / Monat` : sav.known ? 'keine Sparrate' : 'Stand eintragen'}</span>
         </button>
         <button className="wtile" onClick={() => setDetail('depot')} aria-label={`Depot ${last ? formatEUR0(last.valueCents) : 'noch kein Stand'} – Details und aktualisieren`}>
           <span className="wname" style={{ color: 'var(--depot)' }}><Icon name="trend" size={16} w={2.2} />Depot</span>
@@ -125,20 +126,7 @@ export function Sparen({ back, onEditRec }: { back: ReactNode; onAdd?: (p: TxPre
 
       {detail === 'spar' && (
         <Sheet title="Sparkonto" left="Schließen" onClose={() => setDetail('')}>
-          <div className="wdetail">
-            <span className="mid34 num">{sav.known ? formatEUR0(sav.cents) : '–'}</span>
-            <span className="mini">{sav.known ? `heute geschätzt · Bankstand ${formatEUR0(s.savingsBalanceCents)} am ${formatDateDE(s.savingsBalanceDate as string)}${since > 0 ? ` + ${formatEUR0(since)} Sparraten` : ''}` : 'Noch kein Kontostand erfasst'}</span>
-          </div>
-          <button className="btn cta" onClick={() => { setDetail(''); setUpd('spar'); }}>Stand aktualisieren</button>
-          {sav.known && (
-            <div className="card flush">
-              <div className="kv"><span>In 12 Monaten</span><b className="pos">≈ {formatEUR0(sav.cents + rate * 12)}</b></div>
-              <div className="kv"><span>In 3 Jahren</span><b>≈ {formatEUR0(sav.cents + rate * 36)}</b></div>
-              <div className="kv"><span>In 5 Jahren</span><b>≈ {formatEUR0(sav.cents + rate * 60)}</b></div>
-            </div>
-          )}
-          {sav.known && <p className="note" style={{ marginTop: -6 }}>Mit deiner Sparrate, ohne Zinsen.</p>}
-          <EntryList title="Verlauf" items={savList.map((e) => ({ key: e.date, date: e.date, cents: e.cents, del: () => run((db) => deleteSavingsEntry(db, e.date), 'Eintrag gelöscht') }))} />
+          <SparDetail sav={sav} rate={rate} goals={goals} onUpdate={() => { setDetail(''); setUpd('spar'); }} />
         </Sheet>
       )}
       {detail === 'depot' && (
@@ -147,8 +135,8 @@ export function Sparen({ back, onEditRec }: { back: ReactNode; onAdd?: (p: TxPre
             <span className="mid34 num">{last ? formatEUR0(last.valueCents) : '–'}</span>
             <span className={'mini ' + (last && prev ? (last.valueCents >= prev.valueCents ? 'pos' : 'neg') : '')}>{last && prev ? `${last.valueCents >= prev.valueCents ? '+' : '−'}${formatEUR0(Math.abs(last.valueCents - prev.valueCents))} seit ${formatDateDE(prev.date)}` : last ? `Stand vom ${formatDateDE(last.date)}` : 'Noch kein Depotstand erfasst'}</span>
           </div>
-          <button className="btn cta" onClick={() => { setDetail(''); setUpd('depot'); }}>Stand aktualisieren</button>
-          <EntryList title="Verlauf" items={entries.map((e) => ({ key: e.id, date: e.date, cents: e.valueCents, del: () => run((db) => deleteDepotEntry(db, e.id), 'Eintrag gelöscht') }))} />
+          <EntryList items={entries.map((e) => ({ key: e.id, date: e.date, cents: e.valueCents, del: () => run((db) => deleteDepotEntry(db, e.id), 'Eintrag gelöscht') }))} />
+          <div className="wsticky"><button className="btn cta" onClick={() => { setDetail(''); setUpd('depot'); }}>Stand aktualisieren</button></div>
         </Sheet>
       )}
       {upd && <UpdateSheet kind={upd} before={upd === 'spar' ? (sav.known ? { cents: s.savingsBalanceCents, date: s.savingsBalanceDate as string } : null) : (last ? { cents: last.valueCents, date: last.date } : null)} onClose={() => setUpd('')} />}
@@ -161,29 +149,91 @@ function shortMonth(m: string): string {
   return new Date(Number(m.slice(0, 4)), Number(m.slice(5, 7)) - 1, 1).toLocaleDateString('de-DE', { month: 'short', year: 'numeric' });
 }
 
-/** Liste aller Stände mit Veränderung zum vorherigen und Löschen. */
-function EntryList({ title, items }: { title: string; items: { key: string; date: string; cents: number; del: () => unknown }[] }) {
-  if (items.length === 0) return null;
+/** Monate von a bis b (b − a). */
+function monthsBetween(a: string, b: string): number {
+  return (Number(b.slice(0, 4)) - Number(a.slice(0, 4))) * 12 + (Number(b.slice(5, 7)) - Number(a.slice(5, 7)));
+}
+
+/**
+ * Sparkonto-Details (Variante „Kompakt“): Stand, Zusammensetzung pro Monat (Sparrate + Sparziele),
+ * Prognose mit Zeitraum-Umschalter, Verlauf zum Aufklappen und unten „Stand aktualisieren“.
+ */
+function SparDetail({ sav, rate, goals, onUpdate }: { sav: { cents: number; known: boolean }; rate: number; goals: EffGoal[]; onUpdate: () => void }) {
+  const { data, run } = useStore();
+  const s = data.settings;
+  const [years, setYears] = useState<1 | 3 | 5>(1);
+  const month = currentMonthKey();
+  const perMonth = rate + goals.reduce((a, g) => a + g.monthly, 0);
+  // Prognose ohne Zinsen: Sparrate für jeden Monat, Sparziele nur bis zu ihrem Zielmonat (bis der Rest erreicht ist)
+  const forecast = (y: number) => {
+    const n = y * 12;
+    const goalPart = goals.reduce((a, g) => {
+      const rest = Math.max(0, g.targetCents - g.savedCents);
+      const left = monthsBetween(month, g.dueMonth);
+      return left <= 0 ? a : a + Math.round(rest * Math.min(1, n / left));
+    }, 0);
+    return sav.cents + rate * n + goalPart;
+  };
+  const items = savingsEntries(s).map((e) => ({ key: e.date, date: e.date, cents: e.cents, del: () => run((db) => deleteSavingsEntry(db, e.date), 'Eintrag gelöscht') }));
+  const solo = rate === 0 && goals.length > 0 ? goals.reduce((a, g) => (g.dueMonth > a ? g.dueMonth : a), '') : '';
   return (
     <>
-      <span className="cap" style={{ paddingLeft: 4 }}>{title}</span>
-      <div className="card flush">
-        {items.map((e, i) => {
-          const prevE = items[i + 1];
-          const diff = prevE ? e.cents - prevE.cents : null;
-          return (
-            <div className="kv" key={e.key}>
-              <span className="lastentry"><small>{formatDateDE(e.date)}</small>{formatEUR0(e.cents)}</span>
-              <span style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                {diff !== null && <span className={'mini ' + (diff >= 0 ? 'pos' : 'neg')}>{diff >= 0 ? '+' : '−'}{formatEUR0(Math.abs(diff))}</span>}
-                <button className="iconx" aria-label={`Eintrag vom ${formatDateDE(e.date)} löschen`} onClick={() => void e.del()}>✕</button>
-              </span>
-            </div>
-          );
-        })}
+      <div className="wdetail">
+        <span className="mid34 num">{sav.known ? formatEUR0(sav.cents) : '–'}</span>
+        <span className="mini">{sav.known ? `heute geschätzt · Bankstand vom ${formatDateDE(s.savingsBalanceDate as string).slice(0, 6)}` : 'Noch kein Stand erfasst'}</span>
       </div>
-      <p className="note" style={{ marginTop: -6 }}>Pro Tag zählt ein Eintrag.</p>
+
+      {perMonth > 0 && (
+        <div className="card wmix">
+          <div className="wmixhead"><span>Pro Monat</span><b className="num">{formatEUR0(perMonth)}</b></div>
+          <div className="wbar" aria-hidden="true">
+            {rate > 0 && <i style={{ flex: rate, background: 'var(--spar)' }} />}
+            {goals.map((g) => <i key={g.id} style={{ flex: g.monthly, background: 'var(--goal)' }} />)}
+          </div>
+          {rate > 0 && <div className="wleg"><span><i style={{ background: 'var(--spar)' }} />Sparrate · fest</span><b className="num">{formatEUR0(rate)}</b></div>}
+          {goals.map((g) => <div className="wleg" key={g.id}><span><i style={{ background: 'var(--goal)' }} />{g.name} · bis {monthShort(g.dueMonth)} {g.dueMonth.slice(2, 4)}</span><b className="num">{formatEUR0(g.monthly)}</b></div>)}
+          {solo && <p className="note" style={{ margin: 0 }}>Keine feste Sparrate – das Sparziel wirkt bis {monthLabel(solo)} wie eine Sparrate auf Zeit.</p>}
+        </div>
+      )}
+
+      {sav.known && (
+        <div className="card wfc">
+          <span className="wfcval"><small>Prognose {years === 1 ? 'in 1 Jahr' : `in ${years} Jahren`}</small><b className="num">≈ {formatEUR0(forecast(years))}</b></span>
+          <div className="wseg" role="group" aria-label="Zeitraum der Prognose">
+            {([1, 3, 5] as const).map((y) => <button key={y} aria-pressed={years === y} onClick={() => setYears(y)}>{y} J</button>)}
+          </div>
+        </div>
+      )}
+
+      <EntryList items={items} />
+      <div className="wsticky"><button className="btn cta" onClick={onUpdate}>Stand aktualisieren</button></div>
     </>
+  );
+}
+
+/** Verlauf zum Aufklappen: schmale Zeilen mit Betrag, Datum, Veränderung zum vorherigen Stand und Löschen. */
+function EntryList({ items }: { items: { key: string; date: string; cents: number; del: () => unknown }[] }) {
+  const [open, setOpen] = useState(false);
+  if (items.length === 0) return null;
+  return (
+    <div className="card flush whist">
+      <button className="whisthead" aria-expanded={open} onClick={() => setOpen(!open)}>
+        <span>Verlauf <small>· {items.length === 1 ? '1 Eintrag' : `${items.length} Einträge`}</small></span>
+        <span className={"whchev" + (open ? " up" : "")} aria-hidden="true"><Chevr /></span>
+      </button>
+      {open && items.map((e, i) => {
+        const prevE = items[i + 1];
+        const diff = prevE ? e.cents - prevE.cents : null;
+        return (
+          <div className="whrow" key={e.key}>
+            <b className="lastentry num">{formatEUR0(e.cents)}</b>
+            <span className="whdate">{formatDateDE(e.date).slice(0, 6)}{e.date.slice(0, 4) !== todayISO().slice(0, 4) ? e.date.slice(2, 4) : ''}</span>
+            <span className={'whdiff ' + (diff === null ? '' : diff >= 0 ? 'pos' : 'neg')}>{diff === null ? '–' : `${diff >= 0 ? '+' : '−'}${formatEUR0(Math.abs(diff)).replace(/\s?€/, '')}`}</span>
+            <button className="iconx" aria-label={`Eintrag vom ${formatDateDE(e.date)} löschen`} onClick={() => void e.del()}>✕</button>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 

@@ -7,7 +7,7 @@ import { currentMonthKey, daysInMonth, daysLeftInMonth, dayLabel, monthLabel, mo
 import { formatEUR, formatEUR0 } from '../domain/money';
 import type { Transaction } from '../domain/types';
 import type { TxPreset } from './TxSheet';
-import { sortGoals } from './Goals';
+import { effectiveGoals, sortGoals } from './Goals';
 
 /** „Heute, 18:42“ / „Gestern, 18:42“; älter: „Mi, 8.10.“; Vorjahr: „8.10.25“ – passt immer in die schmale Spalte. */
 export function lastEntryLabel(txs: Transaction[], now = new Date()): string | null {
@@ -53,7 +53,7 @@ export function Overview({ onGoBookings, onGoBackup, onGoGroup, onGoJoint }: {
   const jm = jointMonth(data.transactions, data.jointTransactions, data.recurring, data.settings, month);
   const joint = jm && data.settings.joint ? { name: data.settings.joint.name, avail: jm.budgetCents + jm.carryCents, spent: jm.spentCents } : null;
   const jst = joint ? budgetStatus(joint.spent, joint.avail) : null;
-  const goal = sortGoals(data.settings.savingsGoals ?? [])[0];
+  const goal = sortGoals(effectiveGoals(data.settings.savingsGoals ?? [], data.transactions))[0];
   const [sel, setSel] = useState<Sel>(null);
   const toggle = (k: Exclude<Sel, null>) => () => setSel((s) => (s === k ? null : k));
   // Monatswechsel: Auswahl zurücksetzen

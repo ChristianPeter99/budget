@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import type { ReactNode } from 'react';
 import { openBudgetDb } from '../db/db';
 import type { Db } from '../db/db';
-import { ensureHouseholdCategories, exportAll, getMeta, getPreImportSnapshot, runRecurring, seedIfEmpty } from '../db/repo';
+import { ensureHouseholdCategories, exportAll, getMeta, getPreImportSnapshot, runGoals, runRecurring, seedIfEmpty } from '../db/repo';
 import { AppError, DEFAULT_SETTINGS } from '../domain/types';
 import type { BackupData, Transaction } from '../domain/types';
 import { currentMonthKey } from '../domain/dates';
@@ -95,6 +95,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const d = await openBudgetDb();
         await seedIfEmpty(d, currentMonthKey());
         await runRecurring(d, currentMonthKey());
+        await runGoals(d, currentMonthKey());
         await ensureHouseholdCategories(d);
         if (cancelled) return;
         dbRef.current = d;
@@ -127,7 +128,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         if (monthRef.current === currentRef.current) setMonth(now);
         currentRef.current = now;
       }
-      try { if ((await runRecurring(dbRef.current, now)) > 0) await reload(); } catch { /* wird beim nächsten Start erneut versucht */ }
+      try { if ((await runRecurring(dbRef.current, now)) + (await runGoals(dbRef.current, now)) > 0) await reload(); } catch { /* wird beim nächsten Start erneut versucht */ }
     };
     const onVis = () => { void check(); };
     document.addEventListener('visibilitychange', onVis);

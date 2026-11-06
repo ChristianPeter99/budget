@@ -92,6 +92,10 @@ export function validateBackupData(raw: unknown): BackupCheck {
     const tx: Transaction = { id: t.id, date: t.date, type: t.type, amountCents: t.amountCents, categoryId: t.categoryId as string, description: t.description, createdAt: t.createdAt };
     if (t.updatedAt !== undefined) tx.updatedAt = t.updatedAt;
     if (t.recurringId !== undefined) tx.recurringId = t.recurringId;
+    if (t.goalId !== undefined) {
+      if (!isStr(t.goalId, 100) || !t.goalId) { err('Buchung mit ungültigem Sparziel.'); continue; }
+      tx.goalId = t.goalId;
+    }
     if (t.account !== undefined) {
       if (t.account !== 'joint' || t.type !== 'expense') { err('Buchung mit ungültigem Konto.'); continue; }
       tx.account = 'joint';
@@ -197,7 +201,8 @@ export function validateBackupData(raw: unknown): BackupCheck {
   if (settings && isObj(s) && typeof s.fixAccountName === 'string' && s.fixAccountName.trim()) settings.fixAccountName = s.fixAccountName.trim();
   if (settings && isObj(s) && s.savingsHistory !== undefined) settings.savingsHistory = (s.savingsHistory as { date: string; cents: number }[]).map((e) => ({ date: e.date, cents: e.cents }));
   if (settings && isObj(s) && s.importRules !== undefined) settings.importRules = { ...(s.importRules as Record<string, string>) };
-  if (settings && isObj(s) && s.savingsGoals !== undefined) settings.savingsGoals = (s.savingsGoals as SavingsGoal[]).map((g) => ({ id: g.id, name: g.name.trim(), targetCents: g.targetCents, savedCents: g.savedCents, dueMonth: g.dueMonth, createdAt: g.createdAt }));
+  if (settings && isObj(s) && s.savingsGoals !== undefined) settings.savingsGoals = (s.savingsGoals as SavingsGoal[]).map((g) => ({ id: g.id, name: g.name.trim(), targetCents: g.targetCents, savedCents: g.savedCents, dueMonth: g.dueMonth, createdAt: g.createdAt,
+    ...(g.auto !== undefined ? { auto: g.auto } : {}), ...(g.lastBookedMonth !== undefined ? { lastBookedMonth: g.lastBookedMonth } : {}) }));
   if (settings && isObj(s) && s.joint !== undefined) {
     const j = s.joint as Record<string, unknown>;
     settings.joint = {
@@ -218,7 +223,8 @@ function validGoals(v: unknown): boolean {
   const ids = new Set<string>();
   for (const g of v) {
     if (!isObj(g) || !isStr(g.id, 100) || !g.id || ids.has(g.id) || typeof g.name !== 'string' || !g.name.trim() || g.name.length > 40
-      || !isInt(g.targetCents, 1, MAX_CENTS) || !isInt(g.savedCents, 0, MAX_CENTS) || !isValidMonthKey(g.dueMonth) || !isStr(g.createdAt, 40)) return false;
+      || !isInt(g.targetCents, 1, MAX_CENTS) || !isInt(g.savedCents, 0, MAX_CENTS) || !isValidMonthKey(g.dueMonth) || !isStr(g.createdAt, 40)
+      || (g.auto !== undefined && typeof g.auto !== 'boolean') || (g.lastBookedMonth !== undefined && !isValidMonthKey(g.lastBookedMonth))) return false;
     ids.add(g.id);
   }
   return true;

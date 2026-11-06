@@ -46,6 +46,8 @@ export interface Transaction {
   account?: 'joint';
   /** Fingerabdruck der CSV-Zeile, aus der die Buchung importiert wurde (verhindert doppelten Import) */
   importId?: string;
+  /** gesetzt, wenn die Buchung automatisch für ein Sparziel entstanden ist („Sparziel on top“) */
+  goalId?: string;
 }
 
 /** Budget: 'month' = Gesamtbudget für Ausgaben, 'category' = Budget für eine Kategorie (inkl. Unterkategorien). */
@@ -92,6 +94,10 @@ export interface SavingsGoal {
   /** Zielmonat "YYYY-MM" */
   dueMonth: string;
   createdAt: string;
+  /** Automatisch ansparen: jeden Monat bis zum Zielmonat eine Sparen-Buchung zusätzlich zur Sparrate (fehlt = an) */
+  auto?: boolean;
+  /** Letzter Monat, für den die automatische Buchung erledigt ist (verhindert Doppel- und Nachbuchungen) */
+  lastBookedMonth?: string;
 }
 
 /** Merker, dass die Buchung einer Vorlage für einen Monat bereits erzeugt wurde. */
