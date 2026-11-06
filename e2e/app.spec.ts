@@ -104,7 +104,7 @@ test('Depot erfassen mit Tausenderpunkten und Verlauf in der Auswertung', async 
   await page.getByLabel('Neuer Depotstand').fill('123456');
   await expect(page.getByLabel('Neuer Depotstand')).toHaveValue('123.456');
   await page.getByRole('dialog').getByRole('button', { name: 'Speichern' }).click();
-  await expect(page.getByRole('dialog').locator('.mid34')).toHaveText(/123\.456\s€/);
+  await expect(page.getByRole('dialog').locator('.wbigval')).toHaveText(/123\.456\s€/);
   await page.getByRole('dialog').getByRole('button', { name: 'Schließen' }).click();
   await expect(page.locator('.whero .mid34', { hasText: '123.456 €' })).toBeVisible();
   await page.getByRole('button', { name: 'Zurück' }).or(page.getByRole('button', { name: 'Mehr' }).first()).first().click();

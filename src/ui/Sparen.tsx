@@ -34,34 +34,9 @@ export function wealthSeries(data: ReturnType<typeof useStore>['data'], today = 
   return out;
 }
 
-/** Schlichte Verlaufsfläche (ohne Achsen), x nach Datum, y zwischen Minimum und Maximum. */
-function AreaChart({ points, label }: { points: { date: string; cents: number }[]; label: string }) {
-  const W = 358, H = 90;
-  const t = (d: string) => new Date(d + 'T00:00:00').getTime();
-  const t0 = t((points[0] as { date: string }).date), t1 = t((points[points.length - 1] as { date: string }).date);
-  const vals = points.map((p) => p.cents);
-  const lo = Math.min(...vals), hi = Math.max(...vals);
-  const pad = (hi - lo) * 0.15 || Math.max(1, hi * 0.05);
-  const x = (d: string) => (t1 > t0 ? ((t(d) - t0) / (t1 - t0)) * W : W);
-  const y = (c: number) => H - 6 - ((c - (lo - pad)) / (hi + pad - (lo - pad))) * (H - 12);
-  const line = points.map((p, i) => `${i ? 'L' : 'M'}${x(p.date).toFixed(1)} ${y(p.cents).toFixed(1)}`).join(' ');
-  const lastP = points[points.length - 1] as { date: string; cents: number };
-  const mon = (d: string) => new Date(d + 'T00:00:00').toLocaleDateString('de-DE', { month: 'short' }).replace('.', '');
-  return (
-    <div className="wchart">
-      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label={label}>
-        <defs><linearGradient id="wgrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="var(--spar)" stopOpacity="0.28" /><stop offset="1" stopColor="var(--spar)" stopOpacity="0" /></linearGradient></defs>
-        <path d={`${line} L${x(lastP.date).toFixed(1)} ${H} L${x((points[0] as { date: string }).date).toFixed(1)} ${H} Z`} fill="url(#wgrad)" />
-        <path d={line} fill="none" style={{ stroke: 'var(--spar)' }} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
-      </svg>
-      <div className="wlabels" aria-hidden="true"><span>{mon((points[0] as { date: string }).date)}</span><span>{mon(lastP.date)}</span></div>
-    </div>
-  );
-}
-
 /**
  * Sparen & Depot (Variante B): oben die Gesamtsumme mit Verlauf, darunter zwei Kacheln für Sparkonto und Depot
- * (Tipp: Details, Verlauf, „Stand aktualisieren“), dann Sparziele und Sparrate. Eingaben nur noch im Fenster.
+ * (Tipp: Details mit Verlauf, Sparrate und Sparzielen). Diagramme mit Hilfslinien und Werten beim Antippen.
  */
 export function Sparen({ back }: { back: ReactNode; onAdd?: (p: TxPreset) => void; onEditRec?: (r: Recurring) => void }) {
   const { data, run } = useStore();
@@ -86,6 +61,7 @@ export function Sparen({ back }: { back: ReactNode; onAdd?: (p: TxPreset) => voi
   const diff = first && shown.length > 1 ? total - first.cents : null;
   const [detail, setDetail] = useState<'' | 'spar' | 'depot'>('');
   const [sparEdit, setSparEdit] = useState(false);
+  const [depotEdit, setDepotEdit] = useState(false);
   const [sub, setSub] = useState<{ goal: EffGoal | null } | { rate: true } | null>(null);
   const depotPct = last && prev && prev.valueCents > 0 ? ((last.valueCents - prev.valueCents) / prev.valueCents) * 100 : null;
   const pctText = (p: number) => `${p >= 0 ? '+' : '−'}${Math.abs(p).toLocaleString('de-DE', { maximumFractionDigits: 1 })} %`;
@@ -100,7 +76,9 @@ export function Sparen({ back }: { back: ReactNode; onAdd?: (p: TxPreset) => voi
         <span className="mid34 num">{formatEUR0(total)}</span>
         {diff !== null && first && <span className={'mini ' + (diff >= 0 ? 'pos' : 'neg')}>{diff >= 0 ? '+' : '−'}{formatEUR0(Math.abs(diff))} seit {formatDateDE(first.date)}</span>}
         {shown.length > 1
-          ? <AreaChart points={shown} label={`Verlauf Sparkonto und Depot seit ${first ? formatDateDE(first.date) : ''}`} />
+          ? <div className="wbleed"><TrendChart color="var(--spar)" past={shown.map((p) => ({ d: p.date, c: p.cents }))}
+              labels={[`${monthShort(shown[0]!.date.slice(0, 7))} ${shown[0]!.date.slice(2, 4)}`, '', shown[shown.length - 1]!.date === today ? 'heute' : formatDateDE(shown[shown.length - 1]!.date).slice(0, 6)]}
+              aria={`Verlauf Sparkonto und Depot seit ${first ? formatDateDE(first.date) : ''}`} /></div>
           : <p className="note" style={{ margin: '6px 0 0' }}>Trag Stände für Sparkonto und Depot ein – dann erscheint hier der Verlauf.</p>}
       </div>
 
@@ -127,9 +105,9 @@ export function Sparen({ back }: { back: ReactNode; onAdd?: (p: TxPreset) => voi
       {sub && 'goal' in sub && <GoalSheet goal={sub.goal} onClose={() => setSub(null)} />}
       {sub && 'rate' in sub && <RecurringSheet rec={sparRecs[0] ?? null} presetGroup="spar" onClose={() => setSub(null)} run={run} />}
       {detail === 'depot' && (
-        <Sheet title="Depot" left="Schließen" onClose={() => setDetail('')}>
-          <DepotDetail entries={entries} />
-          <EntryList items={entries.map((e) => ({ key: e.id, date: e.date, cents: e.valueCents, del: () => run((db) => deleteDepotEntry(db, e.id), 'Eintrag gelöscht') }))} />
+        <Sheet title="Depot" left="Schließen" onClose={() => { setDetail(''); setDepotEdit(false); }}
+          right={<button className="hdricon" aria-label="Stand aktualisieren" onClick={() => setDepotEdit(true)}><Icon name="repeat" size={18} w={2.2} /></button>}>
+          <DepotDetail entries={entries} edit={[depotEdit, setDepotEdit]} />
         </Sheet>
       )}
     </>
@@ -236,8 +214,10 @@ function SparDetail({ sav, rate, goals, rec, onGoal, onRate, edit }: { sav: { ce
 type Pt = { d: string; c: number };
 
 /** Depot-Details: Stand, Veränderung im gewählten Zeitraum, Verlaufskurve ohne Kasten, Hoch/Tief und Zeitraum. */
-function DepotDetail({ entries }: { entries: { date: string; valueCents: number }[] }) {
+function DepotDetail({ entries, edit }: { entries: { id: string; date: string; valueCents: number }[]; edit: [boolean, (v: boolean) => void] }) {
+  const { run } = useStore();
   const [range, setRange] = useState<'6M' | '1J' | 'Alles'>('6M');
+  const [histOpen, setHistOpen] = useState(false);
   const last = entries[0];
   const today = todayISO();
   const asc = [...entries].sort((a, b) => a.date.localeCompare(b.date)).map((e) => ({ d: e.date, c: e.valueCents }));
@@ -249,24 +229,34 @@ function DepotDetail({ entries }: { entries: { date: string; valueCents: number 
   const first = pts[0];
   const diff = first && last && pts.length > 1 ? last.valueCents - first.c : null;
   const pct = diff !== null && first && first.c > 0 ? (diff / first.c) * 100 : null;
-  const vals = pts.map((p) => p.c);
+  const items = entries.map((e) => ({ key: e.id, date: e.date, cents: e.valueCents, del: () => run((db) => deleteDepotEntry(db, e.id), 'Eintrag gelöscht') }));
+  const mLabel = (d: string) => `${monthShort(d.slice(0, 7))} ${d.slice(2, 4)}`;
   return (
     <>
-      <StandHead kind="depot" cents={last ? last.valueCents : null} date={last?.date ?? null}
-        sub={diff !== null && first ? <span className={'mini ' + (diff >= 0 ? 'pos' : 'neg')}>{diff >= 0 ? '+' : '−'}{formatEUR0(Math.abs(diff))}{pct !== null ? ` · ${diff >= 0 ? '+' : '−'}${Math.abs(pct).toLocaleString('de-DE', { maximumFractionDigits: 1 })} %` : ''} seit {formatDateDE(first.d).slice(0, 6)}</span> : null} />
-      {asc.length > 1 && (
+      <StandHead kind="depot" left edit={edit} cents={last ? last.valueCents : null} date={last?.date ?? null}
+        caption={last ? (last.date === today ? 'Heute' : `Stand vom ${formatDateDE(last.date).slice(0, 6)}`) : undefined}
+        sub={diff !== null && first ? <span className={'wsubline ' + (diff >= 0 ? 'pos' : 'neg')}>{diff >= 0 ? '+' : '−'}{formatEUR0(Math.abs(diff))}{pct !== null ? ` · ${diff >= 0 ? '+' : '−'}${Math.abs(pct).toLocaleString('de-DE', { maximumFractionDigits: 1 })} %` : ''} seit {formatDateDE(first.d).slice(0, 6)}</span> : null} />
+      {asc.length > 1 && !edit[0] && (
         <>
-          {pts.length > 1
-            ? <TrendChart color="var(--depot)" past={pts} labels={[monthShort((pts[0] as Pt).d.slice(0, 7)), '', monthShort((pts[pts.length - 1] as Pt).d.slice(0, 7))]}
-                aria={`Depot seit ${formatDateDE((pts[0] as Pt).d)}: von ${formatEUR0((pts[0] as Pt).c)} auf ${formatEUR0((pts[pts.length - 1] as Pt).c)}`} />
-            : <p className="note" style={{ margin: 0, textAlign: 'center' }}>In diesem Zeitraum gibt es nur einen Stand.</p>}
-          <div className="wfc">
-            <span className="mini">{vals.length > 1 ? <>Hoch <b>{formatEUR0(Math.max(...vals))}</b> · Tief <b>{formatEUR0(Math.min(...vals))}</b></> : null}</span>
-            <div className="wseg" role="group" aria-label="Zeitraum">
-              {(['6M', '1J', 'Alles'] as const).map((r) => <button key={r} aria-pressed={range === r} onClick={() => setRange(r)}>{r}</button>)}
-            </div>
+          <div className="wbleed">
+            {pts.length > 1
+              ? <TrendChart color="var(--depot)" past={pts} labels={[mLabel((pts[0] as Pt).d), '', (pts[pts.length - 1] as Pt).d === today ? 'heute' : mLabel((pts[pts.length - 1] as Pt).d)]}
+                  aria={`Depot seit ${formatDateDE((pts[0] as Pt).d)}: von ${formatEUR0((pts[0] as Pt).c)} auf ${formatEUR0((pts[pts.length - 1] as Pt).c)}`} />
+              : <p className="note wempty">In diesem Zeitraum gibt es nur einen Stand.</p>}
+          </div>
+          <div className="wmode" role="group" aria-label="Zeitraum">
+            {(['6M', '1J', 'Alles'] as const).map((r) => <button key={r} aria-pressed={range === r} onClick={() => setRange(r)}>{r === '6M' ? '6 Monate' : r === '1J' ? '1 Jahr' : 'Alles'}</button>)}
           </div>
         </>
+      )}
+      {items.length > 0 && (
+        <div className="wlist">
+          <button className="wli whead" aria-expanded={histOpen} onClick={() => setHistOpen(!histOpen)}>
+            <span className="wlitxt"><span>Verlauf</span></span><small>{items.length === 1 ? '1 Stand' : `${items.length} Stände`}</small>
+            <span className={'whchev' + (histOpen ? ' up' : '')} aria-hidden="true"><Chevr /></span>
+          </button>
+          {histOpen && <EntryRows items={items} />}
+        </div>
       )}
     </>
   );
@@ -326,7 +316,7 @@ function TrendChart({ past, future = [], markers = [], color, labels, aria }: { 
         ))}
         <div className="tarea">
         <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label={aria}>
-          <defs><linearGradient id={gid} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={color} stopOpacity="0.28" /><stop offset="1" stopColor={color} stopOpacity="0" /></linearGradient></defs>
+          <defs><linearGradient id={gid} x1="0" y1="0" x2="0" y2="1"><stop offset="0" style={{ stopColor: color, stopOpacity: 0.28 }} /><stop offset="1" style={{ stopColor: color, stopOpacity: 0 }} /></linearGradient></defs>
           {past.length > 1 && <path d={`${line} L${x(lp.d).toFixed(1)} ${H} L${x((past[0] as Pt).d).toFixed(1)} ${H} Z`} fill={`url(#${gid})`} />}
           {past.length > 1 && <path d={line} fill="none" style={{ stroke: color }} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />}
           {future.length > 1 && <path d={path(future)} fill="none" style={{ stroke: color }} strokeWidth="2" strokeDasharray="4 5" strokeLinecap="round" opacity="0.8" vectorEffect="non-scaling-stroke" />}
@@ -346,21 +336,6 @@ function TrendChart({ past, future = [], markers = [], color, labels, aria }: { 
         </div>
       </div>
       <div className="wlabels" aria-hidden="true"><span>{labels[0]}</span><span className="now">{labels[1]}</span><span>{labels[2]}</span></div>
-    </div>
-  );
-}
-
-/** Verlauf zum Aufklappen: schmale Zeilen mit Betrag, Datum, Veränderung zum vorherigen Stand und Löschen. */
-function EntryList({ items }: { items: { key: string; date: string; cents: number; del: () => unknown }[] }) {
-  const [open, setOpen] = useState(false);
-  if (items.length === 0) return null;
-  return (
-    <div className="card flush whist">
-      <button className="whisthead" aria-expanded={open} onClick={() => setOpen(!open)}>
-        <span>Verlauf <small>· {items.length === 1 ? '1 Eintrag' : `${items.length} Einträge`}</small></span>
-        <span className={"whchev" + (open ? " up" : "")} aria-hidden="true"><Chevr /></span>
-      </button>
-      {open && <EntryRows items={items} />}
     </div>
   );
 }
@@ -415,7 +390,7 @@ function StandHead({ kind, cents, date, bank, sub, left, caption, display, edit 
   const open = () => { setVal(''); setDay(today); setErr(''); setEditing(true); };
   // Beim Öffnen von außen (↻ in der Kopfzeile) Eingabe zurücksetzen
   const wasEditing = useRef(editing);
-  if (editing && !wasEditing.current) { wasEditing.current = true; if (val || err) { setVal(''); setErr(''); } }
+  if (editing && !wasEditing.current) { wasEditing.current = true; if (val || err || day !== today) { setVal(''); setErr(''); setDay(today); } }
   if (!editing && wasEditing.current) wasEditing.current = false;
   async function save() {
     if (c === null) return setErr(kind === 'spar' ? 'Bitte gib einen gültigen Kontostand ein.' : 'Bitte gib einen gültigen Depotstand ein.');

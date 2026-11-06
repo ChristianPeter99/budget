@@ -104,11 +104,18 @@ test('Sparen & Depot: Gesamt aus Sparkonto + Depot, Aktualisieren direkt im Deta
   await page.getByLabel('Neuer Depotstand').fill('12400');
   await expect(page.getByRole('dialog').locator('.wdiff')).toContainText('+400 €');
   await page.getByRole('dialog').getByRole('button', { name: 'Speichern' }).click();
-  await expect(page.getByRole('dialog').locator('.mid34')).toHaveText(/12\.400\s€/);
+  await expect(page.getByRole('dialog').locator('.wbigval')).toHaveText(/12\.400\s€/);
+  // Depot: eigene Kurve in Depot-Farbe mit Hilfslinien, Zeitraum umschaltbar
+  await expect(page.getByRole('img', { name: /^Depot seit / })).toBeVisible();
+  await expect(page.getByRole('dialog').locator('.wsubline')).toContainText('+400 € · +3,3 %');
+  await page.getByRole('button', { name: 'Alles' }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Schließen' }).click();
   await expect(page.locator('.whero .mid34')).toHaveText(/20\.900\s€/);
   await expect(page.locator('.wtile', { hasText: 'Depot' })).toContainText('+3,3 %');
   await expect(page.getByRole('img', { name: /Verlauf Sparkonto und Depot/ })).toBeVisible();
+  expect(await page.locator('.whero .tgrid').count()).toBeGreaterThanOrEqual(2);
+  await page.locator('.whero .tplot').click({ position: { x: 5, y: 70 } });
+  await expect(page.locator('.whero .ttip')).toContainText('€');
 });
 
 test('Ausgaben-Kalender: Tag zeigt Betrag, Tipp zeigt Buchungen, Erfassen für den Tag', async ({ page }) => {
