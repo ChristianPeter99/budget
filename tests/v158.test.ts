@@ -3,7 +3,7 @@ import { freshDb } from './helpers';
 import { exportAll, importTransactions, seedIfEmpty } from '../src/db/repo';
 import { currentMonthKey, shiftMonth } from '../src/domain/dates';
 import { detectRecurring, parseStatement } from '../src/import/csv';
-import { fixFromCandidates, makeFixRow, memberKeys, saveFixRows } from '../src/ui/FixImport';
+import { fixFromCandidates, makeFixRow, memberKeys, saveFixRows, willSave, withMembers } from '../src/ui/FixImport';
 import { iconInk, subRows, areaSlices } from '../src/ui/Donut';
 
 const de = (iso: string) => `${iso.slice(8, 10)}.${iso.slice(5, 7)}.${iso.slice(0, 4)}`;
@@ -52,7 +52,7 @@ describe('Ein Upload: Buchungen und Fixkosten zusammen (v1.58)', () => {
 
     // Zweiter Import derselben Datei: schon in Fixkosten, nichts wird neu angelegt
     const again = detectRecurring(res.candidates).map((f) => makeFixRow(f, res.candidates, d.categories, d.recurring, {}));
-    expect(again.every((r) => r.same && !r.on)).toBe(true);
+    expect(again.every((r) => r.same && !willSave(r))).toBe(true);
     expect(await saveFixRows(db, again)).toBe(0);
   });
 
@@ -113,5 +113,22 @@ describe('Fixkosten-Vorlage mit gewähltem Beginn (v1.59.2)', () => {
     const d = await exportAll(db);
     expect(d.recurring.find((r) => r.name === 'Hausverwaltung Beispiel')?.startMonth).toBe(next);
     expect(d.transactions.filter((t) => t.amountCents === 85000)).toHaveLength(0);
+  });
+});
+
+describe('Fixkosten: Zusatzkäufe beim selben Händler abwählen (v1.59.3)', () => {
+  it('der Vorlagenbetrag kommt nur aus den gewählten Buchungen', async () => {
+    const res = await parseStatement(['Buchungsdatum;Betrag;Zahlungsempfänger', '01.08.2026;-29,90;Muster Fitness', '15.08.2026;-4,50;Muster Fitness', '01.09.2026;-29,90;Muster Fitness', '20.09.2026;-12,00;Muster Fitness'].join('\n'));
+    const all = res.candidates;
+    const f = fixFromCandidates(all);
+    expect(f.amountCents).toBe(1200); // zuletzt ein Zusatzkauf
+    const row = { ...makeFixRow(f, all, [], [], {}, all.map((c) => c.key)), manual: true };
+    const fee = all.filter((c) => c.amountCents === 2990);
+    const r2 = withMembers(row, fee);
+    expect(r2.f).toMatchObject({ amountCents: 2990, count: 2, last: '2026-09-01', varies: false });
+    expect(r2.keys).toHaveLength(2);
+    expect(withMembers(row, []).keys).toHaveLength(0);
+    expect(willSave({ ...r2, cat: 'x' })).toBe(true);
+    expect(willSave({ ...r2, cat: 'x', on: false })).toBe(false);
   });
 });

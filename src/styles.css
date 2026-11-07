@@ -1089,3 +1089,18 @@ html{background:#000}
 .restlist li{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-top:1px solid var(--line);font-size:var(--t-body)}
 .restlist li:first-child{border-top:0}
 .restlist li span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* Fixkosten: Buchungen zuordnen, alle an/aus */
+.allbar{display:flex;justify-content:flex-end;margin:-4px 2px -6px}
+.allbar .linkbtn{padding:4px 0}
+.fixrow.off .fixname,.fixrow.off .fixhead .num{opacity:.5}
+.fixupd{display:flex;align-items:center;gap:10px;padding-left:30px;font-size:var(--t-note);color:var(--text)}
+.fixupd input,.fixmemrow input{width:18px;height:18px;accent-color:var(--fix);flex:none}
+.fixmem{display:flex;align-items:center;gap:4px;padding:0;min-height:32px;color:var(--mut);text-align:left}
+.fixmembers{margin-left:30px;display:flex;flex-direction:column;gap:2px;animation:fadeup .2s ease both}
+.fixmembers .mini{margin:0 0 4px}
+.fixmemrow{display:grid;grid-template-columns:18px 1fr auto;align-items:center;column-gap:10px;min-height:36px;font-size:var(--t-note)}
+.fixmemrow span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fixmemrow.out span,.fixmemrow.out b{opacity:.45}
+.fixpick{display:flex;flex-direction:column;gap:2px;padding-top:6px;border-top:1px solid color-mix(in srgb, var(--fix) 25%, transparent)}
+.fixpick-t{font-size:var(--t-note);color:var(--mut);margin-bottom:4px}

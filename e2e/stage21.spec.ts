@@ -122,7 +122,7 @@ test('CSV: ein Upload – Fixkosten im eigenen Reiter, von Hand markieren, beim 
   const rows = page.locator('.fixrow');
   await expect(rows).toHaveCount(3);
   await expect(rows.filter({ hasText: 'Muster Fitnessclub' })).toContainText('monatlich · 5× gefunden');
-  await expect(rows.filter({ hasText: 'Muster Fitnessclub' })).toContainText('5 Buchungen aus der Datei');
+  await expect(rows.filter({ hasText: 'Muster Fitnessclub' })).toContainText('5 Zahlungen · 5 neu');
   await expect(rows.filter({ hasText: 'Bioladen' })).toContainText('Vorlage ab');
   await expect(rows.filter({ hasText: 'Bioladen' }).getByLabel(/Kategorie für/)).toHaveValue(/.+/);
   await rows.filter({ hasText: 'Bioladen' }).getByRole('button', { name: 'Keine Fixkosten' }).click();
@@ -207,4 +207,41 @@ test('CSV: höchste Beträge oben, Cafés gebündelt, Rest auf Wunsch nach „So
   await expect(page.locator('.toast')).toContainText('5 Buchungen übernommen');
   await page.locator('nav').getByRole('button', { name: 'Buchungen' }).click();
   await expect(page.locator('main')).toContainText('Sonstige');
+});
+
+test('CSV: Fixkosten-Häkchen nimmt die Buchungen mit – „Alle abwählen“ ergibt 0; Zusatzkäufe abwählbar', async ({ page }) => {
+  await page.goto('/');
+  await openImport(page);
+  const rows = ['Buchungstag;Empfänger;Verwendungszweck;Betrag'];
+  const now = new Date();
+  for (let i = 1; i <= 3; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 5);
+    const m = String(d.getMonth() + 1).padStart(2, '0'), y = d.getFullYear();
+    rows.push(`01.${m}.${y};Hausverwaltung Beispiel;Miete;-850,00`, `05.${m}.${y};Muster Kletterhalle;Eintritt;-39,00`, `1${i}.${m}.${y};Muster Kletterhalle;Getraenk;-${i + 2},50`);
+  }
+  await page.getByLabel('CSV-Datei').setInputFiles({ name: 'g.csv', mimeType: 'text/csv', buffer: Buffer.from(rows.join('\n')) });
+  // Kletterhalle: Kategorie wählen › Fixkosten – nur die Beiträge sind vorgewählt
+  await page.locator('.imp', { hasText: 'Kletterhalle' }).getByRole('button', { name: 'Kategorie wählen' }).click();
+  const pk = page.getByRole('dialog');
+  await pk.getByRole('tab', { name: 'Fixkosten' }).click();
+  const pick = pk.getByRole('group', { name: 'Welche Buchungen sind die Fixkosten?' });
+  await expect(pick.locator('.fixmemrow')).toHaveCount(6);
+  await expect(pick.locator('.fixmemrow input:checked')).toHaveCount(3);
+  await pk.getByRole('button', { name: 'Abos & Verträge', exact: true }).click();
+  await page.getByRole('tab', { name: /^Fixkosten/ }).click();
+  const kl = page.locator('.fixrow', { hasText: 'Kletterhalle' });
+  await expect(kl).toContainText('39,00');
+  await expect(kl).toContainText('3 Zahlungen · 3 neu');
+  // Getränke bleiben Ausgaben
+  await page.getByRole('tab', { name: /^Ausgaben/ }).click();
+  await expect(page.locator('.imp', { hasText: 'Kletterhalle' })).toContainText('3 Buchungen');
+  // Alles abwählen: Ausgaben und Fixkosten → 0 ausgewählt
+  await page.getByRole('button', { name: 'Alle abwählen' }).click();
+  await page.getByRole('tab', { name: /^Fixkosten/ }).click();
+  await page.getByRole('button', { name: 'Alle abwählen' }).click();
+  await expect(page.locator('.selbar')).toContainText('0 ausgewählt · 0,00 €');
+  await expect(page.locator('.selbar').getByRole('button', { name: 'Übernehmen' })).toBeDisabled();
+  // Einzeln wieder an: Miete samt Buchungen
+  await page.locator('.fixrow', { hasText: 'Hausverwaltung' }).getByRole('checkbox', { name: /übernehmen/ }).check();
+  await expect(page.locator('.selbar')).toContainText('3 ausgewählt · 2.550,00 €');
 });
