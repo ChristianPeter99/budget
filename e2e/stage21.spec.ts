@@ -173,3 +173,27 @@ test('CSV-Import: Kategorie „Sport“ in Fixkosten anlegen, obwohl es „Sport
   await expect(page.locator('.toast')).toContainText('„Sport“ angelegt');
   await expect(dlg).toHaveCount(0);
 });
+
+test('CSV: höchste Beträge oben, Cafés gebündelt, Rest auf Wunsch nach „Sonstiges“', async ({ page }) => {
+  await page.goto('/');
+  await openImport(page);
+  const d = new Date(); const t = `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`;
+  const csv = ['Buchungsdatum;Betrag;Zahlungsempfänger',
+    `${t};-3,40;Starbucks Muster`, `${t};-2,90;Café Muster`, `${t};-3,10;Coffee Fellows`, `${t};-120,00;Muster Elektro GmbH`, `${t};-15,00;Unbekannt KG`].join('\n');
+  await page.getByLabel('CSV-Datei').setInputFiles({ name: 'k.csv', mimeType: 'text/csv', buffer: Buffer.from(csv) });
+  const cards = page.locator('.imp');
+  await expect(cards).toHaveCount(3);
+  await expect(cards.nth(0)).toContainText('Muster Elektro');
+  await expect(cards.nth(1)).toContainText('Unbekannt');
+  await expect(cards.nth(2)).toContainText('Cafés & Kaffee');
+  await expect(cards.nth(2)).toContainText('3 Buchungen');
+  // Cafés werden „Essen gehen“ zugeordnet, ohne dass man jeden einzeln anfasst
+  await expect(cards.nth(2)).toContainText('Essen gehen');
+  await page.getByRole('button', { name: 'Übernehmen', exact: true }).click();
+  const ask = page.getByRole('dialog', { name: 'Ohne Kategorie' });
+  await expect(ask).toContainText('2 Buchungen haben noch keine Kategorie');
+  await ask.getByRole('button', { name: 'Ja, in Sonstiges übernehmen' }).click();
+  await expect(page.locator('.toast')).toContainText('5 Buchungen übernommen');
+  await page.locator('nav').getByRole('button', { name: 'Buchungen' }).click();
+  await expect(page.locator('main')).toContainText('Sonstige');
+});

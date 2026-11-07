@@ -22,7 +22,8 @@ test('Import: Supermärkte und Tankstellen als Block, Aufklappen über Pfeil', a
   // Tipp auf den Pfeil klappt auf
   await sm.locator('.impchev').click();
   await expect(sm.locator('.improw')).toHaveCount(4);
-  await expect(sm.locator('.improw').first()).toContainText('Kaufland');
+  // innerhalb des Blocks: höchster Betrag zuerst
+  await expect(sm.locator('.improw').first()).toContainText('34,99');
   await sm.locator('.impchev').click();
   await expect(sm.locator('.improw')).toHaveCount(0);
 });

@@ -419,9 +419,11 @@ export async function parseStatement(text: string, given?: ColumnMap): Promise<P
 
 /** Eingebaute Zuordnung Bank-Unterkategorie → Name einer App-Kategorie (nur Vorschlag) */
 const BANK_SYNONYMS: Record<string, string[]> = {
-  supermarkt: ['einkaufen'], 'sonstiges lebensmittel': ['einkaufen'], backerei: ['backer'], kantine: ['kantine'],
-  'restaurant cafe bar': ['essen gehen'], tanken: ['benzin'], parken: ['parken'], friseur: ['friseur'],
-  apotheke: ['apotheke'], drogerie: ['dm'], bekleidung: ['bekleidung', 'schuhe'], 'online shopping': ['amazon'], kino: ['kino']
+  supermarkt: ['einkaufen'], 'sonstiges lebensmittel': ['einkaufen'], backerei: ['backer', 'backerei'], kantine: ['kantine'],
+  'restaurant cafe bar': ['essen gehen'], tanken: ['benzin', 'tanken'], parken: ['parken'], friseur: ['friseur'],
+  apotheke: ['apotheke'], drogerie: ['dm', 'drogerie'], bekleidung: ['bekleidung', 'kleidung', 'schuhe'], 'online shopping': ['amazon', 'online'], kino: ['kino'],
+  cafe: ['cafe', 'kaffee', 'essen gehen'], restaurant: ['essen gehen', 'restaurant'], lieferdienst: ['lieferdienst', 'essen gehen'],
+  mobilitat: ['offentliche', 'oepnv', 'bahn', 'mobilitat'], baumarkt: ['baumarkt', 'haushalt'], bargeld: ['auszahlung', 'bargeld'], kiosk: ['kiosk']
 };
 
 export interface Suggestion { categoryId: string; source: 'gemerkt' | 'name' | 'bank' }
@@ -442,7 +444,8 @@ export function suggestCategory(c: Candidate, cats: Category[], rules: Record<st
   const p = norm(c.payee), sub = norm(c.bankSub);
   const byName = pool.find((x) => { const n = norm(x.name); return n.length >= 3 && (p.split(' ').includes(n) || sub === n); });
   if (byName) return { categoryId: byName.id, source: 'name' };
-  for (const target of BANK_SYNONYMS[sub] ?? []) {
+  // Bank-Unterkategorie, sonst die Art des Händlers (Café, Drogerie, Baumarkt …)
+  for (const target of [...(BANK_SYNONYMS[sub] ?? []), ...(BANK_SYNONYMS[nameBlock(c) ?? ''] ?? [])]) {
     const hits = pool.filter((x) => norm(x.name) === target);
     // bei mehrdeutigen Namen (z. B. „Benzin“ bei Auto und Motorrad) die Alltags-Kategorie mit dem kleineren sort nehmen
     const hit = hits.sort((a, b) => a.sort - b.sort)[0];
@@ -491,23 +494,48 @@ export interface Block { key: string; title: string }
 /** Lesbare Blocknamen für Bank-Unterkategorien */
 const BLOCK_TITLES: Record<string, string> = {
   supermarkt: 'Supermärkte', tanken: 'Tankstellen', backerei: 'Bäckereien', 'restaurant cafe bar': 'Restaurants, Cafés & Bars',
-  'online shopping': 'Online-Shopping', drogerie: 'Drogerien', apotheke: 'Apotheken', bekleidung: 'Kleidung', parken: 'Parken'
+  'online shopping': 'Online-Shopping', drogerie: 'Drogerien', apotheke: 'Apotheken', bekleidung: 'Kleidung', parken: 'Parken',
+  cafe: 'Cafés & Kaffee', restaurant: 'Restaurants & Imbiss', lieferdienst: 'Lieferdienste', kantine: 'Kantine & Mensa',
+  mobilitat: 'Bahn, Bus & Fahrdienste', baumarkt: 'Baumärkte', bargeld: 'Bargeld', kiosk: 'Kiosk & Getränke'
 };
+
+/** Art des Händlers am Namen erkennen (Wörter im normalisierten Namen); Reihenfolge = Vorrang */
+const NAME_BLOCKS: [string, RegExp][] = [
+  ['lieferdienst', / (lieferando|wolt|uber eats|deliveroo|flink|gorillas|getir|foodora|pizza de) /],
+  ['cafe', / (cafe|caffe|coffee|kaffee|kaffeehaus|espresso|starbucks|tchibo|balzac|einstein|coffee fellows|black sheep|dunkin|barista|rosterei|kaffeerosterei) /],
+  ['backerei', / (backerei|backer|backhaus|backstube|backwerk|ihle|kamps|rischart|hofpfisterei|wimmer|zottl|ditsch|brezel|brot) /],
+  ['kantine', / (kantine|mensa|canteen|betriebsrestaurant|casino|cafeteria|studierendenwerk|studentenwerk) /],
+  ['restaurant', / (restaurant|ristorante|trattoria|osteria|pizzeria|pizza|doner|kebab|kebap|imbiss|burger|mcdonalds|mcdonald s|burger king|kfc|subway|vapiano|sushi|thai|asia|gasthof|gasthaus|wirtshaus|biergarten|brauhaus|bistro|grill|dean david|hans im gluck|five guys|nordsee) /],
+  ['drogerie', / (dm|dm drogerie|rossmann|muller|budni|drogerie) /],
+  ['apotheke', / (apotheke|apotheken|docmorris|shop apotheke|medpex) /],
+  ['online shopping', / (amazon|amzn|zalando|ebay|otto|temu|shein|aliexpress|about you|galaxus|mediamarkt de|kleinanzeigen) /],
+  ['bekleidung', / (h m|hm|zara|primark|c a|uniqlo|deichmann|snipes|tk maxx|new yorker|bershka|pull bear|only|jack jones|decathlon) /],
+  ['baumarkt', / (obi|toom|hornbach|bauhaus|hagebau|globus baumarkt|ikea|jysk|poco|xxxlutz|mobelix) /],
+  ['mobilitat', / (db|deutsche bahn|db vertrieb|bahn|mvg|mvv|bvg|hvv|vrr|vvs|rmv|kvv|flixbus|flixtrain|uber|bolt|free now|freenow|tier|lime|voi|share now|miles|sixt share|swapfiets|nextbike) /],
+  ['parken', / (parken|parkhaus|parkplatz|apcoa|contipark|easypark|parkster|q park) /],
+  ['kiosk', / (kiosk|spati|getranke|trinkhalle|tabak|lotto) /],
+  ['bargeld', / (geldautomat|bargeldauszahlung|atm|cash) /]
+];
 /** zu allgemein für einen gemeinsamen Block – diese Zeilen bleiben je Händler */
 const NO_BLOCK = new Set(['weitere ausgaben', 'sonstiges', 'sonstige ausgaben', 'sonstiges lebensmittel', 'umbuchung', '']);
 
-function nameBlock(c: Candidate): string | null {
-  const first = norm(c.payee).split(' ')[0] ?? '';
+export function nameBlock(c: Candidate): string | null {
+  const p = norm(c.payee);
+  const first = p.split(' ')[0] ?? '';
   if (SUPERMARKETS.includes(first)) return 'supermarkt';
   if (FUEL.includes(first)) return 'tanken';
+  const t = ` ${p} `;
+  for (const [k, re] of NAME_BLOCKS) if (re.test(t)) return k;
   return null;
 }
 
 /**
- * Ordnet Ausgaben gemeinsamen Blöcken zu: Supermärkte und Tankstellen immer, andere Bank-Unterkategorien
- * (z. B. „Restaurant/ Café/ Bar“, „Bäckerei“), sobald mehrere verschiedene Händler darunter vorkommen.
+ * Ordnet Ausgaben gemeinsamen Blöcken zu: Supermärkte und Tankstellen immer; Händler gleicher Art (Cafés,
+ * Bäckereien, Drogerien, Lieferdienste …, am Namen erkannt) und Bank-Unterkategorien (z. B. „Restaurant/ Café/ Bar“),
+ * sobald mehrere verschiedene Händler darunter vorkommen.
  */
 export function assignBlocks(cands: Candidate[]): Map<string, Block> {
+  // Kategorie der Bank zuerst (einheitlich je Bank); ohne sie die Art des Händlers am Namen
   const subOf = (c: Candidate) => { const s = norm(c.bankSub); return s && !NO_BLOCK.has(s) ? s : nameBlock(c); };
   const payees = new Map<string, Set<string>>();
   for (const c of cands) {

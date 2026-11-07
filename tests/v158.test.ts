@@ -84,3 +84,18 @@ describe('Kategorie-Kreis mit Symbolen (v1.58)', () => {
     expect(iconInk('inc', 0)).toBe('#0E0F12');
   });
 });
+
+describe('Bündel am Händlernamen (v1.58)', () => {
+  it('erkennt Cafés, Bäckereien, Drogerien, Lieferdienste, ÖPNV ohne Bank-Kategorie', async () => {
+    const { assignBlocks, nameBlock } = await import('../src/import/csv');
+    const res = await parseStatement(['Buchungsdatum;Betrag;Zahlungsempfänger',
+      '01.10.2026;-3,40;STARBUCKS 1234', '02.10.2026;-2,90;Cafe am Markt', '03.10.2026;-3,10;Bäckerei Huber', '04.10.2026;-2,10;Backhaus Muster',
+      '05.10.2026;-12,00;dm-drogerie markt', '06.10.2026;-8,00;Rossmann 123', '07.10.2026;-23,00;Lieferando.de', '08.10.2026;-18,00;Wolt Munich',
+      '09.10.2026;-3,70;MVG Automat', '10.10.2026;-49,00;DB Vertrieb GmbH', '11.10.2026;-40,00;Muster Elektro GmbH'].join('\n'));
+    const b = assignBlocks(res.candidates);
+    const t = (p: string) => b.get(res.candidates.find((c) => c.payee.startsWith(p))!.key)?.title ?? null;
+    expect([t('STARBUCKS'), t('Cafe am'), t('Bäckerei'), t('Backhaus'), t('dm'), t('Rossmann'), t('Lieferando'), t('Wolt'), t('MVG'), t('DB'), t('Muster Elektro')])
+      .toEqual(['Cafés & Kaffee', 'Cafés & Kaffee', 'Bäckereien', 'Bäckereien', 'Drogerien', 'Drogerien', 'Lieferdienste', 'Lieferdienste', 'Bahn, Bus & Fahrdienste', 'Bahn, Bus & Fahrdienste', null]);
+    expect(nameBlock(res.candidates.find((c) => c.payee.startsWith('Muster'))!)).toBeNull();
+  });
+});

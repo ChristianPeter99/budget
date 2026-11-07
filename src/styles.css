@@ -1081,3 +1081,10 @@ html{background:#000}
 .field.cmap input{min-height:44px;border-radius:12px;border:1px solid var(--line);background:var(--card2);color:var(--text);padding:0 12px;font:inherit;font-size:max(16px,1rem);text-align:left}
 .cmaphint{font-size:var(--t-note);color:var(--mut)}
 .cmapcard .cmapcheck{padding:8px var(--s4)}
+
+/* Import: Rückfrage „Sonstiges“ */
+.restask p{margin:0}
+.restlist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.restlist li{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-top:1px solid var(--line);font-size:var(--t-body)}
+.restlist li:first-child{border-top:0}
+.restlist li span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

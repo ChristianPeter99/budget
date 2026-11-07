@@ -32,7 +32,13 @@ test('CSV-Import: Duplikat erkannt, Kategorie je Händler, übernehmen, merken, 
   await expect(page.getByRole('tab', { name: /Weitere 4/ })).toBeVisible();
   // Beispielshop hat keinen Vorschlag → Übernehmen gesperrt
   await expect(page.getByRole('region', { name: 'Übernehmen' })).toContainText('1 ohne Kategorie');
-  await expect(page.getByRole('button', { name: 'Übernehmen', exact: true })).toBeDisabled();
+  // Übernehmen fragt nach, ob Zeilen ohne Kategorie nach „Sonstiges“ sollen; „Erst noch zuordnen“ führt zurück
+  await page.getByRole('button', { name: 'Übernehmen', exact: true }).click();
+  const ask = page.getByRole('dialog', { name: 'Ohne Kategorie' });
+  await expect(ask).toContainText('1 Buchung hat noch keine Kategorie');
+  await expect(ask).toContainText('Beispielshop');
+  await ask.getByRole('button', { name: 'Erst noch zuordnen' }).click();
+  await expect(ask).toHaveCount(0);
   const shop = page.locator('.imp', { hasText: 'Beispielshop' });
   await shop.getByRole('button', { name: 'Kategorie wählen' }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Kino', exact: true }).click();

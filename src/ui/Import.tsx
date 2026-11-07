@@ -14,6 +14,7 @@ import { categoryName, topLevel } from '../domain/calc';
 import { formatDateDE } from '../domain/dates';
 import { formatEUR } from '../domain/money';
 import type { Category, CatGroup, Transaction } from '../domain/types';
+import type { Db } from '../db/db';
 import { catArea, isHouseholdCat } from '../domain/types';
 import type { CatArea } from '../domain/types';
 
@@ -41,6 +42,24 @@ async function readText(file: File): Promise<string> {
   return decodeBytes(await file.arrayBuffer());
 }
 
+/**
+ * Auffang-Kategorie für Zeilen ohne Kategorie: „Sonstiges › Sonstige“ (Ausgaben) bzw. „Sonstige Einnahmen“.
+ * Fehlt sie, wird sie angelegt – im eigenen Bereich oder in den Kategorien des Haushaltskontos.
+ */
+async function ensureRest(db: Db, cats: Category[], kind: 'expense' | 'income', joint: boolean): Promise<string> {
+  const scope = joint ? { scope: 'joint' as const } : {};
+  const mine = cats.filter((c) => c.kind === kind && !c.archived && isHouseholdCat(c) === joint && (kind === 'income' || joint || c.group === 'alltag'));
+  const isRest = (c: Category) => /^sonstig/i.test(c.name.trim());
+  const group: CatGroup = kind === 'income' ? 'einnahme' : 'alltag';
+  let top = mine.find((c) => !c.parentId && isRest(c));
+  if (!top) top = await addCategory(db, { name: kind === 'income' ? 'Sonstige Einnahmen' : 'Sonstiges', kind, group, parentId: null, ...scope });
+  const kids = cats.filter((c) => c.parentId === top!.id && !c.archived);
+  if (kids.length === 0 && !cats.some((c) => c.parentId === top!.id)) return top.id;
+  const kid = kids.find(isRest);
+  if (kid) return kid.id;
+  return (await addCategory(db, { name: 'Sonstige', kind, group: top.group, parentId: top.id, ...scope })).id;
+}
+
 /** Mehr › CSV-Import: Datei einlesen, prüfen, zuordnen, übernehmen. Bis „Übernehmen“ wird nichts gespeichert. */
 export function ImportPage({ back }: { back: ReactNode }) {
   const { data, run, flash, db, reload } = useStore();
@@ -66,6 +85,8 @@ export function ImportPage({ back }: { back: ReactNode }) {
   const [bankId, setBankId] = useState('');
   const [usedBank, setUsedBank] = useState<string | null>(null);
   const [manage, setManage] = useState(false);
+  // Rückfrage: Zeilen ohne Kategorie nach „Sonstiges“?
+  const [askRest, setAskRest] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const cats = data.categories;
 
@@ -151,14 +172,18 @@ export function ImportPage({ back }: { back: ReactNode }) {
     const rules = Object.fromEntries(Object.entries(all).filter(([k]) => k.startsWith('j:') === joint).map(([k, v]) => [joint ? k.slice(2) : k, v]));
     const scoped = cats.filter((c) => isHouseholdCat(c) === joint);
     const returns = findReturns(res.candidates);
+    const blk = assignBlocks(res.candidates);
+    const okCat = new Set(scoped.map((c) => c.id));
     const list: Row[] = res.candidates.map((c) => {
       const d = dups.get(c.key) ?? { state: 'none' as const };
-      const sug = c.kind === 'transfer' ? null : suggestCategory(c, scoped, rules);
+      // Händler gemerkt bzw. erkannt, sonst die für den ganzen Block (z. B. „Cafés & Kaffee“) gemerkte Kategorie
+      const blockRule = blk.get(c.key) ? rules[blk.get(c.key)!.key] : undefined;
+      const sug = c.kind === 'transfer' ? null : suggestCategory(c, scoped, rules) ?? (blockRule && okCat.has(blockRule) ? { categoryId: blockRule } : null);
       const locked = d.state === 'imported' || c.kind === 'transfer' || (account === 'joint' && c.kind !== 'expense');
       const ret = returns.get(c.key);
       return { c, dup: d.state, ...(d.match ? { match: d.match } : {}), ...(ret ? { ret } : {}), cat: sug?.categoryId ?? null, on: !locked && !ret && d.state === 'none' && c.kind === 'expense', locked };
     });
-    setBlocks(assignBlocks(res.candidates));
+    setBlocks(blk);
     // Fixkosten gleich miterkennen (nur eigenes Konto): eigener Reiter, Vorlagen für den Reiter Fixkosten
     const fx = joint ? [] : detectRecurring(res.candidates).map((f) => makeFixRow(f, res.candidates, cats, data.recurring, rules)).filter((r) => r.keys.length > 0);
     const taken = new Set<string>();
@@ -186,11 +211,11 @@ export function ImportPage({ back }: { back: ReactNode }) {
     }
     const out = [...m.entries()].map(([k, rs]) => ({
       k, block: titles.has(k), title: titles.get(k) ?? rs[0]!.c.payee,
-      rows: k === 'block:retouren' ? sortReturns(rs) : titles.has(k) ? [...rs].sort((a, b) => b.c.date.localeCompare(a.c.date)) : rs,
-      missing: rs.some((r) => r.on && !r.cat)
+      rows: k === 'block:retouren' ? sortReturns(rs) : [...rs].sort((a, b) => b.c.amountCents - a.c.amountCents || b.c.date.localeCompare(a.c.date)),
+      total: rs.reduce((a, r) => a + r.c.amountCents, 0)
     }));
-    // Gruppen ohne Kategorie zuerst, dann die häufigsten
-    return out.sort((a, b) => Number(b.block) - Number(a.block) || Number(b.missing) - Number(a.missing) || b.rows.length - a.rows.length || a.title.localeCompare(b.title));
+    // Höchste Beträge zuerst – so ordnest du zuerst zu, was am meisten ausmacht
+    return out.sort((a, b) => b.total - a.total || a.title.localeCompare(b.title));
   }, [rows, tab, blocks, fixOf]);
 
   const counts = useMemo(() => {
@@ -226,18 +251,36 @@ export function ImportPage({ back }: { back: ReactNode }) {
     flash(add.length === 1 ? `„${add[0]!.f.name}“ zu Fixkosten verschoben` : `${add.length} Händler zu Fixkosten verschoben`, 'ok');
   }
 
-  async function commit() {
-    if (!rows || (chosen.length === 0 && newFix === 0) || missing > 0) return;
+  async function commit(toRest = false) {
+    if (!rows || (chosen.length === 0 && newFix === 0) || (missing > 0 && !toRest)) return;
+    setAskRest(false);
+    // Fehlende Kategorien: Auffang-Kategorie „Sonstiges“ (wird nicht als Zuordnung gemerkt)
+    const restFor = { expense: '', income: '' };
+    if (toRest && missing > 0) {
+      const need = new Set(chosen.filter((r) => !catOf(r)).map((r) => (r.c.kind === 'credit' ? 'income' : 'expense') as 'expense' | 'income'));
+      const got = await run(async (d) => {
+        const out = { expense: '', income: '' };
+        for (const k of need) out[k] = await ensureRest(d, cats, k, account === 'joint');
+        return out;
+      });
+      if (!got) return;
+      Object.assign(restFor, got);
+    }
+    const catFor = (r: Row) => catOf(r) || restFor[r.c.kind === 'credit' ? 'income' : 'expense'];
     const items: ImportItem[] = chosen.map((r) => ({
-      date: r.c.date, type: r.c.kind === 'credit' ? 'income' : 'expense', amountCents: r.c.amountCents, categoryId: catOf(r) as string,
+      date: r.c.date, type: r.c.kind === 'credit' ? 'income' : 'expense', amountCents: r.c.amountCents, categoryId: catFor(r),
       description: r.c.payee.slice(0, 120), importId: r.c.key, ...(account === 'joint' ? { account: 'joint' as const } : {})
     }));
     // Zuordnung merken: je Empfänger, wenn alle übernommenen Zeilen dieselbe Kategorie haben
     const rules: Record<string, string> = {};
     const byPayee = new Map<string, Set<string>>();
-    for (const r of chosen) if (r.c.payeeKey) byPayee.set(r.c.payeeKey, (byPayee.get(r.c.payeeKey) ?? new Set()).add(catOf(r) as string));
+    for (const r of chosen) if (r.c.payeeKey && catOf(r)) byPayee.set(r.c.payeeKey, (byPayee.get(r.c.payeeKey) ?? new Set()).add(catOf(r) as string));
     // Zahlungsdienste (PayPal, Klarna) bündeln verschiedene Händler – dafür nichts merken
     for (const [k, s] of byPayee) if (s.size === 1 && !/^(paypal|klarna)/.test(k)) rules[(account === 'joint' ? 'j:' : '') + k] = [...s][0] as string;
+    // Auch je Block merken (z. B. alle Cafés → Essen gehen), damit neue Händler gleicher Art schon zugeordnet sind
+    const byBlock = new Map<string, Set<string>>();
+    for (const r of chosen) { const b = blocks.get(r.c.key); if (b && catOf(r) && !fixOf.has(r.c.key)) byBlock.set(b.key, (byBlock.get(b.key) ?? new Set()).add(catOf(r) as string)); }
+    for (const [k, s] of byBlock) if (s.size === 1) rules[(account === 'joint' ? 'j:' : '') + k] = [...s][0] as string;
     setBusy(true);
     const out = await run(async (d) => {
       const res = items.length ? await importTransactions(d, items, rules) : [];
@@ -330,7 +373,7 @@ export function ImportPage({ back }: { back: ReactNode }) {
         {tabs.map(([t, l]) => <button key={t} role="tab" aria-selected={tab === t} className={(tab === t ? 'on' : '') + (t === 'fix' ? ' tfix' : '')} onClick={() => setTab(t)}>{l} {counts[t]}</button>)}
       </div>
       <p className="note">
-        {tab === 'ausgaben' && 'Tippe auf die Kategorie, um sie für den ganzen Block festzulegen (gleichartige Händler wie Supermärkte, Tankstellen oder Restaurants sind zusammengefasst). Tippe auf den Namen, um die Buchungen zu sehen, und auf eine Buchung für alle Details.'}
+        {tab === 'ausgaben' && 'Höchste Beträge zuerst. Gleichartige Händler (Supermärkte, Cafés, Bäckereien, Drogerien, Lieferdienste …) sind gebündelt – eine Kategorie gilt für den ganzen Block und wird gemerkt. Was ohne Kategorie bleibt, kann beim Übernehmen nach „Sonstiges“.'}
         {tab === 'fix' && (fixes.length ? 'Wiederkehrende Zahlungen aus der Datei. Angehakte kommen einmalig als Vorlage in den Reiter Fixkosten – ab dann bucht die App sie jeden Monat selbst. Ihre Buchungen aus der Datei werden mit übernommen und der Vorlage zugeordnet. Fehlt etwas, markiere es unter „Ausgaben“ mit „Fixkosten“.' : 'Keine wiederkehrenden Zahlungen erkannt. Markiere Fixkosten unter „Ausgaben“ mit „Fixkosten“. Tipp: Eine Datei über mehrere Monate hilft beim Erkennen.')}
         {tab === 'erfasst' && 'Diese Ausgaben gibt es in der App wahrscheinlich schon (gleicher Betrag, gleiches oder nahes Datum). Sie sind abgewählt; bei Bedarf einzeln anhaken.'}
         {tab === 'weitere' && 'Retouren (Ausgabe und gleich hohe Gutschrift), Aufrundungen, Umbuchungen und Gutschriften werden normalerweise nicht übernommen. Gutschriften lassen sich als Einnahme, Aufrundungen als Sparen übernehmen.'}
@@ -405,7 +448,7 @@ export function ImportPage({ back }: { back: ReactNode }) {
       <div style={{ height: 90 }} />
       <div className="selbar" role="region" aria-label="Übernehmen">
         <span>{chosen.length} ausgewählt · {formatEUR(Math.abs(sum))}{newFix > 0 && <><br /><small className="fixtxt">+ {newFix} Fixkosten-Vorlage{newFix === 1 ? '' : 'n'}</small></>}{missing > 0 && <><br /><small className="needtxt">{missing} ohne Kategorie</small></>}</span>
-        <button className="btn" disabled={busy || (chosen.length === 0 && newFix === 0) || missing > 0} onClick={() => void commit()}>Übernehmen</button>
+        <button className="btn" disabled={busy || (chosen.length === 0 && newFix === 0)} onClick={() => (missing > 0 ? setAskRest(true) : void commit())}>Übernehmen</button>
       </div>
       {detail && rows.find((r) => r.c.key === detail) && (() => {
         const r = rows.find((x) => x.c.key === detail)!;
@@ -415,6 +458,25 @@ export function ImportPage({ back }: { back: ReactNode }) {
           <DetailSheet r={r} cats={cats} fix={fixOf.get(r.c.key)?.f.name} onFix={account === 'own' && r.c.kind === 'expense' && !r.ret && !fixOf.has(r.c.key) ? () => { setDetail(null); markFix(rows.filter((x) => x.c.payeeKey === r.c.payeeKey && tabOf(x) === tabOf(r)).map((x) => x.c.key)); } : undefined} block={r.ret ? 'Retouren' : blocks.get(r.c.key)?.title} partner={r.ret ? rows.find((x) => x.c.key === r.ret)?.c : undefined} onClose={() => setDetail(null)}
             onToggle={r.locked ? undefined : () => update([r.c.key], (x) => ({ ...x, on: !x.on }))}
             onCategory={canCat ? () => { setDetail(null); setPicker({ title: `${r.c.payee} · ${short(r.c.date)}`, keys: [r.c.key], kind }); } : undefined} />
+        );
+      })()}
+      {askRest && (() => {
+        const rest = chosen.filter((r) => !catOf(r));
+        const cents = rest.reduce((a, r) => a + r.c.amountCents, 0);
+        const firstTab = rest[0] ? tabOf(rest[0], fixOf.get(rest[0].c.key)?.f.key) : 'ausgaben';
+        return (
+          <Sheet title="Ohne Kategorie" onClose={() => setAskRest(false)} left="Zurück">
+            <div className="pad stack restask">
+              <p><b>{rest.length === 1 ? '1 Buchung hat' : `${rest.length} Buchungen haben`} noch keine Kategorie</b> ({formatEUR(cents)}).</p>
+              <p className="note">Sollen sie in <b>Sonstiges</b> übernommen werden? Du kannst sie später jederzeit unter Buchungen einer anderen Kategorie zuordnen. „Sonstiges“ wird dabei nicht für den nächsten Import gemerkt.</p>
+              <ul className="restlist">
+                {rest.slice(0, 5).map((r) => <li key={r.c.key}><span>{r.c.payee}</span><b className="num">{formatEUR(r.c.amountCents)}</b></li>)}
+                {rest.length > 5 && <li className="mini">… und {rest.length - 5} weitere</li>}
+              </ul>
+              <button className="btn" disabled={busy} onClick={() => void commit(true)}>Ja, in Sonstiges übernehmen</button>
+              <button className="btn sec2" onClick={() => { setAskRest(false); setTab(firstTab); }}>Erst noch zuordnen</button>
+            </div>
+          </Sheet>
         );
       })()}
       {picker && (
