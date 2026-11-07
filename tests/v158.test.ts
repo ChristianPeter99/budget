@@ -1,0 +1,86 @@
+import { describe, expect, it } from 'vitest';
+import { freshDb } from './helpers';
+import { exportAll, importTransactions, seedIfEmpty } from '../src/db/repo';
+import { currentMonthKey, shiftMonth } from '../src/domain/dates';
+import { detectRecurring, parseStatement } from '../src/import/csv';
+import { fixFromCandidates, makeFixRow, memberKeys, saveFixRows } from '../src/ui/FixImport';
+import { iconInk, subRows, areaSlices } from '../src/ui/Donut';
+
+const de = (iso: string) => `${iso.slice(8, 10)}.${iso.slice(5, 7)}.${iso.slice(0, 4)}`;
+
+// Erfundener Auszug: Miete und Fitnessclub in den letzten 4 Monaten, dazu Einkäufe beim selben Bäcker
+function csv(): string {
+  const rows = ['Buchungstag;Empfänger;Verwendungszweck;Betrag'];
+  const cur = currentMonthKey();
+  for (let i = 4; i >= 1; i--) {
+    const m = shiftMonth(cur, -i);
+    rows.push(`${de(m + '-01')};Hausverwaltung Beispiel;Miete;-850,00`);
+    rows.push(`${de(m + '-05')};Muster Fitnessclub;Beitrag;-29,90`);
+    rows.push(`${de(m + '-0' + (i + 2))};Bäckerei Korn;Einkauf;-${3 + i},50`);
+    rows.push(`${de(m + '-2' + i)};Bäckerei Korn;Einkauf;-${5 + i},10`);
+  }
+  return rows.join('\n');
+}
+
+describe('Ein Upload: Buchungen und Fixkosten zusammen (v1.58)', () => {
+  it('Vorlagen übernehmen die importierten Buchungen – keine doppelten, ab jetzt bucht die App selbst', async () => {
+    const db = await freshDb();
+    await seedIfEmpty(db, currentMonthKey());
+    const d0 = await exportAll(db);
+    const res = await parseStatement(csv());
+    const found = detectRecurring(res.candidates);
+    expect(found.map((f) => f.name).sort()).toEqual(['Hausverwaltung Beispiel', 'Muster Fitnessclub']);
+    const rows = found.map((f) => makeFixRow(f, res.candidates, d0.categories, d0.recurring, {}));
+    for (const r of rows) { expect(r.keys).toHaveLength(4); expect(r.on).toBe(true); expect(r.cat).toBeTruthy(); }
+    // Bäcker gehört zu keiner Fixkosten-Zahlung
+    const fixKeys = new Set(rows.flatMap((r) => r.keys));
+    expect(res.candidates.filter((c) => c.payee.startsWith('Bäckerei')).some((c) => fixKeys.has(c.key))).toBe(false);
+
+    const catOf = new Map(rows.flatMap((r) => r.keys.map((k) => [k, r.cat] as const)));
+    const items = res.candidates.filter((c) => fixKeys.has(c.key)).map((c) => ({ date: c.date, type: 'expense' as const, amountCents: c.amountCents, categoryId: catOf.get(c.key)!, description: c.payee, importId: c.key }));
+    await importTransactions(db, items, {});
+    expect(await saveFixRows(db, rows)).toBe(2);
+    const d = await exportAll(db);
+    expect(d.recurring.filter((r) => r.name === 'Hausverwaltung Beispiel')).toHaveLength(1);
+    const rent = d.transactions.filter((t) => t.amountCents === 85000);
+    // 4 importierte + der laufende Monat (von der Vorlage); der letzte importierte Monat ist der Vorlage zugeordnet
+    expect(rent).toHaveLength(5);
+    const last = shiftMonth(currentMonthKey(), -1);
+    expect(rent.filter((t) => t.date.startsWith(last))).toHaveLength(1);
+    expect(rent.find((t) => t.date.startsWith(last))!.recurringId).toBeTruthy();
+    expect(rent.filter((t) => t.date.startsWith(currentMonthKey()))).toHaveLength(1);
+
+    // Zweiter Import derselben Datei: schon in Fixkosten, nichts wird neu angelegt
+    const again = detectRecurring(res.candidates).map((f) => makeFixRow(f, res.candidates, d.categories, d.recurring, {}));
+    expect(again.every((r) => r.same && !r.on)).toBe(true);
+    expect(await saveFixRows(db, again)).toBe(0);
+  });
+
+  it('von Hand markiert: Zahlung aus den Zeilen eines Händlers', async () => {
+    const res = await parseStatement(csv());
+    const list = res.candidates.filter((c) => c.payee.startsWith('Hausverwaltung'));
+    const f = fixFromCandidates(list);
+    expect(f).toMatchObject({ interval: 'monthly', amountCents: 85000, count: 4, day: 1 });
+    expect(memberKeys(f, res.candidates)).toHaveLength(4);
+  });
+});
+
+describe('Kategorie-Kreis mit Symbolen (v1.58)', () => {
+  it('Abschnitte tragen Symbole, Unterkategorien aufgeschlüsselt, helle Töne mit dunklem Symbol', async () => {
+    const db = await freshDb();
+    await seedIfEmpty(db, currentMonthKey());
+    const { categories: cats } = await exportAll(db);
+    const leb = cats.find((c) => c.name === 'Lebensmittel' && !c.parentId)!;
+    const kids = cats.filter((c) => c.parentId === leb.id);
+    const tx = (categoryId: string, amountCents: number) => ({ id: categoryId + amountCents, type: 'expense', amountCents, categoryId, date: '2026-05-01', description: '', createdAt: '' }) as never;
+    const txs = [tx(kids[0]!.id, 3000), tx(kids[1]!.id, 1000), tx(leb.id, 500)];
+    const s = areaSlices(txs, cats, 'alltag');
+    expect(s[0]!.icon).toBeTruthy();
+    expect(s[0]!.icon).not.toBe('dots');
+    const sub = subRows(txs, cats, 'alltag', leb.id);
+    expect(sub.map((r) => r.cents)).toEqual([3000, 1000, 500]);
+    expect(sub[2]!.name).toBe('Ohne Unterkategorie');
+    expect(iconInk('alltag', 0)).toBe('#fff');
+    expect(iconInk('inc', 0)).toBe('#0E0F12');
+  });
+});

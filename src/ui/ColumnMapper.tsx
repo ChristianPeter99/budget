@@ -14,9 +14,13 @@ const MORE: [Field, string][] = [['card', 'Kaufdatum / Valuta'], ['debit', 'Ausg
  * „Spalten zuordnen“: für Dateien, deren Aufbau die App nicht sicher erkennt. Pro Angabe eine Auswahl der Spalten
  * (mit Beispielwert), darunter eine Vorschau der ersten Zeilen. Die Zuordnung wird auf Wunsch für diese Bank gemerkt.
  */
-export function ColumnMapper({ layout, fileName, err, onApply, onCancel }: { layout: Layout; text: string; fileName: string; err: string; onApply: (m: ColumnMap, remember: boolean) => void; onCancel: () => void }) {
+export function ColumnMapper({ layout, fileName, err, bank, banks, onApply, onCancel }: {
+  layout: Layout; text: string; fileName: string; err: string; bank: string; banks: string[]; onApply: (m: ColumnMap, saveAs: string | null) => void; onCancel: () => void;
+}) {
   const [map, setMap] = useState<ColumnMap>(layout.map);
   const [remember, setRemember] = useState(true);
+  const [name, setName] = useState(bank || (banks.length ? `Bank ${banks.length + 1}` : 'Meine Bank'));
+  const known = banks.some((b) => b.toLowerCase() === name.trim().toLowerCase());
   const [more, setMore] = useState(MORE.some(([k]) => layout.map[k] >= 0));
   const cols = Array.from({ length: layout.columns }, (_, i) => i);
   const sample = (i: number) => layout.samples.map((r) => (r[i] ?? '').trim()).find((v) => v) ?? '';
@@ -53,7 +57,7 @@ export function ColumnMapper({ layout, fileName, err, onApply, onCancel }: { lay
     <>
       <button className="back" onClick={onCancel}><Icon name="left" size={16} w={2.2} />Abbrechen</button>
       <Header kicker={fileName} title="Spalten zuordnen" />
-      <p className="note">Diesen Aufbau kennt die App noch nicht. Sag einmal, wo was steht – Datum und Betrag reichen. Die Vorschau zeigt sofort, ob es passt.</p>
+      <p className="note">Diesen Aufbau kennt die App noch nicht. Sag einmal, wo was steht – Datum und Betrag reichen. Die Vorschau zeigt sofort, ob es passt. Als Bankvorlage gespeichert, wählst du sie beim nächsten Import einfach aus.</p>
       <div className="card cmapcard">
         {MAIN.map(([k, t, req]) => select(k, t, req))}
         <button className="linkbtn" onClick={() => setMore(!more)} aria-expanded={more}>{more ? 'Weniger Spalten' : 'Weitere Spalten (Soll/Haben getrennt, Kaufdatum)'}</button>
@@ -68,9 +72,18 @@ export function ColumnMapper({ layout, fileName, err, onApply, onCancel }: { lay
           </div>
         ))}
       </div>
-      <label className="field cmapcheck"><input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} /><span>Für Dateien dieser Bank merken</span></label>
+      <div className="card cmapcard">
+        <label className="field cmapcheck"><input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} /><span>Als Bankvorlage speichern</span></label>
+        {remember && (
+          <label className="field cmap">
+            <span>Name der Bank</span>
+            <input value={name} maxLength={40} placeholder="z. B. Sparkasse" aria-label="Name der Bank" onChange={(e) => setName(e.target.value)} />
+            {known && <i className="cmaphint">Die Vorlage „{name.trim()}“ wird aktualisiert.</i>}
+          </label>
+        )}
+      </div>
       {err && <div className="err-text" role="alert">{err}</div>}
-      <button className="btn" disabled={!ok} onClick={() => onApply(map, remember)}>Weiter</button>
+      <button className="btn" disabled={!ok || (remember && !name.trim())} onClick={() => onApply(map, remember ? name.trim() : null)}>Weiter</button>
     </>
   );
 }

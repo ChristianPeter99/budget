@@ -33,7 +33,7 @@ function fixCsv(): string {
   return rows.join('\n');
 }
 
-test('Übersicht: Bereich antippen, nochmal antippen → Kreis der Kategorien; Mitte geht Schritt für Schritt zurück', async ({ page }) => {
+test('Übersicht: Bereich zweimal antippen → Kategorie-Kreis als Pop-up mit Symbolen; Übersicht-Knopf führt zurück', async ({ page }) => {
   await page.goto('/');
   await addBooking(page, ['5', '0'], 'Lebensmittel', 'Einkaufen');
   await addBooking(page, ['1', '2'], 'Freizeit', 'Kino');
@@ -41,16 +41,27 @@ test('Übersicht: Bereich antippen, nochmal antippen → Kreis der Kategorien; M
   await page.locator('.ovcorner.br').click();
   await expect(page.locator('.ovhint')).toContainText('Nochmal antippen');
   await page.locator('.ovcorner.br').click();
-  const legend = page.getByRole('list', { name: 'Kategorien Alltag' });
+  const dlg = page.getByRole('dialog', { name: /^Alltag · / });
+  await expect(dlg).toBeVisible();
+  const legend = dlg.getByRole('list', { name: 'Kategorien Alltag' });
   await expect(legend.getByRole('listitem')).toHaveCount(2);
-  await expect(legend.getByRole('listitem').first()).toContainText('Lebensmittel');
   await expect(legend.getByRole('listitem').first()).toContainText('81 %');
-  await legend.locator('.ovlrow', { hasText: 'Freizeit' }).click();
-  await expect(page.locator('.ovcenter')).toContainText('19 % von Alltag');
-  await page.getByRole('button', { name: 'Zurück zum Kategorie-Kreis' }).click();
-  await page.getByRole('button', { name: 'Zurück zum Bereich' }).click();
-  await expect(legend).toHaveCount(0);
-  await page.getByRole('button', { name: 'Zurück zur Gesamtansicht' }).click();
+  // Symbole im Ring und in der Liste
+  await expect(dlg.locator('.dicon')).toHaveCount(2);
+  await expect(legend.locator('.ddot svg')).toHaveCount(2);
+  await legend.locator('.ovlrow', { hasText: 'Lebensmittel' }).click();
+  await expect(dlg.locator('.ovlsub')).toContainText('Einkaufen');
+  await expect(dlg.locator('.dcenter')).toContainText('50 €');
+  // Nach unten ziehen schließt
+  const grab = await dlg.locator('.ph').boundingBox();
+  await page.mouse.move(grab!.x + 200, grab!.y + 20);
+  await page.mouse.down();
+  for (let y = 30; y <= 330; y += 30) await page.mouse.move(grab!.x + 200, grab!.y + y);
+  await page.mouse.up();
+  await expect(dlg).toHaveCount(0);
+  // Bereich bleibt gewählt; Tipp auf „Übersicht“ in der Leiste führt zur Gesamtansicht
+  await expect(page.locator('.ovcenter')).toContainText('Alltag');
+  await page.locator('nav').getByRole('button', { name: 'Übersicht' }).click();
   await expect(page.locator('.ovcenter')).toContainText('Noch verfügbar');
 });
 
@@ -90,36 +101,69 @@ test('CSV: unbekannter Aufbau → Spalten zuordnen; erkannte Datei lässt sich n
   await expect(page.getByRole('heading', { name: 'Prüfen & zuordnen' })).toBeVisible();
 });
 
-test('CSV „Fixkosten erkennen“: füllt den Reiter Fixkosten, beim zweiten Mal „Schon in Fixkosten“', async ({ page }) => {
+test('CSV: ein Upload – Fixkosten im eigenen Reiter, von Hand markieren, beim zweiten Mal „Schon in Fixkosten“', async ({ page }) => {
   await page.goto('/');
   await openImport(page);
-  await page.getByRole('tab', { name: 'Fixkosten erkennen' }).click();
   await page.getByLabel('CSV-Datei').setInputFiles({ name: 'f.csv', mimeType: 'text/csv', buffer: Buffer.from(fixCsv()) });
-  await expect(page.getByRole('heading', { name: 'Fixkosten erkannt' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Prüfen & zuordnen' })).toBeVisible();
+  await expect(page.getByRole('tab', { name: 'Fixkosten 2' })).toBeVisible();
+  // Bioladen bleibt unter Ausgaben; als Fixkosten markieren und wieder zurück
+  await expect(page.locator('.imp', { hasText: 'Bioladen' })).toHaveCount(1);
+  await expect(page.locator('.imp', { hasText: 'Hausverwaltung' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Bioladen Sonnenschein als Fixkosten markieren' }).click();
+  await expect(page.getByRole('tab', { name: 'Fixkosten 3' })).toBeVisible();
+  await page.getByRole('tab', { name: 'Fixkosten 3' }).click();
   const rows = page.locator('.fixrow');
-  await expect(rows).toHaveCount(2);
-  await expect(rows.filter({ hasText: 'Bioladen' })).toHaveCount(0);
+  await expect(rows).toHaveCount(3);
   await expect(rows.filter({ hasText: 'Muster Fitnessclub' })).toContainText('monatlich · 5× gefunden');
-  await page.getByRole('button', { name: '2 in Fixkosten übernehmen' }).click();
-  await expect(page.locator('.toast')).toContainText('2 Fixkosten übernommen');
+  await expect(rows.filter({ hasText: 'Muster Fitnessclub' })).toContainText('5 Buchungen aus der Datei');
+  await rows.filter({ hasText: 'Bioladen' }).getByRole('button', { name: 'Keine Fixkosten' }).click();
+  await expect(rows).toHaveCount(2);
+  await page.getByRole('tab', { name: /^Ausgaben/ }).click();
+  await page.locator('.imp', { hasText: 'Bioladen' }).getByRole('button', { name: 'Kategorie wählen' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Einkaufen', exact: true }).click();
+  await expect(page.locator('.selbar')).toContainText('2 Fixkosten-Vorlagen');
+  await page.locator('.selbar').getByRole('button', { name: 'Übernehmen' }).click();
+  await expect(page.locator('.toast')).toContainText('15 Buchungen und 2 Fixkosten übernommen');
 
   await page.locator('nav').getByRole('button', { name: 'Fixkosten' }).click();
-  await expect(page.locator('main, #root').getByText('Muster Fitnessclub').first()).toBeVisible();
+  await expect(page.locator('main').getByText('Muster Fitnessclub').first()).toBeVisible();
 
   await openImport(page);
-  await page.getByRole('tab', { name: 'Fixkosten erkennen' }).click();
   await page.getByLabel('CSV-Datei').setInputFiles({ name: 'f.csv', mimeType: 'text/csv', buffer: Buffer.from(fixCsv()) });
+  await page.getByRole('tab', { name: 'Fixkosten 2' }).click();
   await expect(page.locator('.fixrow.known')).toHaveCount(2);
   await expect(page.locator('.fixrow').first()).toContainText('Schon in Fixkosten');
-  await expect(page.getByRole('button', { name: 'Nichts ausgewählt' })).toBeDisabled();
+});
+
+test('CSV: Bankvorlage speichern, beim nächsten Import auswählen, verwalten', async ({ page }) => {
+  await page.goto('/');
+  await openImport(page);
+  const file = { name: 'b.csv', mimeType: 'text/csv', buffer: Buffer.from('A;B;C;D\n02.01.2026;03.01.2026;12;100\n03.01.2026;04.01.2026;9;91\n') };
+  await page.getByLabel('CSV-Datei').setInputFiles(file);
+  await page.getByLabel('Betrag', { exact: true }).selectOption({ index: 3 });
+  await page.getByLabel('Name der Bank').fill('Musterbank');
+  await page.getByRole('button', { name: 'Weiter', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Prüfen & zuordnen' })).toBeVisible();
+  await expect(page.locator('.kick')).toContainText('Musterbank');
+  await page.locator('.back').first().click();
+  await expect(page.getByLabel('Bank')).toHaveValue(/.+/);
+  await expect(page.getByLabel('Bank').locator('option:checked')).toHaveText('Musterbank');
+  // Nächster Import mit der gewählten Bank: kein Zuordnen mehr
+  await page.getByLabel('CSV-Datei').setInputFiles(file);
+  await expect(page.getByRole('heading', { name: 'Prüfen & zuordnen' })).toBeVisible();
+  await page.locator('.back').first().click();
+  await page.getByRole('button', { name: /Bankvorlagen verwalten/ }).click();
+  await page.getByRole('button', { name: 'Bankvorlage Musterbank löschen' }).click();
+  await expect(page.getByLabel('Bank').locator('option')).toHaveCount(1);
 });
 
 test('CSV-Import: Kategorie „Sport“ in Fixkosten anlegen, obwohl es „Sport“ in Alltag gibt', async ({ page }) => {
   await page.goto('/');
   await openImport(page);
   const d = new Date(); const t = `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`;
-  await page.getByLabel('CSV-Datei').setInputFiles({ name: 's.csv', mimeType: 'text/csv', buffer: Buffer.from(`Buchungsdatum,Betrag,Zahlungsempfänger\n${t},"-29,90",Muster Verein\n`) });
-  await page.locator('.imp', { hasText: 'Muster Verein' }).getByRole('button', { name: 'Kategorie wählen' }).click();
+  await page.getByLabel('CSV-Datei').setInputFiles({ name: 's.csv', mimeType: 'text/csv', buffer: Buffer.from(`Buchungsdatum,Betrag,Zahlungsempfänger\n${t},"-29,90",Muster Laden\n`) });
+  await page.locator('.imp', { hasText: 'Muster Laden' }).getByRole('button', { name: 'Kategorie wählen' }).click();
   const dlg = page.getByRole('dialog');
   await dlg.getByRole('tab', { name: 'Fixkosten' }).click();
   await dlg.getByRole('button', { name: /Neue Kategorie anlegen/ }).click();

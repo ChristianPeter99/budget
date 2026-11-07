@@ -1002,17 +1002,27 @@ html{background:#000}
 .crt-dot{position:absolute;left:50%;top:50%;width:8px;height:8px;border-radius:50%;background:#fff;opacity:0;transform:translate(-50%,-50%)}
 /* Übersicht: Kategorie-Kreis nach zweitem Tipp */
 .ovring .ovcorner{transition:opacity .25s ease,transform .14s ease}
-.ovring.drilled .ovcorner{opacity:0;pointer-events:none;transform:scale(.94)}
 .ovdrill{transform-origin:160px 160px;animation:ovdrillin .42s cubic-bezier(.2,.85,.25,1) both}
 @keyframes ovdrillin{from{opacity:0;transform:rotate(-35deg) scale(.86)}to{opacity:1;transform:none}}
 .ovlegend{display:flex;flex-direction:column;margin-top:-6px;animation:fadeup .3s ease both}
-.ovlrow{display:grid;grid-template-columns:10px 1fr auto auto;align-items:center;column-gap:10px;min-height:44px;padding:0 2px;border:0;border-top:1px solid var(--line);background:transparent;color:var(--text);text-align:left;font-size:var(--t-body);transition:opacity .2s ease}
-.ovlrow:first-child{border-top:0}
-.ovlrow i{width:10px;height:10px;border-radius:50%}
+.ovlrow{display:grid;grid-template-columns:28px 1fr auto auto;align-items:center;column-gap:12px;width:100%;min-height:48px;padding:0 2px;border:0;background:transparent;color:var(--text);text-align:left;font-size:var(--t-body);transition:opacity .2s ease}
+.ovlitem{border-top:1px solid var(--line);transition:opacity .2s ease}
+.ovlitem:first-child{border-top:0}
+.ovlitem.dim{opacity:.4}
+.ddot{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.ovlsubs{padding:0 2px 10px 42px;display:flex;flex-direction:column;gap:2px;animation:fadeup .22s ease both}
+.ovlsub{display:grid;grid-template-columns:1fr auto auto;column-gap:12px;align-items:center;min-height:30px;font-size:var(--t-note);color:var(--mut)}
+.ovlsub span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ovlsub .num{color:var(--text);min-width:64px;text-align:right}
+.dicon{animation:fadeup .3s ease both;transition:opacity .2s ease}
+.dicon.dim{opacity:.35}
+.dsvg .dseg.dim{opacity:.35}
+.areasheet{padding:0 var(--s4) var(--s4);display:flex;flex-direction:column;gap:6px}
+.areasheet .dwrap{max-width:310px}
+.areaopen{align-self:center;margin-top:6px;display:flex;align-items:center;gap:2px;min-height:44px;padding:0 10px;border:0;background:transparent;font-size:var(--t-body);font-weight:700}
 .ovlname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ovlpct{color:var(--mut);font-size:var(--t-note);font-variant-numeric:tabular-nums}
 .ovlrow b{font-weight:700;min-width:64px;text-align:right}
-.ovlrow.dim{opacity:.35}
 @media (prefers-reduced-motion: reduce){.ovdrill,.ovlegend{animation:none}}
 @keyframes fadeup{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 /* Auswertung: Kategorien im Kreis */
@@ -1049,3 +1059,25 @@ html{background:#000}
 .fixstate.ok{color:var(--pos)}
 .fixstate.warn{color:var(--warn)}
 .fixcat{margin-left:30px;min-height:40px;border-radius:10px;border:1px solid var(--line);background:var(--card2);color:var(--text);padding:0 8px;font:inherit;font-size:max(16px,1rem)}
+
+/* Import: Fixkosten-Reiter, Bankvorlagen */
+.catline{display:flex;gap:var(--s2);margin:0 var(--s4) var(--s3)}
+.catline .catpick{flex:1;width:auto;margin:0;min-width:0}
+.catline .catpick span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fixmark{flex:none;display:flex;align-items:center;gap:5px;min-height:44px;padding:0 12px;border-radius:12px;border:1px solid var(--line);background:transparent;color:var(--fix);font-size:var(--t-note);font-weight:700}
+.seg .tfix.on{color:var(--fix)}
+.fixok{width:20px;height:20px;border-radius:50%;background:var(--pos);color:#0E0F12;display:flex;align-items:center;justify-content:center;flex:none}
+.fixsel{display:flex;gap:8px;padding-left:30px;flex-wrap:wrap}
+.fixsel .fixcat{margin-left:0;flex:1 1 150px;min-width:0}
+.fixsel .fixiv{flex:0 1 140px}
+.fixfoot{display:flex;align-items:center;justify-content:space-between;gap:8px;padding-left:30px;font-size:var(--t-note);color:var(--mut)}
+.fixfoot .linkbtn{padding:0;min-height:32px;color:var(--mut);white-space:nowrap;flex:none}
+.fixfoot>span{flex:1;min-width:0}
+.fixtxt{color:var(--fix);font-weight:600}
+.field.bankpick select{flex:0 1 auto;max-width:72%;min-height:40px;border-radius:10px;border:1px solid var(--line);background:var(--card2);color:var(--text);padding:0 10px;font:inherit;font-size:max(16px,1rem)}
+.linkbtn.padl{margin:0 var(--s4) 6px}
+.linkbtn.danger{color:var(--neg);padding:0;min-height:32px}
+.bankrow{align-items:center}
+.field.cmap input{min-height:44px;border-radius:12px;border:1px solid var(--line);background:var(--card2);color:var(--text);padding:0 12px;font:inherit;font-size:max(16px,1rem);text-align:left}
+.cmaphint{font-size:var(--t-note);color:var(--mut)}
+.cmapcard .cmapcheck{padding:8px var(--s4)}

@@ -611,7 +611,10 @@ export function detectRecurring(cands: Candidate[]): FixFound[] {
       const same = byMonth.size === sorted.length || sorted.length <= months.length * 1.5;
       const close = [...byMonth.values()].filter((c) => Math.abs(c.amountCents - lastC.amountCents) <= Math.max(500, lastC.amountCents * 0.2)).length >= months.length * 0.6;
       if (regular && same && close) interval = med <= 1 ? 'monthly' : med <= 3 ? 'quarterly' : med <= 7 ? 'halfyearly' : med <= 13 ? 'yearly' : null;
-    } else if (FIX_WORDS.test(text)) interval = 'monthly';
+    } else if (FIX_WORDS.test(text) && sorted.length === 1 && !/karte|card|pos\b|apple pay|google pay/i.test(`${lastC.raw.type} ${lastC.raw.zweck}`)) {
+      // Nur eine Zahlung: nur bei eindeutigen Worten (Miete, Versicherung …) und nicht bei Kartenzahlungen (z. B. „Vereinsheim“)
+      interval = 'monthly';
+    }
     if (!interval) continue;
     const vals = [...byMonth.values()];
     const days = vals.map((c) => Number(c.date.slice(8, 10))).sort((a, b) => a - b);

@@ -6,9 +6,10 @@ import { toMessage, useStore } from '../state/store';
 import { addCategory, deleteCategory, getMeta, importTransactions, setMeta, undoImport } from '../db/repo';
 import type { ImportItem } from '../db/repo';
 import { MAX_IMPORT_BYTES, NeedsMapping, assignBlocks, decodeBytes, bookable, detectLayout, detectRecurring, findDuplicates, findReturns, parseStatement, suggestCategory } from '../import/csv';
-import type { Block, Candidate, ColumnMap, DupState, FixFound, Layout, ParseResult } from '../import/csv';
+import type { Block, Candidate, ColumnMap, DupState, Layout, ParseResult } from '../import/csv';
 import { ColumnMapper } from './ColumnMapper';
-import { FixImport } from './FixImport';
+import { FixList, fixFromCandidates, fixPool, makeFixRow, saveFixRows } from './FixImport';
+import type { FixRow } from './FixImport';
 import { categoryName, topLevel } from '../domain/calc';
 import { formatDateDE } from '../domain/dates';
 import { formatEUR } from '../domain/money';
@@ -18,12 +19,22 @@ import type { CatArea } from '../domain/types';
 
 /** Ein Eintrag der Prüfliste */
 interface Row { c: Candidate; on: boolean; cat: string | null; dup: DupState; match?: Transaction; locked: boolean; /** Gegenbuchung, wenn Teil einer Retoure */ ret?: string }
-type Tab = 'ausgaben' | 'erfasst' | 'weitere';
+type Tab = 'ausgaben' | 'fix' | 'erfasst' | 'weitere';
+/** Gespeicherte Bankvorlage: Spaltenzuordnung unter einem Namen */
+export interface BankTpl { id: string; name: string; signature: string; map: ColumnMap }
 interface LastImport { ids: string[]; at: string; count: number }
 
 const KIND_LABEL: Record<Candidate['kind'], string> = { expense: 'Ausgabe', credit: 'Gutschrift', roundup: 'Aufrundung', transfer: 'Umbuchung' };
 const short = (iso: string) => formatDateDE(iso).slice(0, 6);
-const tabOf = (r: Row): Tab => (r.ret ? 'weitere' : r.dup !== 'none' ? 'erfasst' : r.c.kind === 'expense' ? 'ausgaben' : 'weitere');
+const tabOf = (r: Row, fixKey?: string): Tab => (r.ret ? 'weitere' : fixKey ? 'fix' : r.dup !== 'none' ? 'erfasst' : r.c.kind === 'expense' ? 'ausgaben' : 'weitere');
+
+/** Bankvorlagen lesen (ältere Speicherung: Zuordnung je Aufbau ohne Namen) */
+async function loadBanks(db: NonNullable<ReturnType<typeof useStore>['db']>): Promise<BankTpl[]> {
+  const list = (await getMeta<BankTpl[]>(db, 'csvBanks')) ?? [];
+  const legacy = (await getMeta<Record<string, ColumnMap>>(db, 'csvMaps')) ?? {};
+  const extra = Object.entries(legacy).filter(([sig]) => !list.some((b) => b.signature === sig)).map(([sig, map], i) => ({ id: 'legacy' + i, name: `Gespeicherte Vorlage ${i + 1}`, signature: sig, map }));
+  return [...list, ...extra];
+}
 
 /** Datei lesen: UTF-16, UTF-8 oder Windows-1252 (siehe decodeBytes). */
 async function readText(file: File): Promise<string> {
@@ -46,16 +57,37 @@ export function ImportPage({ back }: { back: ReactNode }) {
   const [last, setLast] = useState<LastImport | null>(null);
   const [blocks, setBlocks] = useState<Map<string, Block>>(new Map());
   const [detail, setDetail] = useState<string | null>(null);
-  // Was die Datei füllen soll: Buchungen (Standard) oder den Reiter Fixkosten (Vorlagen statt Buchungen)
-  const [mode, setMode] = useState<'tx' | 'fix'>('tx');
-  const [fixes, setFixes] = useState<FixFound[] | null>(null);
-  // Datei mit unbekanntem Aufbau: Spalten einmal zuordnen (wird je Bank gemerkt)
-  const [mapping, setMapping] = useState<{ layout: Layout; text: string } | null>(null);
+  // Erkannte bzw. von Hand markierte Fixkosten (Reiter „Fixkosten“ der Prüfliste)
+  const [fixes, setFixes] = useState<FixRow[]>([]);
+  // Datei mit unbekanntem Aufbau: Spalten einmal zuordnen (als Bankvorlage gespeichert)
+  const [mapping, setMapping] = useState<{ layout: Layout; text: string; bank?: string } | null>(null);
   const [lastFile, setLastFile] = useState<{ text: string; layout: Layout } | null>(null);
+  const [banks, setBanks] = useState<BankTpl[]>([]);
+  const [bankId, setBankId] = useState('');
+  const [usedBank, setUsedBank] = useState<string | null>(null);
+  const [manage, setManage] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const cats = data.categories;
 
   useEffect(() => { if (db) void getMeta<LastImport>(db, 'lastImport').then((v) => setLast(v ?? null)); }, [db, data.transactions.length, data.jointTransactions.length]);
+  useEffect(() => {
+    if (!db) return;
+    void loadBanks(db).then(setBanks);
+    void getMeta<string>(db, 'csvBank').then((v) => setBankId(v ?? ''));
+  }, [db]);
+  const pickBank = (id: string) => { setBankId(id); if (db) void setMeta(db, 'csvBank', id || null); };
+  async function storeBanks(list: BankTpl[]) {
+    if (!db) return;
+    // Ältere Speicherung in die benannten Vorlagen übernehmen
+    await setMeta(db, 'csvBanks', list.map((b) => (b.id.startsWith('legacy') ? { ...b, id: crypto.randomUUID() } : b)));
+    await setMeta(db, 'csvMaps', null);
+    setBanks(await loadBanks(db));
+  }
+  async function removeBank(id: string) {
+    await storeBanks(banks.filter((b) => b.id !== id));
+    if (bankId === id) pickBank('');
+    flash('Bankvorlage gelöscht');
+  }
 
   async function onFile(f: File | undefined) {
     if (!f) return;
@@ -66,14 +98,19 @@ export function ImportPage({ back }: { back: ReactNode }) {
       const text = await readText(f);
       setFileName(f.name);
       const layout = detectLayout(text);
-      const saved = db ? (await getMeta<Record<string, ColumnMap>>(db, 'csvMaps'))?.[layout.signature] : undefined;
+      // Gewählte Bank, sonst eine Vorlage mit gleichem Aufbau, sonst automatisch
+      const tpl = bankId ? banks.find((b) => b.id === bankId) : banks.find((b) => b.signature === layout.signature);
       let res: ParseResult;
-      try { res = await parseStatement(text, saved); }
-      catch (e) {
-        if (e instanceof NeedsMapping) { setMapping({ layout: e.layout, text }); return; }
+      try {
+        res = await parseStatement(text, tpl?.map);
+        if (tpl && res.candidates.length === 0) throw new NeedsMapping({ ...layout, map: tpl.map });
+      } catch (e) {
+        if (e instanceof NeedsMapping) { setMapping({ layout: tpl ? { ...e.layout, map: tpl.map } : e.layout, text, bank: tpl?.name }); return; }
+        if (tpl) { setErr(`Die Vorlage „${tpl.name}“ passt nicht zu dieser Datei. Ordne die Spalten neu zu.`); setMapping({ layout: { ...layout, map: tpl.map }, text, bank: tpl.name }); return; }
         throw e;
       }
-      setLastFile({ text, layout });
+      setUsedBank(tpl?.name ?? null);
+      setLastFile({ text, layout: tpl ? { ...layout, map: tpl.map } : layout });
       show(res);
     } catch (e) {
       setErr(toMessage(e));
@@ -83,16 +120,20 @@ export function ImportPage({ back }: { back: ReactNode }) {
     }
   }
 
-  /** Zuordnung aus „Spalten zuordnen“ übernehmen (und auf Wunsch für diese Bank merken) */
-  async function applyMapping(map: ColumnMap, remember: boolean) {
+  /** Zuordnung aus „Spalten zuordnen“ übernehmen und auf Wunsch als Bankvorlage speichern */
+  async function applyMapping(map: ColumnMap, saveAs: string | null) {
     if (!mapping) return;
     setErr('');
     try {
       const res = await parseStatement(mapping.text, map);
-      if (remember && db) {
-        const all = (await getMeta<Record<string, ColumnMap>>(db, 'csvMaps')) ?? {};
-        await setMeta(db, 'csvMaps', { ...all, [mapping.layout.signature]: map });
-      }
+      if (saveAs) {
+        const name = saveAs.trim();
+        const ex = banks.find((b) => b.name.toLowerCase() === name.toLowerCase());
+        const tpl: BankTpl = { id: ex?.id && !ex.id.startsWith('legacy') ? ex.id : crypto.randomUUID(), name, signature: mapping.layout.signature, map };
+        await storeBanks([...banks.filter((b) => b !== ex && b.signature !== tpl.signature), tpl]);
+        pickBank(tpl.id);
+        setUsedBank(name);
+      } else setUsedBank(null);
       setLastFile({ text: mapping.text, layout: { ...mapping.layout, map } });
       setMapping(null);
       show(res);
@@ -101,13 +142,6 @@ export function ImportPage({ back }: { back: ReactNode }) {
 
   /** Ergebnis anzeigen: Prüfliste (Buchungen) oder erkannte Fixkosten */
   function show(res: ParseResult) {
-    if (mode === 'fix') {
-      const found = detectRecurring(res.candidates);
-      setFixes(found);
-      setSkipped(res.skippedLines);
-      if (found.length === 0) setErr('In der Datei wurden keine wiederkehrenden Zahlungen gefunden. Tipp: Eine Datei über mehrere Monate hilft beim Erkennen.');
-      return;
-    }
     const target = account === 'joint' ? data.jointTransactions : data.transactions;
     const other = account === 'joint' ? data.transactions : data.jointTransactions;
     const dups = findDuplicates(res.candidates, [...target, ...other.filter((t) => t.importId)]);
@@ -125,6 +159,11 @@ export function ImportPage({ back }: { back: ReactNode }) {
       return { c, dup: d.state, ...(d.match ? { match: d.match } : {}), ...(ret ? { ret } : {}), cat: sug?.categoryId ?? null, on: !locked && !ret && d.state === 'none' && c.kind === 'expense', locked };
     });
     setBlocks(assignBlocks(res.candidates));
+    // Fixkosten gleich miterkennen (nur eigenes Konto): eigener Reiter, Vorlagen für den Reiter Fixkosten
+    const fx = joint ? [] : detectRecurring(res.candidates).map((f) => makeFixRow(f, res.candidates, cats, data.recurring, rules)).filter((r) => r.keys.length > 0);
+    const taken = new Set<string>();
+    for (const r of fx) { r.keys = r.keys.filter((k) => !taken.has(k)); r.keys.forEach((k) => taken.add(k)); }
+    setFixes(fx.filter((r) => r.keys.length > 0));
     setRows(list);
     setSkipped(res.skippedLines);
     setTab('ausgaben');
@@ -132,12 +171,14 @@ export function ImportPage({ back }: { back: ReactNode }) {
     if (list.length === 0) setErr('In der Datei wurden keine Buchungen gefunden.');
   }
 
+  // Zeile → Fixkosten, zu der sie gehört
+  const fixOf = useMemo(() => { const m = new Map<string, FixRow>(); for (const f of fixes) for (const k of f.keys) m.set(k, f); return m; }, [fixes]);
   const groups = useMemo(() => {
     if (!rows) return [];
     const m = new Map<string, Row[]>();
     const titles = new Map<string, string>();
     for (const r of rows) {
-      if (tabOf(r) !== tab) continue;
+      if (tabOf(r, fixOf.get(r.c.key)?.f.key) !== tab) continue;
       const b = r.ret ? { key: 'block:retouren', title: 'Retouren' } : blocks.get(r.c.key);
       const k = b?.key ?? `${r.c.kind}|${r.c.payeeKey}`;
       if (b) titles.set(k, b.title);
@@ -150,43 +191,69 @@ export function ImportPage({ back }: { back: ReactNode }) {
     }));
     // Gruppen ohne Kategorie zuerst, dann die häufigsten
     return out.sort((a, b) => Number(b.block) - Number(a.block) || Number(b.missing) - Number(a.missing) || b.rows.length - a.rows.length || a.title.localeCompare(b.title));
-  }, [rows, tab, blocks]);
+  }, [rows, tab, blocks, fixOf]);
 
   const counts = useMemo(() => {
-    const n: Record<Tab, number> = { ausgaben: 0, erfasst: 0, weitere: 0 };
-    for (const r of rows ?? []) n[tabOf(r)]++;
+    const n: Record<Tab, number> = { ausgaben: 0, fix: fixes.length, erfasst: 0, weitere: 0 };
+    for (const r of rows ?? []) { const t = tabOf(r, fixOf.get(r.c.key)?.f.key); if (t !== 'fix') n[t]++; }
     return n;
-  }, [rows]);
+  }, [rows, fixes.length, fixOf]);
+  // Kategorie einer Zeile: bei Fixkosten die der Fixkosten
+  const catOf = (r: Row) => fixOf.get(r.c.key)?.cat || r.cat;
   const chosen = (rows ?? []).filter((r) => r.on);
-  const missing = chosen.filter((r) => !r.cat).length;
+  const missing = chosen.filter((r) => !catOf(r)).length;
+  const newFix = fixes.filter((f) => f.on && !f.same && f.cat).length;
+  const booked = fixes.map((f) => f.keys.filter((k) => rows?.find((r) => r.c.key === k)?.on).length);
   const sum = chosen.reduce((a, r) => a + (r.c.kind === 'credit' ? -r.c.amountCents : r.c.amountCents), 0);
 
   const update = (keys: string[], fn: (r: Row) => Row) => setRows((rs) => rs && rs.map((r) => (keys.includes(r.c.key) ? fn(r) : r)));
   const toggleOpen = (k: string) => setOpen((s) => { const n = new Set(s); if (n.has(k)) n.delete(k); else n.add(k); return n; });
 
+  /** Zeilen von Hand als Fixkosten markieren (eine Zahlung je Händler) */
+  function markFix(keys: string[]) {
+    if (!rows) return;
+    const list = rows.filter((r) => keys.includes(r.c.key) && r.c.kind === 'expense' && !r.ret);
+    if (list.length === 0) return;
+    const byPayee = new Map<string, Candidate[]>();
+    for (const r of list) byPayee.set(r.c.payeeKey, [...(byPayee.get(r.c.payeeKey) ?? []), r.c]);
+    const pool = new Set(fixPool(cats).map((c) => c.id));
+    const add = [...byPayee.values()].map((cs) => {
+      const cur = rows.find((r) => r.c.key === cs[0]!.key)?.cat;
+      return { ...makeFixRow(fixFromCandidates(cs), cs, cats, data.recurring, data.settings.importRules ?? {}, cs.map((c) => c.key), cur && pool.has(cur) ? cur : undefined), manual: true };
+    });
+    const moved = new Set(add.flatMap((a) => a.keys));
+    setFixes((fs) => [...fs.map((f) => ({ ...f, keys: f.keys.filter((k) => !moved.has(k)) })).filter((f) => f.keys.length > 0), ...add.filter((a) => !fs.some((f) => f.f.key === a.f.key))]);
+    flash(add.length === 1 ? `„${add[0]!.f.name}“ zu Fixkosten verschoben` : `${add.length} Händler zu Fixkosten verschoben`, 'ok');
+  }
+
   async function commit() {
-    if (!rows || chosen.length === 0 || missing > 0) return;
+    if (!rows || (chosen.length === 0 && newFix === 0) || missing > 0) return;
     const items: ImportItem[] = chosen.map((r) => ({
-      date: r.c.date, type: r.c.kind === 'credit' ? 'income' : 'expense', amountCents: r.c.amountCents, categoryId: r.cat as string,
+      date: r.c.date, type: r.c.kind === 'credit' ? 'income' : 'expense', amountCents: r.c.amountCents, categoryId: catOf(r) as string,
       description: r.c.payee.slice(0, 120), importId: r.c.key, ...(account === 'joint' ? { account: 'joint' as const } : {})
     }));
     // Zuordnung merken: je Empfänger, wenn alle übernommenen Zeilen dieselbe Kategorie haben
     const rules: Record<string, string> = {};
     const byPayee = new Map<string, Set<string>>();
-    for (const r of chosen) if (r.c.payeeKey) byPayee.set(r.c.payeeKey, (byPayee.get(r.c.payeeKey) ?? new Set()).add(r.cat as string));
+    for (const r of chosen) if (r.c.payeeKey) byPayee.set(r.c.payeeKey, (byPayee.get(r.c.payeeKey) ?? new Set()).add(catOf(r) as string));
     // Zahlungsdienste (PayPal, Klarna) bündeln verschiedene Händler – dafür nichts merken
     for (const [k, s] of byPayee) if (s.size === 1 && !/^(paypal|klarna)/.test(k)) rules[(account === 'joint' ? 'j:' : '') + k] = [...s][0] as string;
     setBusy(true);
-    const ids = await run(async (d) => {
-      const res = await importTransactions(d, items, rules);
-      await setMeta(d, 'lastImport', { ids: res, at: new Date().toISOString(), count: res.length } satisfies LastImport);
-      return res;
+    const out = await run(async (d) => {
+      const res = items.length ? await importTransactions(d, items, rules) : [];
+      if (res.length) await setMeta(d, 'lastImport', { ids: res, at: new Date().toISOString(), count: res.length } satisfies LastImport);
+      // Danach die Vorlagen: sie übernehmen die eben importierten Buchungen ihres Monats, statt doppelt zu buchen
+      const nf = await saveFixRows(d, fixes);
+      return { ids: res, nf };
     });
     setBusy(false);
-    if (!ids) return;
+    if (!out) return;
+    const { ids, nf } = out;
     setRows(null);
-    setLast({ ids, at: new Date().toISOString(), count: ids.length });
-    flash(`${ids.length} Buchung${ids.length === 1 ? '' : 'en'} übernommen`, 'ok', { label: 'Rückgängig', run: () => void undo(ids) });
+    setFixes([]);
+    if (ids.length) setLast({ ids, at: new Date().toISOString(), count: ids.length });
+    const txt = [ids.length ? `${ids.length} Buchung${ids.length === 1 ? '' : 'en'}` : '', nf ? `${nf} Fixkosten` : ''].filter(Boolean).join(' und ');
+    flash(`${txt} übernommen`, 'ok', ids.length ? { label: 'Rückgängig', run: () => void undo(ids) } : undefined);
   }
 
   async function undo(ids: string[]) {
@@ -196,12 +263,8 @@ export function ImportPage({ back }: { back: ReactNode }) {
 
   /* ───── Spalten zuordnen (unbekannter Aufbau) ───── */
   if (mapping) {
-    return <ColumnMapper layout={mapping.layout} text={mapping.text} fileName={fileName} err={err} onApply={(m, r) => void applyMapping(m, r)} onCancel={() => { setMapping(null); setErr(''); }} />;
-  }
-
-  /* ───── Fixkosten erkannt ───── */
-  if (fixes && fixes.length > 0) {
-    return <FixImport found={fixes} fileName={fileName} onDone={() => setFixes(null)} onRemap={lastFile ? () => { setFixes(null); setMapping({ layout: lastFile.layout, text: lastFile.text }); } : undefined} />;
+    return <ColumnMapper layout={mapping.layout} text={mapping.text} fileName={fileName} err={err} bank={mapping.bank ?? banks.find((b) => b.id === bankId)?.name ?? ''} banks={banks.map((b) => b.name)}
+      onApply={(m, name) => void applyMapping(m, name)} onCancel={() => { setMapping(null); setErr(''); }} />;
   }
 
   /* ───── Schritt 1: Datei wählen ───── */
@@ -211,12 +274,20 @@ export function ImportPage({ back }: { back: ReactNode }) {
         {back}
         <Header title="CSV-Import" />
         <p className="note">Lies einen Kontoauszug als CSV ein, von jeder Bank. Kennt die App den Aufbau noch nicht, ordnest du die Spalten einmal zu. Gespeichert wird erst bei „Übernehmen“. Die Datei bleibt auf dem Gerät.</p>
-        <div className="catseg imode" role="tablist" aria-label="Was soll die Datei füllen?">
-          <button role="tab" aria-selected={mode === 'tx'} className={mode === 'tx' ? 'on' : ''} style={{ ['--c' as string]: 'var(--all)' }} onClick={() => { setMode('tx'); setErr(''); }}>Buchungen</button>
-          <button role="tab" aria-selected={mode === 'fix'} className={mode === 'fix' ? 'on' : ''} style={{ ['--c' as string]: 'var(--fix)' }} onClick={() => { setMode('fix'); setAccount('own'); setErr(''); }}>Fixkosten erkennen</button>
+        <div className="card flush">
+          <label className="field bankpick">
+            <span>Bank</span>
+            <select value={bankId} onChange={(e) => pickBank(e.target.value)} aria-label="Bank">
+              <option value="">Automatisch erkennen</option>
+              {banks.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+            </select>
+          </label>
+          {banks.length > 0 && <button className="linkbtn padl" aria-expanded={manage} onClick={() => setManage(!manage)}>{manage ? 'Fertig' : `Bankvorlagen verwalten (${banks.length})`}</button>}
+          {manage && banks.map((b) => (
+            <div className="kv bankrow" key={b.id}><span>{b.name}</span><button className="linkbtn danger" onClick={() => void removeBank(b.id)} aria-label={`Bankvorlage ${b.name} löschen`}>Löschen</button></div>
+          ))}
         </div>
-        {mode === 'fix' && <p className="note">Für den Auszug deines Fixkosten-Kontos: Die App sucht wiederkehrende Zahlungen (Miete, Versicherungen, Abos …) und schlägt sie für den Reiter Fixkosten vor – einmal anlegen statt jeden Monat buchen. Einzelne Buchungen werden dabei nicht importiert.</p>}
-        {joint && mode === 'tx' && (
+        {joint && (
           <div className="seg" role="tablist" aria-label="Zielkonto">
             <button role="tab" aria-selected={account === 'own'} className={account === 'own' ? 'on' : ''} onClick={() => setAccount('own')}>Mein Konto</button>
             <button role="tab" aria-selected={account === 'joint'} className={account === 'joint' ? 'on' : ''} onClick={() => setAccount('joint')}>{joint.name}</button>
@@ -234,6 +305,8 @@ export function ImportPage({ back }: { back: ReactNode }) {
             <li><b>Ähnlich</b> (bis 3 Tage daneben): abgewählt, zum Prüfen</li>
             <li><b>Aufrundungen, Umbuchungen, Gutschriften</b>: ausgeblendet, einzeln wählbar</li>
             <li><b>Gleicher Händler</b>: gebündelt, eine Kategorie für alle, wird für das nächste Mal gemerkt</li>
+            <li><b>Fixkosten</b> (Miete, Versicherungen, Abos …): werden erkannt und als Vorlage für den Reiter Fixkosten angeboten; was fehlt, markierst du selbst</li>
+            <li><b>Neue Bank</b>: Spalten einmal zuordnen und als Bankvorlage speichern</li>
           </ul>
         </div>
         {last && last.count > 0 && (
@@ -247,23 +320,28 @@ export function ImportPage({ back }: { back: ReactNode }) {
   }
 
   /* ───── Schritt 2: prüfen und zuordnen ───── */
-  const tabs: [Tab, string][] = [['ausgaben', 'Ausgaben'], ['erfasst', 'Schon da'], ['weitere', 'Weitere']];
+  const tabs: [Tab, string][] = account === 'joint' ? [['ausgaben', 'Ausgaben'], ['erfasst', 'Schon da'], ['weitere', 'Weitere']] : [['ausgaben', 'Ausgaben'], ['fix', 'Fixkosten'], ['erfasst', 'Schon da'], ['weitere', 'Weitere']];
   return (
     <>
       <button className="back" onClick={() => setRows(null)}><Icon name="left" size={16} w={2.2} />Abbrechen</button>
-      <Header kicker={fileName} title="Prüfen & zuordnen" />
+      <Header kicker={usedBank ? `${fileName} · ${usedBank}` : fileName} title="Prüfen & zuordnen" />
       {lastFile && <button className="linkbtn" onClick={() => { setRows(null); setMapping({ layout: lastFile.layout, text: lastFile.text }); }}>Spalten falsch erkannt? Zuordnung ändern</button>}
       <div className="seg" role="tablist" aria-label="Ansicht">
-        {tabs.map(([t, l]) => <button key={t} role="tab" aria-selected={tab === t} className={tab === t ? 'on' : ''} onClick={() => setTab(t)}>{l} {counts[t]}</button>)}
+        {tabs.map(([t, l]) => <button key={t} role="tab" aria-selected={tab === t} className={(tab === t ? 'on' : '') + (t === 'fix' ? ' tfix' : '')} onClick={() => setTab(t)}>{l} {counts[t]}</button>)}
       </div>
       <p className="note">
         {tab === 'ausgaben' && 'Tippe auf die Kategorie, um sie für den ganzen Block festzulegen (gleichartige Händler wie Supermärkte, Tankstellen oder Restaurants sind zusammengefasst). Tippe auf den Namen, um die Buchungen zu sehen, und auf eine Buchung für alle Details.'}
+        {tab === 'fix' && (fixes.length ? 'Wiederkehrende Zahlungen aus der Datei. Angehakte kommen einmalig als Vorlage in den Reiter Fixkosten – ab dann bucht die App sie jeden Monat selbst. Ihre Buchungen aus der Datei werden mit übernommen und der Vorlage zugeordnet. Fehlt etwas, markiere es unter „Ausgaben“ mit „Fixkosten“.' : 'Keine wiederkehrenden Zahlungen erkannt. Markiere Fixkosten unter „Ausgaben“ mit „Fixkosten“. Tipp: Eine Datei über mehrere Monate hilft beim Erkennen.')}
         {tab === 'erfasst' && 'Diese Ausgaben gibt es in der App wahrscheinlich schon (gleicher Betrag, gleiches oder nahes Datum). Sie sind abgewählt; bei Bedarf einzeln anhaken.'}
         {tab === 'weitere' && 'Retouren (Ausgabe und gleich hohe Gutschrift), Aufrundungen, Umbuchungen und Gutschriften werden normalerweise nicht übernommen. Gutschriften lassen sich als Einnahme, Aufrundungen als Sparen übernehmen.'}
         {skipped > 0 && ` ${skipped} Zeile${skipped === 1 ? '' : 'n'} konnte${skipped === 1 ? '' : 'n'} nicht gelesen werden.`}
       </p>
-      {groups.length === 0 && <div className="empty">Nichts in dieser Ansicht.</div>}
-      {groups.map((g) => {
+      {tab === 'fix' && fixes.length > 0 && (
+        <FixList rows={fixes} cats={cats} booked={booked} onChange={(i, p) => setFixes((fs) => fs.map((f, k) => (k === i ? { ...f, ...p } : f)))}
+          onUnmark={(i) => setFixes((fs) => fs.filter((_, k) => k !== i))} />
+      )}
+      {tab !== 'fix' && groups.length === 0 && <div className="empty">Nichts in dieser Ansicht.</div>}
+      {tab !== 'fix' && groups.map((g) => {
         const first = g.rows[0]!;
         const kind = first.c.kind === 'credit' ? 'income' : 'expense';
         const free = g.rows.filter((r) => !r.locked);
@@ -290,13 +368,16 @@ export function ImportPage({ back }: { back: ReactNode }) {
                 <span className="impamt">{isRet ? formatEUR(g.rows.filter((r) => r.c.kind === 'credit').reduce((a, r) => a + r.c.amountCents, 0)) : `${first.c.kind === 'credit' ? '+' : ''}${formatEUR(gsum)}`}{multi && <span className="impchev" aria-hidden="true"><Icon name={isOpen ? 'up' : 'down'} size={16} w={2.2} /></span>}</span>
               </button>
             </div>
-            {canCat && (
+            {canCat && <div className="catline">
               <button className={'catpick' + (someOn && gcat === null ? ' need' : '')} onClick={() => setPicker({ title: g.title, keys: g.rows.filter((r) => !r.locked).map((r) => r.c.key), group: g.block ? g.k : first.c.payeeKey, kind })} disabled={free.length === 0}>
                 <Icon name="tag" size={16} />
                 <span>{gcat === 'mixed' ? 'Verschiedene Kategorien' : gcat ? categoryName(cats, gcat) : 'Kategorie wählen'}</span>
                 {gcat && gcat !== 'mixed' && g.rows.every((r) => (data.settings.importRules ?? {})[(account === 'joint' ? 'j:' : '') + r.c.payeeKey] === gcat) && <span className="tag">gemerkt</span>}
               </button>
-            )}
+              {account === 'own' && kind === 'expense' && tab === 'ausgaben' && (
+                <button className="fixmark" aria-label={`${g.title} als Fixkosten markieren`} onClick={() => markFix(g.rows.map((r) => r.c.key))}><Icon name="cal" size={15} w={2.2} />Fixkosten</button>
+              )}
+            </div>}
             {isRet && <div className="impnote">Ausgabe und Gutschrift mit gleichem Betrag beim selben Händler, z. B. eine Rücksendung. Beide sind abgewählt und zählen damit nicht in deine Ausgaben.</div>}
             {first.c.kind === 'transfer' && <div className="impnote">Umbuchung zwischen eigenen Konten – wird nicht importiert.</div>}
             {!multi && first.dup === 'imported' && <div className="impnote">Schon importiert</div>}
@@ -323,15 +404,15 @@ export function ImportPage({ back }: { back: ReactNode }) {
       })}
       <div style={{ height: 90 }} />
       <div className="selbar" role="region" aria-label="Übernehmen">
-        <span>{chosen.length} ausgewählt · {formatEUR(Math.abs(sum))}{missing > 0 && <><br /><small className="needtxt">{missing} ohne Kategorie</small></>}</span>
-        <button className="btn" disabled={busy || chosen.length === 0 || missing > 0} onClick={() => void commit()}>Übernehmen</button>
+        <span>{chosen.length} ausgewählt · {formatEUR(Math.abs(sum))}{newFix > 0 && <><br /><small className="fixtxt">+ {newFix} Fixkosten-Vorlage{newFix === 1 ? '' : 'n'}</small></>}{missing > 0 && <><br /><small className="needtxt">{missing} ohne Kategorie</small></>}</span>
+        <button className="btn" disabled={busy || (chosen.length === 0 && newFix === 0) || missing > 0} onClick={() => void commit()}>Übernehmen</button>
       </div>
       {detail && rows.find((r) => r.c.key === detail) && (() => {
         const r = rows.find((x) => x.c.key === detail)!;
         const kind = r.c.kind === 'credit' ? 'income' : 'expense';
         const canCat = r.c.kind !== 'transfer' && !r.locked && !(account === 'joint' && kind === 'income');
         return (
-          <DetailSheet r={r} cats={cats} block={r.ret ? 'Retouren' : blocks.get(r.c.key)?.title} partner={r.ret ? rows.find((x) => x.c.key === r.ret)?.c : undefined} onClose={() => setDetail(null)}
+          <DetailSheet r={r} cats={cats} fix={fixOf.get(r.c.key)?.f.name} onFix={account === 'own' && r.c.kind === 'expense' && !r.ret && !fixOf.has(r.c.key) ? () => { setDetail(null); markFix(rows.filter((x) => x.c.payeeKey === r.c.payeeKey && tabOf(x) === tabOf(r)).map((x) => x.c.key)); } : undefined} block={r.ret ? 'Retouren' : blocks.get(r.c.key)?.title} partner={r.ret ? rows.find((x) => x.c.key === r.ret)?.c : undefined} onClose={() => setDetail(null)}
             onToggle={r.locked ? undefined : () => update([r.c.key], (x) => ({ ...x, on: !x.on }))}
             onCategory={canCat ? () => { setDetail(null); setPicker({ title: `${r.c.payee} · ${short(r.c.date)}`, keys: [r.c.key], kind }); } : undefined} />
         );
@@ -355,7 +436,7 @@ function sortReturns(rs: Row[]): Row[] {
 const STATE_TEXT: Record<DupState, string> = { none: 'Neu', imported: 'Schon importiert', same: 'Schon erfasst', maybe: 'Ähnliche Buchung vorhanden' };
 
 /** Alle Angaben der Bank zu einer Zeile, dazu was die App damit vorhat */
-function DetailSheet({ r, cats, block, partner, onClose, onToggle, onCategory }: { r: Row; cats: Category[]; block?: string; partner?: Candidate; onClose: () => void; onToggle?: () => void; onCategory?: () => void }) {
+function DetailSheet({ r, cats, block, partner, fix, onClose, onToggle, onCategory, onFix }: { r: Row; cats: Category[]; block?: string; partner?: Candidate; fix?: string; onClose: () => void; onToggle?: () => void; onCategory?: () => void; onFix?: () => void }) {
   const c = r.c, raw = c.raw;
   const kv = (label: string, value: ReactNode) => <div className="kv dkv"><span>{label}</span><b>{value}</b></div>;
   return (
@@ -367,12 +448,14 @@ function DetailSheet({ r, cats, block, partner, onClose, onToggle, onCategory }:
         {r.match && kv('Vorhandene Buchung', `${formatDateDE(r.match.date)} · ${formatEUR(r.match.amountCents)} · ${categoryName(cats, r.match.categoryId)}${r.match.description ? ` · ${r.match.description}` : ''}`)}
         {kv('Kategorie', r.cat ? categoryName(cats, r.cat) : '–')}
         {block && kv('Block', block)}
+        {fix && kv('Fixkosten', fix)}
         {partner && kv(partner.kind === 'credit' ? 'Gutschrift dazu' : 'Ursprüngliche Ausgabe', `${formatDateDE(partner.date)} · ${formatEUR(partner.amountCents)} · ${partner.payee}`)}
         {kv('Bezeichnung', c.payee)}
         {kv('Datum', formatDateDE(c.date))}
-        {(onToggle || onCategory) && (
+        {(onToggle || onCategory || onFix) && (
           <div className="pad stack">
             {onCategory && <button className="btn sec2" onClick={onCategory}>Kategorie ändern</button>}
+            {onFix && <button className="btn sec2" onClick={onFix}>Als Fixkosten markieren</button>}
             {onToggle && <button className="btn sec2" onClick={onToggle}>{r.on ? 'Nicht übernehmen' : 'Übernehmen'}</button>}
           </div>
         )}

@@ -8,7 +8,7 @@ import { formatEUR, formatEUR0 } from '../domain/money';
 import type { Transaction } from '../domain/types';
 import type { TxPreset } from './TxSheet';
 import { effectiveGoals, sortGoals } from './Goals';
-import { AREA_COLOR, AREA_NAME, DonutRing, areaSlices, shade } from './Donut';
+import { AreaSheet } from './Donut';
 import type { DonutArea } from './Donut';
 
 /** „Heute, 18:42“ / „Gestern, 18:42“; älter: „Mi, 8.10.“; Vorjahr: „8.10.25“ – passt immer in die schmale Spalte. */
@@ -57,24 +57,15 @@ export function Overview({ onGoBookings, onGoBackup, onGoGroup, onGoJoint }: {
   const jst = joint ? budgetStatus(joint.spent, joint.avail) : null;
   const goal = sortGoals(effectiveGoals(data.settings.savingsGoals ?? [], data.transactions))[0];
   const [sel, setSel] = useState<Sel>(null);
-  // Zweiter Tipp auf den gewählten Abschnitt: Kategorie-Kreis dieses Bereichs; darin ein Tipp wählt eine Kategorie
+  // Zweiter Tipp auf den gewählten Abschnitt: Kategorie-Kreis dieses Bereichs als Pop-up
   const [drill, setDrill] = useState<DonutArea | null>(null);
-  const [dsel, setDsel] = useState<string | null>(null);
   const toggle = (k: Exclude<Sel, null>) => () => {
-    if (sel === k) { setDrill(k); setDsel(null); return; }
-    setSel(k); setDrill(null); setDsel(null);
+    if (sel === k) { setDrill(k); return; }
+    setSel(k); setDrill(null);
   };
   // Monatswechsel: Auswahl zurücksetzen
-  useEffect(() => { setSel(null); setDrill(null); setDsel(null); }, [month]);
-  const slices = useMemo(() => {
-    if (!drill) return [];
-    const src = drill === 'hh' ? data.jointTransactions.filter((t) => t.date >= from && t.date <= to) : txs;
-    return areaSlices(src, cats, drill);
-  }, [drill, txs, data.jointTransactions, cats, from, to]);
-  const dTotal = slices.reduce((a, x) => a + x.cents, 0);
-  const dPick = slices.find((x) => x.id === dsel);
-  const dIdx = slices.findIndex((x) => x.id === dsel);
-  const dColor = drill ? AREA_COLOR[drill] : '';
+  useEffect(() => { setSel(null); setDrill(null); }, [month]);
+  const drillTxs = useMemo(() => (drill === 'hh' ? data.jointTransactions.filter((t) => t.date >= from && t.date <= to) : txs), [drill, txs, data.jointTransactions, from, to]);
 
   const base = av.incomeCents;
   const pct = (c: number) => (base > 0 ? `${Math.round((c / base) * 100)} %` : '–');
@@ -117,10 +108,9 @@ export function Overview({ onGoBookings, onGoBackup, onGoGroup, onGoJoint }: {
         </button>
       )}
 
-      <div className={'hero ovring' + (drill ? ' drilled' : '')}>
+      <div className="hero ovring">
         <svg className="ovsvg" viewBox="0 0 320 320" role="img"
           aria-label={`Fixkosten ${formatEUR(groups.fix)}, Alltag ${formatEUR(groups.alltag)}, Sparen ${formatEUR(groups.spar)} von ${formatEUR(base)} ${av.expected ? 'erwartetem Gehalt' : 'Einnahmen'}${joint ? `; ${joint.name}: ${formatEUR(joint.spent)} von ${formatEUR(joint.avail)}` : ''}`}>
-          {drill ? <g className="ovdrill" key={drill}><DonutRing slices={slices} color={dColor} total={dTotal} selected={dsel} onSelect={(id) => setDsel((d) => (d === id ? null : id))} /></g> : <>
           <circle cx="160" cy="160" r={R} fill="none" style={{ stroke: 'var(--ring-track)' }} strokeWidth="34" />
           {segs.map((sg) => sg.len > 0.5 && (
             <circle key={sg.k} className={'ovseg' + dim(sg.k)} cx="160" cy="160" r={R} fill="none" style={{ stroke: sg.color }}
@@ -130,7 +120,7 @@ export function Overview({ onGoBookings, onGoBackup, onGoGroup, onGoJoint }: {
           {joint && <>
             <circle cx="160" cy="160" r={r2} fill="none" style={{ stroke: 'var(--ring-track)' }} strokeWidth="8" />
             {(vals[3] ?? 0) > 1 && <circle className={'ovseg' + dim('hh')} cx="160" cy="160" r={r2} fill="none" style={{ stroke: jst?.over ? 'var(--neg)' : 'var(--hh)' }}
-              strokeWidth={!drill && sel === 'hh' ? 12 : 8} strokeLinecap="round" strokeDasharray={`${((vals[3] ?? 0) / 1000) * C2} ${C2}`} transform="rotate(-90 160 160)" onClick={toggle('hh')} />}
+              strokeWidth={sel === 'hh' ? 12 : 8} strokeLinecap="round" strokeDasharray={`${((vals[3] ?? 0) / 1000) * C2} ${C2}`} transform="rotate(-90 160 160)" onClick={toggle('hh')} />}
           </>}
           <g style={{ color: '#fff' }}>
             {segs.map((sg) => sg.len >= 30 && (
@@ -139,58 +129,45 @@ export function Overview({ onGoBookings, onGoBackup, onGoGroup, onGoJoint }: {
               </g>
             ))}
           </g>
-          </>}
         </svg>
 
         <div className="ovcenter">
-          <button className="ovreset" aria-label={dsel ? 'Zurück zum Kategorie-Kreis' : drill ? 'Zurück zum Bereich' : sel ? 'Zurück zur Gesamtansicht' : 'Noch verfügbar'}
-            onClick={() => { if (dsel) setDsel(null); else if (drill) setDrill(null); else setSel(null); }} />
-          {drill && (dPick ? <>
-            <span className="ovlabel" style={{ color: shade(dColor, dIdx, dPick.id) }}>{dPick.name}</span>
-            <span className="ovamt">{formatEUR0(dPick.cents)}</span>
-            <span className="ovsub">{dTotal > 0 ? Math.round((dPick.cents / dTotal) * 100) : 0} % von {AREA_NAME[drill] === 'Haushaltskonto' && joint ? joint.name : AREA_NAME[drill]}</span>
-            <span className="ovsub">{dPick.count === 1 ? '1 Buchung' : `${dPick.count} Buchungen`}</span>
-          </> : <>
-            <span className="ovlabel" style={{ color: dColor }}>{drill === 'hh' && joint ? joint.name : AREA_NAME[drill]}</span>
-            <span className="ovamt">{formatEUR0(dTotal)}</span>
-            <span className="ovsub">{slices.length === 0 ? 'keine Buchungen' : slices.length === 1 ? '1 Kategorie' : `${slices.length} Kategorien`}</span>
-            {drill === 'hh' ? open('Konto', onGoJoint, dColor) : drill === 'inc' ? open('Buchungen', onGoBookings, dColor) : open(AREA_NAME[drill], () => onGoGroup(drill), dColor)}
-          </>)}
-          {drill ? null : !sel && <>
+          <button className="ovreset" data-pop={sel ? '' : undefined} aria-label={sel ? 'Zurück zur Gesamtansicht' : 'Noch verfügbar'} onClick={() => setSel(null)} />
+          {!sel && <>
             <span className="ovlabel">Noch verfügbar</span>
             <span className="big" aria-live="polite"><Money cents={shown} /></span>
             <span className="ovfacts">von {formatEUR0(base)} {av.expected ? 'Gehalt (erwartet)' : 'Einnahmen'}</span>
             {perDay !== null && <span className="ovday">Heute frei {formatEUR0(perDay)}</span>}
           </>}
-          {!drill && sel === 'fix' && <>
+          {sel === 'fix' && <>
             <span className="ovlabel" style={{ color: 'var(--fix)' }}>Fixkosten</span>
             <span className="ovamt">{formatEUR0(groups.fix)}</span>
             <span className="ovsub">{pct(groups.fix)} vom {av.expected ? 'Gehalt' : 'Einkommen'}</span>
             <span className="ovsub">{fixCount === 1 ? '1 Buchung' : `${fixCount} Buchungen`}</span>
             {open('Fixkosten', () => onGoGroup('fix'), 'var(--fix)')}
           </>}
-          {!drill && sel === 'alltag' && <>
+          {sel === 'alltag' && <>
             <span className="ovlabel" style={{ color: 'var(--all)' }}>Alltag</span>
             <span className="ovamt">{formatEUR0(groups.alltag)}</span>
             <span className="ovsub">{pct(groups.alltag)} vom {av.expected ? 'Gehalt' : 'Einkommen'}</span>
             {elapsed > 0 && <span className="ovsub">Ø {formatEUR0(groups.alltag / elapsed)} pro Tag</span>}
             {open('Alltag', () => onGoGroup('alltag'), 'var(--all)')}
           </>}
-          {!drill && sel === 'spar' && <>
+          {sel === 'spar' && <>
             <span className="ovlabel" style={{ color: 'var(--spar)' }}>Sparen</span>
             <span className="ovamt">{formatEUR0(groups.spar)}</span>
             <span className="ovsub">diesen Monat gespart</span>
             {goal && <span className="ovsub">{goal.name}: {formatEUR0(goal.savedCents)} / {formatEUR0(goal.targetCents)}</span>}
             {open('Sparen', () => onGoGroup('spar'), 'var(--spar)')}
           </>}
-          {!drill && sel === 'hh' && joint && jst && <>
+          {sel === 'hh' && joint && jst && <>
             <span className="ovlabel" style={{ color: 'var(--hh)' }}>{joint.name}</span>
             <span className={'ovamt' + (jst.over ? ' neg' : '')}>{formatEUR0(Math.abs(jst.remainingCents))}</span>
             <span className="ovsub">{jst.over ? 'drüber' : 'übrig'} von {formatEUR0(joint.avail)}</span>
             <span className="ovsub">{formatEUR0(joint.spent)} ausgegeben</span>
             {open('Konto', onGoJoint, 'var(--hh)')}
           </>}
-          {!drill && sel === 'inc' && <>
+          {sel === 'inc' && <>
             <span className="ovlabel" style={{ color: 'var(--inc)' }}>{incLabel}</span>
             <span className="ovamt">{formatEUR0(base)}</span>
             <span className="ovsub">Ausgaben {formatEUR0(sum.expenseCents)}</span>
@@ -228,25 +205,17 @@ export function Overview({ onGoBookings, onGoBackup, onGoGroup, onGoJoint }: {
         </button>
       </div>
 
-      {drill && slices.length > 0 && (
-        <div className="ovlegend" role="list" aria-label={`Kategorien ${AREA_NAME[drill]}`}>
-          {slices.map((x, i) => (
-            <button key={x.id} role="listitem" className={'ovlrow' + (dsel === x.id ? ' on' : '') + (dsel && dsel !== x.id ? ' dim' : '')} onClick={() => setDsel((d) => (d === x.id ? null : x.id))}>
-              <i style={{ background: shade(dColor, i, x.id) }} />
-              <span className="ovlname">{x.name}</span>
-              <span className="ovlpct">{dTotal > 0 ? Math.round((x.cents / dTotal) * 100) : 0} %</span>
-              <b className="num">{formatEUR0(x.cents)}</b>
-            </button>
-          ))}
-        </div>
-      )}
-      {!drill && mb && (
+      {mb && (
         <div className="stack" style={{ gap: 6 }}>
           <div className="sp"><span className="cap">Monatsbudget</span><span className={'cap num ' + (mb.over ? 'neg' : '')}>{mb.over ? `${formatEUR(-mb.remainingCents)} drüber` : `${formatEUR(mb.remainingCents)} übrig`}</span></div>
           <Bar ratio={mb.ratio} color={barColor(mb.ratio, mb.over, 'var(--inc)')} />
         </div>
       )}
-      <p className="ovhint">{drill ? 'Kategorie antippen · Mitte antippen zum Zurückgehen' : sel ? 'Nochmal antippen für Kategorien · Mitte für die Gesamtansicht' : 'Tippe auf einen Bereich für Details'}</p>
+      <p className="ovhint">{sel ? 'Nochmal antippen für den Kategorie-Kreis · Mitte für die Gesamtansicht' : 'Tippe auf einen Bereich für Details'}</p>
+      {drill && (
+        <AreaSheet area={drill} label={drill === 'hh' && joint ? joint.name : undefined} txs={drillTxs} cats={cats} period={monthLabel(month)} onClose={() => setDrill(null)}
+          onOpen={drill === 'hh' ? onGoJoint : drill === 'inc' ? onGoBookings : () => onGoGroup(drill)} openLabel={drill === 'hh' ? 'Konto öffnen' : drill === 'inc' ? 'Buchungen öffnen' : undefined} />
+      )}
     </div>
   );
 }
