@@ -76,6 +76,7 @@ export function parseCsvText(text: string, sep: string): string[][] {
   return rows;
 }
 
+const formatAmount = (c: number) => `${(c / 100).toFixed(2).replace('.', ',')} €`;
 const norm = (s: string) => s.toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/ß/g, 'ss').replace(/[^a-z0-9]+/g, ' ').trim();
 
 /** „-34,99 €“, „1.234,56“, „-12.50“ → vorzeichenbehaftete Cent */
@@ -590,6 +591,8 @@ export function findReturns(cands: Candidate[]): Map<string, string> {
 export type FixInterval = 'monthly' | 'quarterly' | 'halfyearly' | 'yearly';
 export interface FixFound {
   key: string; name: string; payeeKey: string;
+  /** Zeilen der Datei, die zu dieser Zahlung gehören (falls bekannt) */
+  keys?: string[];
   /** zuletzt gezahlter Betrag */
   amountCents: number;
   interval: FixInterval;
@@ -611,9 +614,53 @@ const FIX_WORDS = /miete|dauerauftrag|versicherung|beitrag|abo\b|abonnement|rund
  * Wiederkehrende Ausgaben in einem Kontoauszug finden: gleicher Empfänger in mehreren Monaten
  * (Abstand ~1, 3, 6 oder 12 Monate). Einzelne Zahlungen nur, wenn der Text klar nach Vertrag aussieht (Miete, Versicherung, Abo …).
  */
+/**
+ * Zahlungen eines Händlers nach Betrag trennen (z. B. Haftpflicht 5,80 € und Reiseversicherung 12,40 € bei derselben
+ * Versicherung). Beträge innerhalb von 10 % (mind. 1 €) gehören zusammen.
+ */
+export function amountClusters(list: Candidate[]): Candidate[][] {
+  const out: Candidate[][] = [];
+  for (const c of [...list].sort((a, b) => a.amountCents - b.amountCents)) {
+    const last = out[out.length - 1];
+    const ref = last?.[last.length - 1];
+    if (last && ref && c.amountCents - ref.amountCents <= Math.max(100, ref.amountCents * 0.1)) last.push(c); else out.push([c]);
+  }
+  return out;
+}
+
+/** Unterscheidendes Wort aus dem Verwendungszweck (z. B. „Haftpflichtversicherung“), um Verträge desselben Händlers zu benennen. */
+export function contractLabel(cs: Candidate[], others: Candidate[] = []): string {
+  const words = (c: Candidate) => norm(`${c.raw.zweck} ${c.detail}`).split(' ').filter((w) => w.length >= 5 && !/\d/.test(w));
+  const otherWords = new Set(others.flatMap(words));
+  const cnt = new Map<string, number>();
+  for (const c of cs) for (const w of new Set(words(c))) if (!otherWords.has(w) && !norm(c.payee).includes(w)) cnt.set(w, (cnt.get(w) ?? 0) + 1);
+  const best = [...cnt.entries()].sort((a, b) => b[1] - a[1] || b[0].length - a[0].length)[0];
+  if (!best || best[1] < Math.ceil(cs.length / 2)) return '';
+  // Originalschreibweise aus dem Text holen
+  const src = `${cs[0]!.raw.zweck} ${cs[0]!.detail}`;
+  const m = src.split(/[^\p{L}\p{N}-]+/u).find((w) => norm(w) === best[0]);
+  return m ?? best[0];
+}
+
 export function detectRecurring(cands: Candidate[]): FixFound[] {
+  const byPayee = new Map<string, Candidate[]>();
+  for (const c of cands) if (c.kind === 'expense') byPayee.set(c.payeeKey, [...(byPayee.get(c.payeeKey) ?? []), c]);
+  // Mehrere Verträge beim selben Empfänger (Versicherung, Mobilfunk …): nach Betrag getrennt prüfen
   const groups = new Map<string, Candidate[]>();
-  for (const c of cands) if (c.kind === 'expense') groups.set(c.payeeKey, [...(groups.get(c.payeeKey) ?? []), c]);
+  const suffix = new Map<string, string>();
+  for (const [k, list] of byPayee) {
+    const cl = amountClusters(list);
+    const months = (cs: Candidate[]) => new Set(cs.map((c) => c.date.slice(0, 7))).size;
+    const split = cl.length >= 2 && cl.length <= 4 && FIX_WORDS.test(list.map((c) => `${c.payee} ${c.raw.zweck}`).join(' '))
+      && cl.every((cs) => months(cs) === cs.length);
+    if (!split) { groups.set(k, list); continue; }
+    cl.forEach((cs, i) => {
+      const key = `${k}#${cs[cs.length - 1]!.amountCents}`;
+      groups.set(key, cs);
+      const lab = contractLabel(cs, cl.filter((_, j) => j !== i).flat());
+      suffix.set(key, lab || formatAmount(cs[cs.length - 1]!.amountCents));
+    });
+  }
   const mIdx = (iso: string) => Number(iso.slice(0, 4)) * 12 + Number(iso.slice(5, 7)) - 1;
   const out: FixFound[] = [];
   for (const [k, list] of groups) {
@@ -647,7 +694,8 @@ export function detectRecurring(cands: Candidate[]): FixFound[] {
     const vals = [...byMonth.values()];
     const days = vals.map((c) => Number(c.date.slice(8, 10))).sort((a, b) => a - b);
     out.push({
-      key: k, name: lastC.payee, payeeKey: k, amountCents: lastC.amountCents, interval, count: months.length,
+      key: k, name: suffix.has(k) ? `${lastC.payee} · ${suffix.get(k)}` : lastC.payee, payeeKey: lastC.payeeKey, ...(suffix.has(k) ? { keys: list.map((c) => c.key) } : {}),
+      amountCents: lastC.amountCents, interval, count: months.length,
       first: (vals[0] as Candidate).date, last: lastC.date, day: Math.min(28, Math.max(1, days[Math.floor(days.length / 2)] ?? 1)),
       dueMonth: Number(lastC.date.slice(5, 7)), varies: vals.some((c) => c.amountCents !== lastC.amountCents),
       hint: `${lastC.raw.zweck} ${lastC.raw.type} ${lastC.bankCategory} ${lastC.bankSub}`.slice(0, 200)

@@ -245,3 +245,22 @@ test('CSV: Fixkosten-Häkchen nimmt die Buchungen mit – „Alle abwählen“ e
   await page.locator('.fixrow', { hasText: 'Hausverwaltung' }).getByRole('checkbox', { name: /übernehmen/ }).check();
   await expect(page.locator('.selbar')).toContainText('3 ausgewählt · 2.550,00 €');
 });
+
+test('CSV: zwei Verträge beim selben Händler nacheinander als Fixkosten – beide wandern, eigene Namen', async ({ page }) => {
+  await page.goto('/');
+  await openImport(page);
+  const rows = ['Buchungstag;Empfänger;Verwendungszweck;Betrag'];
+  for (const m of ['08', '09', '10']) rows.push(`03.${m}.2026;Muster Verlag;Tageszeitung 9;-5,80`, `03.${m}.2026;Muster Verlag;Kochmagazin 7;-12,40`);
+  rows.push('04.10.2026;Bioladen;Einkauf;-20,00');
+  await page.getByLabel('CSV-Datei').setInputFiles({ name: 'v.csv', mimeType: 'text/csv', buffer: Buffer.from(rows.join('\n')) });
+  for (let n = 0; n < 2; n++) {
+    await page.locator('.imp', { hasText: 'Muster Verlag' }).getByRole('button', { name: /Kategorie wählen/ }).click();
+    const pk = page.getByRole('dialog');
+    await pk.getByRole('tab', { name: 'Fixkosten' }).click();
+    await pk.getByRole('button', { name: 'Abos & Verträge', exact: true }).click();
+    await expect(pk).toHaveCount(0);
+  }
+  await expect(page.locator('.imp', { hasText: 'Muster Verlag' })).toHaveCount(0);
+  await page.getByRole('tab', { name: 'Fixkosten 2' }).click();
+  await expect(page.locator('.fixrow .fixname')).toHaveText(['Muster Verlag · Kochmagazin', 'Muster Verlag · Tageszeitung']);
+});

@@ -5,7 +5,7 @@ import { Icon } from './icons';
 import { toMessage, useStore } from '../state/store';
 import { addCategory, deleteCategory, getMeta, importTransactions, setMeta, undoImport } from '../db/repo';
 import type { ImportItem } from '../db/repo';
-import { MAX_IMPORT_BYTES, NeedsMapping, assignBlocks, decodeBytes, bookable, detectLayout, detectRecurring, findDuplicates, findReturns, parseStatement, suggestCategory } from '../import/csv';
+import { MAX_IMPORT_BYTES, NeedsMapping, amountClusters, assignBlocks, contractLabel, decodeBytes, bookable, detectLayout, detectRecurring, findDuplicates, findReturns, parseStatement, suggestCategory } from '../import/csv';
 import type { Block, Candidate, ColumnMap, DupState, FixFound, Layout, ParseResult } from '../import/csv';
 import { ColumnMapper } from './ColumnMapper';
 import { FixList, fixFromCandidates, fixPool, makeFixRow, saveFixRows, willSave, withMembers } from './FixImport';
@@ -274,16 +274,50 @@ export function ImportPage({ back }: { back: ReactNode }) {
     const byPayee = new Map<string, Candidate[]>();
     for (const r of list) byPayee.set(r.c.payeeKey, [...(byPayee.get(r.c.payeeKey) ?? []), r.c]);
     const pool = new Set(fixPool(cats).map((c) => c.id));
-    const add = [...byPayee.values()].map((cs) => {
-      const cur = rows.find((r) => r.c.key === cs[0]!.key)?.cat;
-      const f = fixFromCandidates(cs);
-      if (opt) f.interval = opt.interval;
-      const row = makeFixRow(f, cs, cats, data.recurring, data.settings.importRules ?? {}, cs.map((c) => c.key), catId ?? (cur && pool.has(cur) ? cur : undefined));
-      return { ...row, manual: true, ...(opt?.start ? { start: opt.start } : {}) };
-    });
+    // Je Händler und Betrag eine Vorlage: zwei Verträge bei derselben Versicherung werden zwei Fixkosten
+    const add: FixRow[] = [];
+    for (const cs of byPayee.values()) {
+      const cl = amountClusters(cs);
+      const allOfPayee = rows.filter((r) => r.c.kind === 'expense' && r.c.payeeKey === cs[0]!.payeeKey).map((r) => r.c);
+      for (const part of cl) {
+        const cur = rows.find((r) => r.c.key === part[0]!.key)?.cat;
+        const f = fixFromCandidates(part);
+        f.key = `m:${f.payeeKey}#${f.amountCents}`;
+        if (opt) f.interval = opt.interval;
+        // Gleicher Name schon in Fixkosten (z. B. HUK für das Auto) oder mehrere Verträge: Vertrag im Namen nennen
+        const sameName = data.recurring.some((r) => r.name.toLowerCase().includes(f.name.toLowerCase()) || f.name.toLowerCase().includes(r.name.toLowerCase()));
+        if (cl.length > 1 || sameName) {
+          const lab = contractLabel(part, allOfPayee.filter((c) => !part.includes(c)));
+          f.name = `${f.name} · ${lab || formatEUR(f.amountCents)}`;
+        }
+        const row = makeFixRow(f, part, cats, data.recurring, data.settings.importRules ?? {}, part.map((c) => c.key), catId ?? (cur && pool.has(cur) ? cur : undefined));
+        add.push({ ...row, manual: true, ...(opt?.start ? { start: opt.start } : {}) });
+      }
+    }
     const moved = new Set(add.flatMap((a) => a.keys));
-    setFixes((fs) => [...fs.map((f) => ({ ...f, keys: f.keys.filter((k) => !moved.has(k)) })).filter((f) => f.keys.length > 0), ...add.filter((a) => !fs.some((f) => f.f.key === a.f.key))]);
-    flash(add.length === 1 ? `„${add[0]!.f.name}“ wird als Fixkosten angelegt – siehe Reiter Fixkosten` : `${add.length} Händler werden als Fixkosten angelegt`, 'ok');
+    setFixes((fs) => {
+      const rest = fs.map((f) => ({ ...f, keys: f.keys.filter((k) => !moved.has(k)) })).filter((f) => f.keys.length > 0);
+      for (const a of add) {
+        const i = rest.findIndex((f) => f.f.key === a.f.key);
+        // Schon da (z. B. zweimal gewählt): zusammenführen statt verwerfen
+        if (i >= 0) { const all = new Set([...rest[i]!.keys, ...a.keys]); rest[i] = withMembers({ ...rest[i]!, cat: a.cat, on: true }, rows.filter((r) => all.has(r.c.key)).map((r) => r.c)); }
+        else rest.push(a);
+      }
+      // Gleich benannte Fixkosten (zwei Verträge, nacheinander gewählt): Vertrag im Namen nennen
+      const cOf = (f: FixRow) => rows.filter((r) => f.keys.includes(r.c.key)).map((r) => r.c);
+      const names = new Map<string, number[]>();
+      rest.forEach((f, i) => names.set(f.f.name, [...(names.get(f.f.name) ?? []), i]));
+      for (const idx of names.values()) {
+        if (idx.length < 2) continue;
+        for (const i of idx) {
+          const f = rest[i]!;
+          const lab = contractLabel(cOf(f), idx.filter((j) => j !== i).flatMap((j) => cOf(rest[j]!)));
+          rest[i] = { ...f, f: { ...f.f, name: `${f.f.name} · ${lab || formatEUR(f.f.amountCents)}` } };
+        }
+      }
+      return rest;
+    });
+    flash(add.length === 1 ? `„${add[0]!.f.name}“ wird als Fixkosten angelegt – siehe Reiter Fixkosten` : `${add.length} Fixkosten werden angelegt – siehe Reiter Fixkosten`, 'ok');
   }
 
   async function commit(toRest = false) {

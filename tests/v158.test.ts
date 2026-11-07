@@ -132,3 +132,39 @@ describe('Fixkosten: Zusatzkäufe beim selben Händler abwählen (v1.59.3)', () 
     expect(willSave({ ...r2, cat: 'x', on: false })).toBe(false);
   });
 });
+
+describe('Zwei Verträge beim selben Empfänger (v1.59.4)', () => {
+  const huk = () => parseStatement(['Buchungsdatum;Betrag;Zahlungsempfänger;Verwendungszweck',
+    ...['08', '09', '10'].flatMap((m) => [`03.${m}.2026;-5,80;HUK-COBURG;Haftpflichtversicherung 123`, `03.${m}.2026;-12,40;HUK-COBURG;Reiseversicherung 456`])].join('\n'));
+
+  it('erkennt Haftpflicht und Reiseversicherung als zwei Fixkosten mit eigenem Namen', async () => {
+    const res = await huk();
+    const found = detectRecurring(res.candidates);
+    expect(found.map((f) => [f.name, f.amountCents, f.keys?.length]).sort()).toEqual([
+      ['HUK-COBURG · Haftpflichtversicherung', 580, 3], ['HUK-COBURG · Reiseversicherung', 1240, 3]]);
+  });
+
+  it('eine vorhandene HUK-Vorlage fürs Auto gilt nicht als „schon vorhanden“ und wird nicht überschrieben', async () => {
+    const db = await freshDb();
+    await seedIfEmpty(db, currentMonthKey());
+    const d0 = await exportAll(db);
+    const fixCat = d0.categories.find((c) => c.name === 'Versicherungen')!;
+    const { saveRecurring } = await import('../src/db/repo');
+    await saveRecurring(db, null, { name: 'HUK-COBURG', type: 'expense', categoryId: fixCat.id, startMonth: '2026-01', day: 1, active: true, amountCents: 4500 }, currentMonthKey());
+    const d1 = await exportAll(db);
+    const res = await huk();
+    // nur die HUK-Vorlage betrachten (die Startdaten enthalten u. a. eine „Haftpflichtversicherung“)
+    const rows = detectRecurring(res.candidates).map((f) => makeFixRow(f, res.candidates, d1.categories, d1.recurring.filter((r) => r.name === 'HUK-COBURG'), {}));
+    expect(rows.every((r) => !r.old && r.on)).toBe(true);
+    expect(await saveFixRows(db, rows)).toBe(2);
+    const d2 = await exportAll(db);
+    expect(d2.recurring.find((r) => r.name === 'HUK-COBURG')?.amountCents).toBe(4500);
+    expect(d2.recurring.filter((r) => r.name.startsWith('HUK-COBURG'))).toHaveLength(3);
+  });
+
+  it('Bäcker mit wechselnden Beträgen wird nicht in „Verträge“ zerlegt', async () => {
+    const res = await parseStatement(['Buchungsdatum;Betrag;Zahlungsempfänger',
+      ...['08', '09', '10'].flatMap((m) => [`03.${m}.2026;-3,10;Bäckerei Huber`, `17.${m}.2026;-8,40;Bäckerei Huber`])].join('\n'));
+    expect(detectRecurring(res.candidates)).toEqual([]);
+  });
+});

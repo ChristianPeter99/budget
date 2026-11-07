@@ -16,12 +16,21 @@ const norm = (s: string) => s.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]
 export const templateCents = (f: FixFound) => f.amountCents * FACTOR[f.interval];
 export const storedCents = (r: Recurring) => (r.interval === 'yearly' ? r.yearlyCents ?? r.amountCents * 12 : r.amountCents);
 
-/** Gibt es die Fixkosten schon? Gleicher (oder enthaltener) Name, gleiche Art. */
+/**
+ * Gibt es die Fixkosten schon? Gleicher (oder enthaltener) Name UND ähnlicher Betrag – sonst wäre z. B. die
+ * Kfz-Versicherung bei der HUK „schon vorhanden“, obwohl es um die Haftpflicht geht. Bei mehreren: der nächste Betrag.
+ */
 export function findExisting(f: FixFound, list: Recurring[]): Recurring | undefined {
-  const n = norm(f.name);
+  const n = norm(f.name), base = norm(f.name.split(' · ')[0] ?? '');
   if (!n) return undefined;
-  return list.find((r) => r.type === 'expense' && norm(r.name) === n)
-    ?? list.find((r) => { const m = norm(r.name); return r.type === 'expense' && m.length >= 4 && n.length >= 4 && (m.includes(n) || n.includes(m)); });
+  const t = templateCents(f);
+  const named = list.filter((r) => {
+    if (r.type !== 'expense') return false;
+    const m = norm(r.name);
+    return m === n || (m.length >= 4 && n.length >= 4 && (m.includes(n) || n.includes(m))) || (base.length >= 4 && m.includes(base));
+  });
+  const near = named.filter((r) => Math.abs(storedCents(r) - t) <= Math.max(500, t * 0.25));
+  return near.sort((a, b) => Math.abs(storedCents(a) - t) - Math.abs(storedCents(b) - t))[0];
 }
 
 /** Eine erkannte (oder von Hand markierte) Fixkosten-Zahlung in der Prüfliste */
@@ -57,7 +66,7 @@ export function makeFixRow(f: FixFound, cands: Candidate[], cats: Category[], re
   const same = !!old && storedCents(old) === templateCents(f);
   const pool = fixPool(cats);
   const c = cat ?? old?.categoryId ?? guessFixCategory(f, cats, rules) ?? pool[0]?.id ?? '';
-  return { f, on: true, cat: c, old, same, keys: keys ?? memberKeys(f, cands) };
+  return { f, on: true, cat: c, old, same, keys: keys ?? f.keys ?? memberKeys(f, cands) };
 }
 
 /** Von Hand markiert: aus den Zeilen eines Händlers eine Fixkosten-Zahlung bauen. */
