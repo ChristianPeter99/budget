@@ -374,7 +374,7 @@ export function ImportPage({ back }: { back: ReactNode }) {
       </div>
       <p className="note">
         {tab === 'ausgaben' && 'Höchste Beträge zuerst. Gleichartige Händler (Supermärkte, Cafés, Bäckereien, Drogerien, Lieferdienste …) sind gebündelt – eine Kategorie gilt für den ganzen Block und wird gemerkt. Was ohne Kategorie bleibt, kann beim Übernehmen nach „Sonstiges“.'}
-        {tab === 'fix' && (fixes.length ? 'Wiederkehrende Zahlungen aus der Datei. Angehakte kommen einmalig als Vorlage in den Reiter Fixkosten – ab dann bucht die App sie jeden Monat selbst. Ihre Buchungen aus der Datei werden mit übernommen und der Vorlage zugeordnet. Fehlt etwas, markiere es unter „Ausgaben“ mit „Fixkosten“.' : 'Keine wiederkehrenden Zahlungen erkannt. Markiere Fixkosten unter „Ausgaben“ mit „Fixkosten“. Tipp: Eine Datei über mehrere Monate hilft beim Erkennen.')}
+        {tab === 'fix' && (fixes.length ? 'Wiederkehrende Zahlungen aus der Datei. Angehakte kommen einmalig als Vorlage in den Reiter Fixkosten – ab dann bucht die App sie jeden Monat selbst. Ihre Buchungen aus der Datei werden mit übernommen und der Vorlage zugeordnet. Fehlt etwas: unter „Ausgaben“ auf „Kategorie wählen“ tippen › „Als Fixkosten erkennen“.' : 'Keine wiederkehrenden Zahlungen erkannt. Fixkosten markierst du unter „Ausgaben“ über „Kategorie wählen“ › „Als Fixkosten erkennen“. Tipp: Eine Datei über mehrere Monate hilft beim Erkennen.')}
         {tab === 'erfasst' && 'Diese Ausgaben gibt es in der App wahrscheinlich schon (gleicher Betrag, gleiches oder nahes Datum). Sie sind abgewählt; bei Bedarf einzeln anhaken.'}
         {tab === 'weitere' && 'Retouren (Ausgabe und gleich hohe Gutschrift), Aufrundungen, Umbuchungen und Gutschriften werden normalerweise nicht übernommen. Gutschriften lassen sich als Einnahme, Aufrundungen als Sparen übernehmen.'}
         {skipped > 0 && ` ${skipped} Zeile${skipped === 1 ? '' : 'n'} konnte${skipped === 1 ? '' : 'n'} nicht gelesen werden.`}
@@ -411,16 +411,13 @@ export function ImportPage({ back }: { back: ReactNode }) {
                 <span className="impamt">{isRet ? formatEUR(g.rows.filter((r) => r.c.kind === 'credit').reduce((a, r) => a + r.c.amountCents, 0)) : `${first.c.kind === 'credit' ? '+' : ''}${formatEUR(gsum)}`}{multi && <span className="impchev" aria-hidden="true"><Icon name={isOpen ? 'up' : 'down'} size={16} w={2.2} /></span>}</span>
               </button>
             </div>
-            {canCat && <div className="catline">
+            {canCat && (
               <button className={'catpick' + (someOn && gcat === null ? ' need' : '')} onClick={() => setPicker({ title: g.title, keys: g.rows.filter((r) => !r.locked).map((r) => r.c.key), group: g.block ? g.k : first.c.payeeKey, kind })} disabled={free.length === 0}>
                 <Icon name="tag" size={16} />
                 <span>{gcat === 'mixed' ? 'Verschiedene Kategorien' : gcat ? categoryName(cats, gcat) : 'Kategorie wählen'}</span>
                 {gcat && gcat !== 'mixed' && g.rows.every((r) => (data.settings.importRules ?? {})[(account === 'joint' ? 'j:' : '') + r.c.payeeKey] === gcat) && <span className="tag">gemerkt</span>}
               </button>
-              {account === 'own' && kind === 'expense' && tab === 'ausgaben' && (
-                <button className="fixmark" aria-label={`${g.title} als Fixkosten markieren`} onClick={() => markFix(g.rows.map((r) => r.c.key))}><Icon name="cal" size={15} w={2.2} />Fixkosten</button>
-              )}
-            </div>}
+            )}
             {isRet && <div className="impnote">Ausgabe und Gutschrift mit gleichem Betrag beim selben Händler, z. B. eine Rücksendung. Beide sind abgewählt und zählen damit nicht in deine Ausgaben.</div>}
             {first.c.kind === 'transfer' && <div className="impnote">Umbuchung zwischen eigenen Konten – wird nicht importiert.</div>}
             {!multi && first.dup === 'imported' && <div className="impnote">Schon importiert</div>}
@@ -482,6 +479,7 @@ export function ImportPage({ back }: { back: ReactNode }) {
       {picker && (
         <CategoryPicker title={picker.title} cats={cats} current={rows?.find((r) => picker.keys.includes(r.c.key))?.cat ?? null} household={account === 'joint' && picker.kind === 'expense'} kind={picker.kind} hint={picker.group && /^(paypal|klarna)/.test(picker.group) ? 'Gilt für alle angezeigten Buchungen. Bei Zahlungsdiensten wird nichts gemerkt, weil dahinter verschiedene Händler stecken.' : picker.group?.startsWith('block:') ? 'Gilt für alle Buchungen in diesem Block und wird je Händler für den nächsten Import gemerkt.' : picker.group ? 'Gilt für alle Buchungen dieses Händlers und wird für den nächsten Import gemerkt.' : 'Gilt nur für diese Buchung.'}
           onClose={() => setPicker(null)}
+          onFix={account === 'own' && picker.kind === 'expense' && tab === 'ausgaben' ? () => { const k = picker.keys; setPicker(null); markFix(k); } : undefined}
           onPick={(id) => { update(picker.keys, (r) => ({ ...r, cat: id, on: r.locked ? r.on : r.on || tab === 'weitere' || picker.keys.length === 1 })); setPicker(null); }} />
       )}
     </>
@@ -539,7 +537,7 @@ function DetailSheet({ r, cats, block, partner, fix, onClose, onToggle, onCatego
   );
 }
 
-function CategoryPicker({ title, cats: allCats, current, household, kind, hint, onPick, onClose }: { title: string; cats: Category[]; current: string | null; household: boolean; kind: 'expense' | 'income'; hint: string; onPick: (id: string) => void; onClose: () => void }) {
+function CategoryPicker({ title, cats: allCats, current, household, kind, hint, onPick, onClose, onFix }: { title: string; cats: Category[]; current: string | null; household: boolean; kind: 'expense' | 'income'; hint: string; onPick: (id: string) => void; onClose: () => void; onFix?: () => void }) {
   // Eigenes Konto, Ausgaben: Alltag und Fixkosten getrennt wählbar; Vorgabe ist der Bereich der bisherigen Kategorie
   const cur = current ? allCats.find((c) => c.id === current) : undefined;
   const [area, setArea] = useState<'alltag' | 'fix' | 'spar'>(() => { const a = cur ? catArea(cur) : 'alltag'; return a === 'fix' || a === 'spar' ? a : 'alltag'; });
@@ -579,6 +577,13 @@ function CategoryPicker({ title, cats: allCats, current, household, kind, hint, 
         <div className="fseg" role="tablist" aria-label="Bereich">
           {([['alltag', 'Alltag'], ['fix', 'Fixkosten'], ['spar', 'Sparen']] as const).map(([a, l]) => <button key={a} role="tab" aria-selected={area === a} className={area === a ? 'on' : ''} onClick={() => { setArea(a); setAdding(null); setNewTop(null); }}>{l}</button>)}
         </div>
+      )}
+      {onFix && (
+        <button className="fixoffer" onClick={onFix}>
+          <span className="fixoffer-ic"><Icon name="cal" size={18} w={2.2} /></span>
+          <span className="fixoffer-tx"><b>Als Fixkosten erkennen</b><span>Wiederkehrende Zahlung (Miete, Abo, Vertrag …) – wird im Reiter Fixkosten als Vorlage angelegt</span></span>
+          <Icon name="right" size={16} w={2.2} />
+        </button>
       )}
       <p className="note">{hint} Fehlt eine Unterkategorie, lege sie mit „+“ an; ganz unten kannst du eine neue Kategorie anlegen.</p>
       {tops.map((t) => {

@@ -110,7 +110,10 @@ test('CSV: ein Upload – Fixkosten im eigenen Reiter, von Hand markieren, beim 
   // Bioladen bleibt unter Ausgaben; als Fixkosten markieren und wieder zurück
   await expect(page.locator('.imp', { hasText: 'Bioladen' })).toHaveCount(1);
   await expect(page.locator('.imp', { hasText: 'Hausverwaltung' })).toHaveCount(0);
-  await page.getByRole('button', { name: 'Bioladen Sonnenschein als Fixkosten markieren' }).click();
+  // Kein Fixkosten-Knopf an jeder Karte; die Option steckt in „Kategorie wählen“
+  await expect(page.getByRole('button', { name: /als Fixkosten markieren/ })).toHaveCount(0);
+  await page.locator('.imp', { hasText: 'Bioladen' }).getByRole('button', { name: 'Kategorie wählen' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: /Als Fixkosten erkennen/ }).click();
   await expect(page.getByRole('tab', { name: 'Fixkosten 3' })).toBeVisible();
   await page.getByRole('tab', { name: 'Fixkosten 3' }).click();
   const rows = page.locator('.fixrow');
