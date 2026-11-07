@@ -3,7 +3,7 @@ import type { Candidate, FixFound } from '../import/csv';
 import { runRecurring, saveRecurring } from '../db/repo';
 import type { Db } from '../db/db';
 import type { Category, Recurring } from '../domain/types';
-import { currentMonthKey, formatDateDE } from '../domain/dates';
+import { currentMonthKey, formatDateDE, monthLabel } from '../domain/dates';
 import { formatEUR } from '../domain/money';
 import { Icon } from './icons';
 
@@ -35,6 +35,8 @@ export interface FixRow {
   /** Zeilen der Datei, die zu dieser Zahlung gehören (werden als Buchungen dieser Fixkosten übernommen) */
   keys: string[];
   manual?: boolean;
+  /** Beginn der Vorlage (Monat); sonst der Monat der letzten Zahlung */
+  start?: string;
 }
 
 /** Zeilen einer Zahlung: gleicher Empfänger, Ausgabe, Betrag nah an der erkannten Rate. */
@@ -78,7 +80,7 @@ export async function saveFixRows(db: Db, rows: FixRow[]): Promise<number> {
     const lastMonth = f.last.slice(0, 7);
     await saveRecurring(db, r.old?.id ?? null, {
       name: r.old?.name ?? f.name, type: 'expense', categoryId: r.cat,
-      startMonth: r.old ? r.old.startMonth : lastMonth > cur ? cur : lastMonth,
+      startMonth: r.old ? r.old.startMonth : r.start ?? (lastMonth > cur ? cur : lastMonth),
       day: Math.min(28, Math.max(1, r.old?.day ?? f.day)), active: r.old?.active ?? true,
       interval: f.interval === 'monthly' ? 'monthly' : 'yearly', amountCents: templateCents(f),
       dueMonth: f.interval === 'yearly' ? f.dueMonth : null, notice: r.old?.notice ?? null
@@ -109,7 +111,7 @@ export function FixList({ rows, cats, booked, onChange, onUnmark }: { rows: FixR
               <b className="num">{formatEUR(t)}{f.interval === 'monthly' ? '' : ' / Jahr'}</b>
             </label>
             <div className="fixmeta">
-              {IV_TEXT[f.interval]}{f.interval === 'quarterly' || f.interval === 'halfyearly' ? ` à ${formatEUR(f.amountCents)}` : ''} · {r.manual ? 'von dir markiert' : `${f.count}× gefunden`} · zuletzt {formatDateDE(f.last)}{f.varies ? ' · Betrag schwankt' : ''}
+              {IV_TEXT[f.interval]}{f.interval === 'quarterly' || f.interval === 'halfyearly' ? ` à ${formatEUR(f.amountCents)}` : ''} · {r.manual ? 'von dir markiert' : `${f.count}× gefunden`} · zuletzt {formatDateDE(f.last)}{f.varies ? ' · Betrag schwankt' : ''}{!r.old && r.on ? ` · Vorlage ab ${monthLabel(r.start ?? (f.last.slice(0, 7) > currentMonthKey() ? currentMonthKey() : f.last.slice(0, 7)))}` : ''}
             </div>
             {r.old && (r.same
               ? <div className="fixstate ok">Schon in Fixkosten</div>

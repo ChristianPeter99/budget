@@ -6,12 +6,12 @@ import { toMessage, useStore } from '../state/store';
 import { addCategory, deleteCategory, getMeta, importTransactions, setMeta, undoImport } from '../db/repo';
 import type { ImportItem } from '../db/repo';
 import { MAX_IMPORT_BYTES, NeedsMapping, assignBlocks, decodeBytes, bookable, detectLayout, detectRecurring, findDuplicates, findReturns, parseStatement, suggestCategory } from '../import/csv';
-import type { Block, Candidate, ColumnMap, DupState, Layout, ParseResult } from '../import/csv';
+import type { Block, Candidate, ColumnMap, DupState, FixFound, Layout, ParseResult } from '../import/csv';
 import { ColumnMapper } from './ColumnMapper';
 import { FixList, fixFromCandidates, fixPool, makeFixRow, saveFixRows } from './FixImport';
 import type { FixRow } from './FixImport';
 import { categoryName, topLevel } from '../domain/calc';
-import { formatDateDE } from '../domain/dates';
+import { currentMonthKey, formatDateDE, shiftMonth } from '../domain/dates';
 import { formatEUR } from '../domain/money';
 import type { Category, CatGroup, Transaction } from '../domain/types';
 import type { Db } from '../db/db';
@@ -235,7 +235,7 @@ export function ImportPage({ back }: { back: ReactNode }) {
   const toggleOpen = (k: string) => setOpen((s) => { const n = new Set(s); if (n.has(k)) n.delete(k); else n.add(k); return n; });
 
   /** Zeilen von Hand als Fixkosten markieren (eine Zahlung je Händler) */
-  function markFix(keys: string[]) {
+  function markFix(keys: string[], catId?: string, opt?: FixOpt) {
     if (!rows) return;
     const list = rows.filter((r) => keys.includes(r.c.key) && r.c.kind === 'expense' && !r.ret);
     if (list.length === 0) return;
@@ -244,11 +244,14 @@ export function ImportPage({ back }: { back: ReactNode }) {
     const pool = new Set(fixPool(cats).map((c) => c.id));
     const add = [...byPayee.values()].map((cs) => {
       const cur = rows.find((r) => r.c.key === cs[0]!.key)?.cat;
-      return { ...makeFixRow(fixFromCandidates(cs), cs, cats, data.recurring, data.settings.importRules ?? {}, cs.map((c) => c.key), cur && pool.has(cur) ? cur : undefined), manual: true };
+      const f = fixFromCandidates(cs);
+      if (opt) f.interval = opt.interval;
+      const row = makeFixRow(f, cs, cats, data.recurring, data.settings.importRules ?? {}, cs.map((c) => c.key), catId ?? (cur && pool.has(cur) ? cur : undefined));
+      return { ...row, manual: true, ...(opt?.start ? { start: opt.start } : {}) };
     });
     const moved = new Set(add.flatMap((a) => a.keys));
     setFixes((fs) => [...fs.map((f) => ({ ...f, keys: f.keys.filter((k) => !moved.has(k)) })).filter((f) => f.keys.length > 0), ...add.filter((a) => !fs.some((f) => f.f.key === a.f.key))]);
-    flash(add.length === 1 ? `„${add[0]!.f.name}“ zu Fixkosten verschoben` : `${add.length} Händler zu Fixkosten verschoben`, 'ok');
+    flash(add.length === 1 ? `„${add[0]!.f.name}“ wird als Fixkosten angelegt – siehe Reiter Fixkosten` : `${add.length} Händler werden als Fixkosten angelegt`, 'ok');
   }
 
   async function commit(toRest = false) {
@@ -374,7 +377,7 @@ export function ImportPage({ back }: { back: ReactNode }) {
       </div>
       <p className="note">
         {tab === 'ausgaben' && 'Höchste Beträge zuerst. Gleichartige Händler (Supermärkte, Cafés, Bäckereien, Drogerien, Lieferdienste …) sind gebündelt – eine Kategorie gilt für den ganzen Block und wird gemerkt. Was ohne Kategorie bleibt, kann beim Übernehmen nach „Sonstiges“.'}
-        {tab === 'fix' && (fixes.length ? 'Wiederkehrende Zahlungen aus der Datei. Angehakte kommen einmalig als Vorlage in den Reiter Fixkosten – ab dann bucht die App sie jeden Monat selbst. Ihre Buchungen aus der Datei werden mit übernommen und der Vorlage zugeordnet. Fehlt etwas: unter „Ausgaben“ auf „Kategorie wählen“ tippen › „Als Fixkosten erkennen“.' : 'Keine wiederkehrenden Zahlungen erkannt. Fixkosten markierst du unter „Ausgaben“ über „Kategorie wählen“ › „Als Fixkosten erkennen“. Tipp: Eine Datei über mehrere Monate hilft beim Erkennen.')}
+        {tab === 'fix' && (fixes.length ? 'Wiederkehrende Zahlungen aus der Datei. Angehakte kommen einmalig als Vorlage in den Reiter Fixkosten – ab dann bucht die App sie jeden Monat selbst. Ihre Buchungen aus der Datei werden mit übernommen und der Vorlage zugeordnet. Fehlt etwas: unter „Ausgaben“ bei „Kategorie wählen“ eine Fixkosten-Kategorie wählen.' : 'Keine wiederkehrenden Zahlungen erkannt. Wählst du unter „Ausgaben“ eine Fixkosten-Kategorie, wird daraus eine Vorlage. Tipp: Eine Datei über mehrere Monate hilft beim Erkennen.')}
         {tab === 'erfasst' && 'Diese Ausgaben gibt es in der App wahrscheinlich schon (gleicher Betrag, gleiches oder nahes Datum). Sie sind abgewählt; bei Bedarf einzeln anhaken.'}
         {tab === 'weitere' && 'Retouren (Ausgabe und gleich hohe Gutschrift), Aufrundungen, Umbuchungen und Gutschriften werden normalerweise nicht übernommen. Gutschriften lassen sich als Einnahme, Aufrundungen als Sparen übernehmen.'}
         {skipped > 0 && ` ${skipped} Zeile${skipped === 1 ? '' : 'n'} konnte${skipped === 1 ? '' : 'n'} nicht gelesen werden.`}
@@ -452,7 +455,7 @@ export function ImportPage({ back }: { back: ReactNode }) {
         const kind = r.c.kind === 'credit' ? 'income' : 'expense';
         const canCat = r.c.kind !== 'transfer' && !r.locked && !(account === 'joint' && kind === 'income');
         return (
-          <DetailSheet r={r} cats={cats} fix={fixOf.get(r.c.key)?.f.name} onFix={account === 'own' && r.c.kind === 'expense' && !r.ret && !fixOf.has(r.c.key) ? () => { setDetail(null); markFix(rows.filter((x) => x.c.payeeKey === r.c.payeeKey && tabOf(x) === tabOf(r)).map((x) => x.c.key)); } : undefined} block={r.ret ? 'Retouren' : blocks.get(r.c.key)?.title} partner={r.ret ? rows.find((x) => x.c.key === r.ret)?.c : undefined} onClose={() => setDetail(null)}
+          <DetailSheet r={r} cats={cats} fix={fixOf.get(r.c.key)?.f.name} block={r.ret ? 'Retouren' : blocks.get(r.c.key)?.title} partner={r.ret ? rows.find((x) => x.c.key === r.ret)?.c : undefined} onClose={() => setDetail(null)}
             onToggle={r.locked ? undefined : () => update([r.c.key], (x) => ({ ...x, on: !x.on }))}
             onCategory={canCat ? () => { setDetail(null); setPicker({ title: `${r.c.payee} · ${short(r.c.date)}`, keys: [r.c.key], kind }); } : undefined} />
         );
@@ -479,7 +482,8 @@ export function ImportPage({ back }: { back: ReactNode }) {
       {picker && (
         <CategoryPicker title={picker.title} cats={cats} current={rows?.find((r) => picker.keys.includes(r.c.key))?.cat ?? null} household={account === 'joint' && picker.kind === 'expense'} kind={picker.kind} hint={picker.group && /^(paypal|klarna)/.test(picker.group) ? 'Gilt für alle angezeigten Buchungen. Bei Zahlungsdiensten wird nichts gemerkt, weil dahinter verschiedene Händler stecken.' : picker.group?.startsWith('block:') ? 'Gilt für alle Buchungen in diesem Block und wird je Händler für den nächsten Import gemerkt.' : picker.group ? 'Gilt für alle Buchungen dieses Händlers und wird für den nächsten Import gemerkt.' : 'Gilt nur für diese Buchung.'}
           onClose={() => setPicker(null)}
-          onFix={account === 'own' && picker.kind === 'expense' && tab === 'ausgaben' ? () => { const k = picker.keys; setPicker(null); markFix(k); } : undefined}
+          fixLast={account === 'own' && picker.kind === 'expense' && tab === 'ausgaben' ? rows.filter((r) => picker.keys.includes(r.c.key)).reduce((m, r) => (r.c.date > m ? r.c.date : m), '').slice(0, 7) || undefined : undefined}
+          onFix={(id, o) => { const k = picker.keys; setPicker(null); markFix(k, id, o); }}
           onPick={(id) => { update(picker.keys, (r) => ({ ...r, cat: id, on: r.locked ? r.on : r.on || tab === 'weitere' || picker.keys.length === 1 })); setPicker(null); }} />
       )}
     </>
@@ -496,7 +500,7 @@ function sortReturns(rs: Row[]): Row[] {
 const STATE_TEXT: Record<DupState, string> = { none: 'Neu', imported: 'Schon importiert', same: 'Schon erfasst', maybe: 'Ähnliche Buchung vorhanden' };
 
 /** Alle Angaben der Bank zu einer Zeile, dazu was die App damit vorhat */
-function DetailSheet({ r, cats, block, partner, fix, onClose, onToggle, onCategory, onFix }: { r: Row; cats: Category[]; block?: string; partner?: Candidate; fix?: string; onClose: () => void; onToggle?: () => void; onCategory?: () => void; onFix?: () => void }) {
+function DetailSheet({ r, cats, block, partner, fix, onClose, onToggle, onCategory }: { r: Row; cats: Category[]; block?: string; partner?: Candidate; fix?: string; onClose: () => void; onToggle?: () => void; onCategory?: () => void }) {
   const c = r.c, raw = c.raw;
   const kv = (label: string, value: ReactNode) => <div className="kv dkv"><span>{label}</span><b>{value}</b></div>;
   return (
@@ -512,10 +516,9 @@ function DetailSheet({ r, cats, block, partner, fix, onClose, onToggle, onCatego
         {partner && kv(partner.kind === 'credit' ? 'Gutschrift dazu' : 'Ursprüngliche Ausgabe', `${formatDateDE(partner.date)} · ${formatEUR(partner.amountCents)} · ${partner.payee}`)}
         {kv('Bezeichnung', c.payee)}
         {kv('Datum', formatDateDE(c.date))}
-        {(onToggle || onCategory || onFix) && (
+        {(onToggle || onCategory) && (
           <div className="pad stack">
             {onCategory && <button className="btn sec2" onClick={onCategory}>Kategorie ändern</button>}
-            {onFix && <button className="btn sec2" onClick={onFix}>Als Fixkosten markieren</button>}
             {onToggle && <button className="btn sec2" onClick={onToggle}>{r.on ? 'Nicht übernehmen' : 'Übernehmen'}</button>}
           </div>
         )}
@@ -537,7 +540,17 @@ function DetailSheet({ r, cats, block, partner, fix, onClose, onToggle, onCatego
   );
 }
 
-function CategoryPicker({ title, cats: allCats, current, household, kind, hint, onPick, onClose, onFix }: { title: string; cats: Category[]; current: string | null; household: boolean; kind: 'expense' | 'income'; hint: string; onPick: (id: string) => void; onClose: () => void; onFix?: () => void }) {
+/** Fixkosten aus der Kategorie-Auswahl: Rhythmus und Beginn der Vorlage */
+export interface FixOpt { interval: FixFound['interval']; start?: string }
+type FixIv = FixFound['interval'] | 'once';
+
+function CategoryPicker({ title, cats: allCats, current, household, kind, hint, onPick: pickPlain, onClose, fixLast, onFix }: {
+  title: string; cats: Category[]; current: string | null; household: boolean; kind: 'expense' | 'income'; hint: string; onPick: (id: string) => void; onClose: () => void;
+  /** Monat der letzten Zahlung – gesetzt, wenn eine Fixkosten-Kategorie eine Vorlage anlegen kann */
+  fixLast?: string; onFix?: (id: string, o: FixOpt) => void;
+}) {
+  const [fixIv, setFixIv] = useState<FixIv>('monthly');
+  const [fixStart, setFixStart] = useState<'last' | 'cur' | 'next'>('last');
   // Eigenes Konto, Ausgaben: Alltag und Fixkosten getrennt wählbar; Vorgabe ist der Bereich der bisherigen Kategorie
   const cur = current ? allCats.find((c) => c.id === current) : undefined;
   const [area, setArea] = useState<'alltag' | 'fix' | 'spar'>(() => { const a = cur ? catArea(cur) : 'alltag'; return a === 'fix' || a === 'spar' ? a : 'alltag'; });
@@ -551,6 +564,14 @@ function CategoryPicker({ title, cats: allCats, current, household, kind, hint, 
   const [newTop, setNewTop] = useState<{ name: string; sub: string; group: CatGroup } | null>(null);
   const pool = bookable(cats, kind);
   const ids = new Set(pool.map((c) => c.id));
+  const nowM = currentMonthKey();
+  const mm = (k: string) => `${k.slice(5, 7)}/${k.slice(2, 4)}`;
+  const asFix = area === 'fix' && !!fixLast && !!onFix && fixIv !== 'once';
+  // In Fixkosten: einmal als Vorlage anlegen (außer „nur diese Buchung“)
+  const onPick = (id: string) => {
+    if (asFix) onFix!(id, { interval: fixIv as FixFound['interval'], ...(fixStart === 'cur' ? { start: nowM } : fixStart === 'next' ? { start: shiftMonth(nowM, 1) } : {}) });
+    else pickPlain(id);
+  };
   const jointId = data.settings.joint?.categoryId;
   const tops = topLevel(cats, kind).filter((t) => !t.archived && t.id !== jointId);
   // Hauptkategorien ohne Unterkategorien (z. B. Miete, Sparen, Einnahmen) direkt wählbar
@@ -578,12 +599,25 @@ function CategoryPicker({ title, cats: allCats, current, household, kind, hint, 
           {([['alltag', 'Alltag'], ['fix', 'Fixkosten'], ['spar', 'Sparen']] as const).map(([a, l]) => <button key={a} role="tab" aria-selected={area === a} className={area === a ? 'on' : ''} onClick={() => { setArea(a); setAdding(null); setNewTop(null); }}>{l}</button>)}
         </div>
       )}
-      {onFix && (
-        <button className="fixoffer" onClick={onFix}>
-          <span className="fixoffer-ic"><Icon name="cal" size={18} w={2.2} /></span>
-          <span className="fixoffer-tx"><b>Als Fixkosten erkennen</b><span>Wiederkehrende Zahlung (Miete, Abo, Vertrag …) – wird im Reiter Fixkosten als Vorlage angelegt</span></span>
-          <Icon name="right" size={16} w={2.2} />
-        </button>
+      {area === 'fix' && fixLast && onFix && (
+        <div className="fixhint" role="group" aria-label="Fixkosten-Vorlage">
+          <p><b>Wird einmal als Vorlage im Reiter Fixkosten angelegt.</b> Danach bucht die App die Zahlung selbst – du musst sie nicht mehr importieren.</p>
+          <label className="fixhint-row"><span>Rhythmus</span>
+            <select value={fixIv} onChange={(e) => setFixIv(e.target.value as FixIv)} aria-label="Rhythmus">
+              <option value="monthly">monatlich</option><option value="quarterly">vierteljährlich</option><option value="halfyearly">halbjährlich</option><option value="yearly">jährlich</option>
+              <option value="once">einmalig – keine Vorlage</option>
+            </select>
+          </label>
+          {fixIv !== 'once' && (
+            <label className="fixhint-row"><span>Ab</span>
+              <select value={fixStart} onChange={(e) => setFixStart(e.target.value as 'last' | 'cur' | 'next')} aria-label="Vorlage ab">
+                <option value="last">{fixLast === nowM ? 'diesem Monat' : 'letzter Zahlung'} ({mm(fixLast)})</option>
+                {fixLast !== nowM && <option value="cur">diesem Monat ({mm(nowM)})</option>}
+                <option value="next">nächstem Monat ({mm(shiftMonth(nowM, 1))})</option>
+              </select>
+            </label>
+          )}
+        </div>
       )}
       <p className="note">{hint} Fehlt eine Unterkategorie, lege sie mit „+“ an; ganz unten kannst du eine neue Kategorie anlegen.</p>
       {tops.map((t) => {

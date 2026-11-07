@@ -99,3 +99,19 @@ describe('Bündel am Händlernamen (v1.58)', () => {
     expect(nameBlock(res.candidates.find((c) => c.payee.startsWith('Muster'))!)).toBeNull();
   });
 });
+
+describe('Fixkosten-Vorlage mit gewähltem Beginn (v1.59.2)', () => {
+  it('startet im gewählten Monat statt im Monat der letzten Zahlung', async () => {
+    const db = await freshDb();
+    await seedIfEmpty(db, currentMonthKey());
+    const d0 = await exportAll(db);
+    const res = await parseStatement(csv());
+    const f = fixFromCandidates(res.candidates.filter((c) => c.payee.startsWith('Hausverwaltung')));
+    const next = shiftMonth(currentMonthKey(), 1);
+    const row = { ...makeFixRow(f, res.candidates, d0.categories, d0.recurring, {}), start: next };
+    expect(await saveFixRows(db, [row])).toBe(1);
+    const d = await exportAll(db);
+    expect(d.recurring.find((r) => r.name === 'Hausverwaltung Beispiel')?.startMonth).toBe(next);
+    expect(d.transactions.filter((t) => t.amountCents === 85000)).toHaveLength(0);
+  });
+});

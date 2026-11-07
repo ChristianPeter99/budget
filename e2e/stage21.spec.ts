@@ -110,16 +110,21 @@ test('CSV: ein Upload – Fixkosten im eigenen Reiter, von Hand markieren, beim 
   // Bioladen bleibt unter Ausgaben; als Fixkosten markieren und wieder zurück
   await expect(page.locator('.imp', { hasText: 'Bioladen' })).toHaveCount(1);
   await expect(page.locator('.imp', { hasText: 'Hausverwaltung' })).toHaveCount(0);
-  // Kein Fixkosten-Knopf an jeder Karte; die Option steckt in „Kategorie wählen“
-  await expect(page.getByRole('button', { name: /als Fixkosten markieren/ })).toHaveCount(0);
+  // Fixkosten-Kategorie wählen → Hinweis „einmal als Vorlage“, Rhythmus und Beginn wählbar
   await page.locator('.imp', { hasText: 'Bioladen' }).getByRole('button', { name: 'Kategorie wählen' }).click();
-  await page.getByRole('dialog').getByRole('button', { name: /Als Fixkosten erkennen/ }).click();
+  const pk = page.getByRole('dialog');
+  await pk.getByRole('tab', { name: 'Fixkosten' }).click();
+  await expect(pk.locator('.fixhint')).toContainText('Wird einmal als Vorlage im Reiter Fixkosten angelegt');
+  await pk.getByLabel('Vorlage ab').selectOption('next');
+  await pk.getByRole('button', { name: 'Abos & Verträge', exact: true }).click();
   await expect(page.getByRole('tab', { name: 'Fixkosten 3' })).toBeVisible();
   await page.getByRole('tab', { name: 'Fixkosten 3' }).click();
   const rows = page.locator('.fixrow');
   await expect(rows).toHaveCount(3);
   await expect(rows.filter({ hasText: 'Muster Fitnessclub' })).toContainText('monatlich · 5× gefunden');
   await expect(rows.filter({ hasText: 'Muster Fitnessclub' })).toContainText('5 Buchungen aus der Datei');
+  await expect(rows.filter({ hasText: 'Bioladen' })).toContainText('Vorlage ab');
+  await expect(rows.filter({ hasText: 'Bioladen' }).getByLabel(/Kategorie für/)).toHaveValue(/.+/);
   await rows.filter({ hasText: 'Bioladen' }).getByRole('button', { name: 'Keine Fixkosten' }).click();
   await expect(rows).toHaveCount(2);
   await page.getByRole('tab', { name: /^Ausgaben/ }).click();
@@ -173,8 +178,11 @@ test('CSV-Import: Kategorie „Sport“ in Fixkosten anlegen, obwohl es „Sport
   await dlg.getByLabel('Name der neuen Kategorie').fill('Sport');
   await dlg.getByLabel('Erste Unterkategorie').fill('Verein');
   await dlg.getByRole('button', { name: 'Anlegen und zuordnen' }).click();
-  await expect(page.locator('.toast')).toContainText('„Sport“ angelegt');
+  // Neue Fixkosten-Kategorie: ohne Fehler angelegt, die Zahlung wird zur Fixkosten-Vorlage in „Sport“
   await expect(dlg).toHaveCount(0);
+  await expect(page.locator('.err-text')).toHaveCount(0);
+  await page.getByRole('tab', { name: 'Fixkosten 1' }).click();
+  await expect(page.locator('.fixrow', { hasText: 'Muster Laden' }).getByLabel(/Kategorie für/).locator('option:checked')).toHaveText('Sport › Verein');
 });
 
 test('CSV: höchste Beträge oben, Cafés gebündelt, Rest auf Wunsch nach „Sonstiges“', async ({ page }) => {
