@@ -1,0 +1,450 @@
+import { useId, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
+import type { TxPreset } from '../../domain/transactions';
+import type { Recurring } from '../../domain/types';
+import { useStore } from '../../state/store';
+import { effectiveGoals, goalLine, goalPlan, sortGoals } from '../../domain/goals';
+import type { EffGoal } from '../../domain/goals';
+import { currentMonthKey, formatDateDE, isValidISODate, monthLabel, monthRange, monthShort, shiftMonth, todayISO } from '../../domain/dates';
+import { savingsEntries, savingsEstimate, wealthSeries } from '../../domain/savings';
+import { Header } from '../../ui/Header';
+import { formatEUR0, parseCents } from '../../domain/money';
+import { Icon } from '../../ui/icons';
+import { Sheet } from '../../ui/Sheet';
+import { GoalSheet } from '../../sheets/GoalSheet';
+import { RecurringSheet } from '../../sheets/RecurringSheet';
+import { addSavingsEntry, deleteSavingsEntry } from '../../data/settings';
+import { Chevr } from '../../ui/Collapse';
+import { addDepotEntry, deleteDepotEntry } from '../../data/depot';
+import { AmountInput } from '../../ui/Money';
+
+/**
+ * Sparen & Depot (Variante B): oben die Gesamtsumme mit Verlauf, darunter zwei Kacheln für Sparkonto und Depot
+ * (Tipp: Details mit Verlauf, Sparrate und Sparzielen). Diagramme mit Hilfslinien und Werten beim Antippen.
+ */
+export function Sparen({ back }: { back: ReactNode; onAdd?: (p: TxPreset) => void; onEditRec?: (r: Recurring) => void }) {
+  const { data, run } = useStore();
+  const cats = data.categories;
+  const s = data.settings;
+  const isSpar = (catId: string) => cats.find((c) => c.id === catId)?.group === 'spar';
+  const sparRecs = data.recurring.filter((r) => r.active && r.type === 'expense' && isSpar(r.categoryId));
+  const rate = sparRecs.reduce((a, r) => a + r.amountCents, 0);
+  const goals = effectiveGoals(s.savingsGoals ?? [], data.transactions).filter((g) => g.auto !== false && g.monthly > 0);
+  const perMonth = rate + goals.reduce((a, g) => a + g.monthly, 0);
+  const today = todayISO();
+  const sav = savingsEstimate(data, today);
+  const entries = [...data.depotEntries].sort((a, b) => b.date.localeCompare(a.date));
+  const last = entries[0];
+  const prev = entries[1];
+  const total = sav.cents + (last?.valueCents ?? 0);
+  // Verlauf der letzten 6 Monate (bzw. alles, wenn weniger)
+  const series = wealthSeries(data, today);
+  const cutoff = monthRange(shiftMonth(today.slice(0, 7), -6)).from;
+  const shown = series.filter((p) => p.date >= cutoff).length > 1 ? series.filter((p) => p.date >= cutoff) : series;
+  const first = shown[0];
+  const diff = first && shown.length > 1 ? total - first.cents : null;
+  const [detail, setDetail] = useState<'' | 'spar' | 'depot'>('');
+  const [sparEdit, setSparEdit] = useState(false);
+  const [depotEdit, setDepotEdit] = useState(false);
+  const [sub, setSub] = useState<{ goal: EffGoal | null } | { rate: true } | null>(null);
+  const depotPct = last && prev && prev.valueCents > 0 ? ((last.valueCents - prev.valueCents) / prev.valueCents) * 100 : null;
+  const pctText = (p: number) => `${p >= 0 ? '+' : '−'}${Math.abs(p).toLocaleString('de-DE', { maximumFractionDigits: 1 })} %`;
+
+  return (
+    <>
+      {back}
+      <Header title="Sparen & Depot" />
+
+      <div className="whero">
+        <span className="cap">Gesamt</span>
+        <span className="mid34 num">{formatEUR0(total)}</span>
+        {diff !== null && first && <span className={'mini ' + (diff >= 0 ? 'pos' : 'neg')}>{diff >= 0 ? '+' : '−'}{formatEUR0(Math.abs(diff))} seit {formatDateDE(first.date)}</span>}
+        {shown.length > 1
+          ? <div className="wbleed"><TrendChart color="var(--spar)" past={shown.map((p) => ({ d: p.date, c: p.cents }))}
+              labels={[`${monthShort(shown[0]!.date.slice(0, 7))} ${shown[0]!.date.slice(2, 4)}`, '', shown[shown.length - 1]!.date === today ? 'heute' : formatDateDE(shown[shown.length - 1]!.date).slice(0, 6)]}
+              aria={`Verlauf Sparkonto und Depot seit ${first ? formatDateDE(first.date) : ''}`} /></div>
+          : null}
+      </div>
+
+      <div className="wtiles">
+        <button className="wtile" onClick={() => setDetail('spar')} aria-label={`Sparkonto ${sav.known ? formatEUR0(sav.cents) : 'noch kein Stand'} – Details und aktualisieren`}>
+          <span className="wname" style={{ color: 'var(--spar)' }}><Icon name="piggy" size={16} w={2.2} />Sparkonto</span>
+          {sav.known
+            ? <><span className="wval num">{formatEUR0(sav.cents)}</span><span className="wsub">{perMonth > 0 ? `+${formatEUR0(perMonth)} / Monat` : 'keine Sparrate'}</span></>
+            : <><span className="wadd" style={{ color: 'var(--spar)' }}>+ Stand eintragen</span>{perMonth > 0 && <span className="wsub">+{formatEUR0(perMonth)} / Monat</span>}</>}
+        </button>
+        <button className="wtile" onClick={() => setDetail('depot')} aria-label={`Depot ${last ? formatEUR0(last.valueCents) : 'noch kein Stand'} – Details und aktualisieren`}>
+          <span className="wname" style={{ color: 'var(--depot)' }}><Icon name="trend" size={16} w={2.2} />Depot</span>
+          {last
+            ? <><span className="wval num">{formatEUR0(last.valueCents)}</span><span className={'wsub' + (depotPct !== null ? (depotPct >= 0 ? ' pos' : ' neg') : '')}>{depotPct !== null && prev ? `${pctText(depotPct)} seit ${formatDateDE(prev.date).slice(0, 6)}` : `Stand ${formatDateDE(last.date)}`}</span></>
+            : <span className="wadd" style={{ color: 'var(--depot)' }}>+ Stand eintragen</span>}
+        </button>
+      </div>
+
+      {detail === 'spar' && !sub && (
+        <Sheet title="Sparkonto" left="Schließen" onClose={() => { setDetail(''); setSparEdit(false); }}
+          right={<button className="hdricon" aria-label="Stand aktualisieren" onClick={() => setSparEdit(true)}><Icon name="repeat" size={18} w={2.2} /></button>}>
+          <SparDetail sav={sav} rate={rate} goals={goals} rec={sparRecs[0] ?? null} onGoal={(g) => setSub({ goal: g })} onRate={() => setSub({ rate: true })} edit={[sparEdit, setSparEdit]} />
+        </Sheet>
+      )}
+      {/* Sparziel bzw. Sparrate bearbeiten: ersetzt kurz die Sparkonto-Details, danach geht es dorthin zurück */}
+      {sub && 'goal' in sub && <GoalSheet goal={sub.goal} onClose={() => setSub(null)} />}
+      {sub && 'rate' in sub && <RecurringSheet rec={sparRecs[0] ?? null} presetGroup="spar" onClose={() => setSub(null)} run={run} />}
+      {detail === 'depot' && (
+        <Sheet title="Depot" left="Schließen" onClose={() => { setDetail(''); setDepotEdit(false); }}
+          right={<button className="hdricon" aria-label="Stand aktualisieren" onClick={() => setDepotEdit(true)}><Icon name="repeat" size={18} w={2.2} /></button>}>
+          <DepotDetail entries={entries} edit={[depotEdit, setDepotEdit]} />
+        </Sheet>
+      )}
+    </>
+  );
+}
+
+/** Monate von a bis b (b − a). */
+function monthsBetween(a: string, b: string): number {
+  return (Number(b.slice(0, 4)) - Number(a.slice(0, 4))) * 12 + (Number(b.slice(5, 7)) - Number(a.slice(5, 7)));
+}
+
+/**
+ * Sparkonto-Details (Vorlage J1 mit J3): links Betrag und Veränderung, Umschalter „Bisher | Nächstes Jahr“,
+ * Diagramm über die volle Breite, darunter eine schlichte Liste: Sparrate, Sparziele, „+ Sparziel“, Verlauf.
+ */
+function SparDetail({ sav, rate, goals, rec, onGoal, onRate, edit }: { sav: { cents: number; known: boolean }; rate: number; goals: EffGoal[]; rec: Recurring | null; onGoal: (g: EffGoal | null) => void; onRate: () => void; edit: [boolean, (v: boolean) => void] }) {
+  const { data, run } = useStore();
+  const s = data.settings;
+  const month = currentMonthKey();
+  const today = todayISO();
+  const perMonth = rate + goals.reduce((a, g) => a + g.monthly, 0);
+  // Prognose ohne Zinsen: Sparrate für jeden Monat, Sparziele nur bis zu ihrem Zielmonat (bis der Rest erreicht ist)
+  const at = (n: number) => sav.cents + rate * n + goals.reduce((a, g) => {
+    const rest = Math.max(0, g.targetCents - g.savedCents);
+    const left = monthsBetween(month, g.dueMonth);
+    return left <= 0 ? a : a + Math.round(rest * Math.min(1, n / left));
+  }, 0);
+  const past: Pt[] = [...savingsEntries(s)].filter((e) => e.date < today).sort((a, b) => a.date.localeCompare(b.date)).map((e) => ({ d: e.date, c: e.cents }));
+  past.push({ d: today, c: sav.cents });
+  // ohne eigene Wahl: „Bisher“, sobald es mindestens zwei Stände gibt, sonst die Prognose
+  const [chosen, setMode] = useState<'past' | 'future' | null>(null);
+  const mode = chosen ?? (past.length > 1 ? 'past' : 'future');
+  const [histOpen, setHistOpen] = useState(false);
+  const day = today.slice(8, 10) > '28' ? '28' : today.slice(8, 10);
+  const future: Pt[] = Array.from({ length: 13 }, (_, k) => ({ d: k === 0 ? today : `${shiftMonth(month, k)}-${day}`, c: at(k) }));
+  const reached = goals.map((g) => ({ g, left: monthsBetween(month, g.dueMonth) })).filter((x) => x.left > 0 && x.left <= 12);
+  const markers = reached.map(({ g, left }) => ({ ...(future[left] as Pt), label: g.name }));
+  const first = past[0] as Pt;
+  const grow = sav.cents - first.c;
+  const fut = mode === 'future';
+  const all = sortGoals(effectiveGoals(s.savingsGoals ?? [], data.transactions));
+  const items = savingsEntries(s).map((e) => ({ key: e.date, date: e.date, cents: e.cents, del: () => run((db) => deleteSavingsEntry(db, e.date), 'Eintrag gelöscht') }));
+  const mLabel = (m: string) => `${monthShort(m)} ${m.slice(2, 4)}`;
+  const sub = !sav.known ? null : fut
+    ? <span className="wsubline pos">+{formatEUR0(perMonth)} jeden Monat</span>
+    : past.length > 1 ? <span className={'wsubline ' + (grow >= 0 ? 'pos' : 'neg')}>{grow >= 0 ? '+' : '−'}{formatEUR0(Math.abs(grow))} seit {monthLabel(first.d.slice(0, 7)).split(' ')[0]}</span> : null;
+  return (
+    <>
+      <StandHead kind="spar" left edit={edit} cents={sav.known ? sav.cents : null} date={sav.known ? (s.savingsBalanceDate as string) : null}
+        bank={sav.known ? s.savingsBalanceCents : null} caption={sav.known ? (fut ? 'In einem Jahr · ohne Zinsen' : 'Heute') : undefined}
+        display={sav.known && fut ? `≈ ${formatEUR0(at(12))}` : undefined} sub={sub} />
+
+      {sav.known && !edit[0] && (
+        <>
+          <div className="wbleed">
+            {fut
+              ? <TrendChart color="var(--spar)" past={[past[past.length - 1] as Pt]} future={future} markers={markers} labels={['heute', '', mLabel(shiftMonth(month, 12))]}
+                  aria={`Prognose Sparkonto bis ${monthLabel(shiftMonth(month, 12))}: ungefähr ${formatEUR0(at(12))}`} />
+              : past.length > 1
+                ? <TrendChart color="var(--spar)" past={past} labels={[mLabel(first.d.slice(0, 7)), '', 'heute']}
+                    aria={`Sparkonto seit ${formatDateDE(first.d)}: von ${formatEUR0(first.c)} auf ${formatEUR0(sav.cents)}`} />
+                : <p className="note wempty">Ab dem zweiten Stand siehst du hier deinen Verlauf.</p>}
+          </div>
+          <div className="wmode" role="group" aria-label="Ansicht">
+            <button aria-pressed={!fut} onClick={() => setMode('past')}>Bisher</button>
+            <button aria-pressed={fut} onClick={() => setMode('future')}>Nächstes Jahr</button>
+          </div>
+        </>
+      )}
+
+      <div className="wlist">
+        <button className="wli" onClick={onRate} aria-label={rec ? `Sparrate ${formatEUR0(rate)} pro Monat – ändern` : 'Sparrate festlegen'}>
+          <span className="wlitxt"><b className={rec ? '' : 'pos'}>{rec ? 'Sparrate' : 'Sparrate festlegen'}</b></span>
+          {rec && <b className="num">{formatEUR0(rate)}</b>}<Chevr />
+        </button>
+        {all.map((g) => {
+          const p = goalPlan(g, month);
+          const line = goalLine(g, month);
+          return (
+            <button className="wli goalrow" key={g.id} onClick={() => onGoal(g)} aria-label={`Sparziel ${g.name}: ${formatEUR0(g.savedCents)} von ${formatEUR0(g.targetCents)}, ${line.text}`}>
+              <span className="wlitxt">
+                <span className="wlitop"><b>{g.name}</b><small className={line.tone}>{formatEUR0(g.savedCents).replace(/\s?€/, '')} / {formatEUR0(g.targetCents)}{p.done ? ' · erreicht' : p.overdue ? ' · vorbei' : ` · ${mLabel(g.dueMonth)}`}</small></span>
+                <span className="wgbar" aria-hidden="true"><span style={{ width: `${Math.min(100, p.ratio * 100)}%` }} /></span>
+              </span>
+              <b className="num">{!p.done && !p.overdue && g.auto !== false && g.monthly > 0 ? formatEUR0(g.monthly) : ''}</b><Chevr />
+            </button>
+          );
+        })}
+        <button className="wli wadd" onClick={() => onGoal(null)} aria-label="Sparziel hinzufügen">+ Sparziel</button>
+        {items.length > 0 && (
+          <>
+            <button className="wli whead" aria-expanded={histOpen} onClick={() => setHistOpen(!histOpen)}>
+              <span className="wlitxt"><span>Verlauf</span></span><small>{items.length === 1 ? '1 Stand' : `${items.length} Stände`}</small>
+              <span className={'whchev' + (histOpen ? ' up' : '')} aria-hidden="true"><Chevr /></span>
+            </button>
+            {histOpen && <EntryRows items={items} />}
+          </>
+        )}
+      </div>
+    </>
+  );
+}
+
+type Pt = { d: string; c: number };
+
+/** Depot-Details: Stand, Veränderung im gewählten Zeitraum, Verlaufskurve ohne Kasten, Hoch/Tief und Zeitraum. */
+function DepotDetail({ entries, edit }: { entries: { id: string; date: string; valueCents: number }[]; edit: [boolean, (v: boolean) => void] }) {
+  const { run } = useStore();
+  const [range, setRange] = useState<'6M' | '1J' | 'Alles'>('6M');
+  const [histOpen, setHistOpen] = useState(false);
+  const last = entries[0];
+  const today = todayISO();
+  const asc = [...entries].sort((a, b) => a.date.localeCompare(b.date)).map((e) => ({ d: e.date, c: e.valueCents }));
+  const cut = range === 'Alles' ? '' : `${shiftMonth(today.slice(0, 7), range === '6M' ? -6 : -12)}${today.slice(7)}`;
+  // Ein Stand vor dem Zeitraum wird als Startpunkt mitgenommen, damit die Kurve am linken Rand beginnt
+  const inRange = asc.filter((p) => p.d >= cut);
+  const before = asc.filter((p) => p.d < cut).pop();
+  const pts = before && inRange.length > 0 ? [before, ...inRange] : inRange;
+  const first = pts[0];
+  const diff = first && last && pts.length > 1 ? last.valueCents - first.c : null;
+  const pct = diff !== null && first && first.c > 0 ? (diff / first.c) * 100 : null;
+  const items = entries.map((e) => ({ key: e.id, date: e.date, cents: e.valueCents, del: () => run((db) => deleteDepotEntry(db, e.id), 'Eintrag gelöscht') }));
+  const mLabel = (d: string) => `${monthShort(d.slice(0, 7))} ${d.slice(2, 4)}`;
+  return (
+    <>
+      <StandHead kind="depot" left edit={edit} cents={last ? last.valueCents : null} date={last?.date ?? null}
+        caption={last ? (last.date === today ? 'Heute' : `Stand vom ${formatDateDE(last.date).slice(0, 6)}`) : undefined}
+        sub={diff !== null && first ? <span className={'wsubline ' + (diff >= 0 ? 'pos' : 'neg')}>{diff >= 0 ? '+' : '−'}{formatEUR0(Math.abs(diff))}{pct !== null ? ` · ${diff >= 0 ? '+' : '−'}${Math.abs(pct).toLocaleString('de-DE', { maximumFractionDigits: 1 })} %` : ''} seit {formatDateDE(first.d).slice(0, 6)}</span> : null} />
+      {asc.length > 1 && !edit[0] && (
+        <>
+          <div className="wbleed">
+            {pts.length > 1
+              ? <TrendChart color="var(--depot)" past={pts} labels={[mLabel((pts[0] as Pt).d), '', (pts[pts.length - 1] as Pt).d === today ? 'heute' : mLabel((pts[pts.length - 1] as Pt).d)]}
+                  aria={`Depot seit ${formatDateDE((pts[0] as Pt).d)}: von ${formatEUR0((pts[0] as Pt).c)} auf ${formatEUR0((pts[pts.length - 1] as Pt).c)}`} />
+              : <p className="note wempty">In diesem Zeitraum gibt es nur einen Stand.</p>}
+          </div>
+          <div className="wmode" role="group" aria-label="Zeitraum">
+            {(['6M', '1J', 'Alles'] as const).map((r) => <button key={r} aria-pressed={range === r} onClick={() => setRange(r)}>{r === '6M' ? '6 Monate' : r === '1J' ? '1 Jahr' : 'Alles'}</button>)}
+          </div>
+        </>
+      )}
+      {items.length > 0 && (
+        <div className="wlist">
+          <button className="wli whead" aria-expanded={histOpen} onClick={() => setHistOpen(!histOpen)}>
+            <span className="wlitxt"><span>Verlauf</span></span><small>{items.length === 1 ? '1 Stand' : `${items.length} Stände`}</small>
+            <span className={'whchev' + (histOpen ? ' up' : '')} aria-hidden="true"><Chevr /></span>
+          </button>
+          {histOpen && <EntryRows items={items} />}
+        </div>
+      )}
+    </>
+  );
+}
+
+/** Runde Schrittweite (1, 2, 2,5 oder 5 × 10ⁿ) für etwa zwei bis drei Hilfslinien. */
+function niceStep(range: number): number {
+  const raw = Math.max(range, 1) / 2;
+  const p = Math.pow(10, Math.floor(Math.log10(raw)));
+  const f = raw / p;
+  return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * p;
+}
+
+/**
+ * Verlaufskurve ohne Kasten: Fläche + Linie bis heute, optional gestrichelte Prognose und Markierungen (Sparziele).
+ * Dezente Hilfslinien auf runden Beträgen (rechts beschriftet); Finger über die Kurve ziehen zeigt Betrag und Datum.
+ * x nach Datum. Punkte als HTML, damit sie bei voller Breite rund bleiben.
+ */
+function TrendChart({ past, future = [], markers = [], color, labels, aria }: { past: Pt[]; future?: Pt[]; markers?: (Pt & { label?: string })[]; color: string; labels: [string, string, string]; aria: string }) {
+  const gid = useId().replace(/:/g, '');
+  const plotRef = useRef<HTMLDivElement>(null);
+  const [hover, setHover] = useState<number | null>(null);
+  const W = 358, H = 140;
+  const all = [...past, ...future];
+  const t = (d: string) => new Date(d + 'T00:00:00').getTime();
+  const t0 = t((all[0] as Pt).d), t1 = t((all[all.length - 1] as Pt).d);
+  const vmin = Math.min(...all.map((p) => p.c)), vmax = Math.max(...all.map((p) => p.c));
+  const step = niceStep(vmax - vmin || Math.max(10000, vmax * 0.2));
+  const lo = Math.floor(vmin / step) * step, hi = Math.max(Math.ceil(vmax / step) * step, lo + step);
+  const ticks: number[] = [];
+  for (let v = lo; v <= hi + 1; v += step) ticks.push(v);
+  const x = (d: string) => (t1 > t0 ? ((t(d) - t0) / (t1 - t0)) * W : W / 2);
+  const y = (c: number) => H - 6 - ((c - lo) / (hi - lo)) * (H - 22);
+  const path = (ps: Pt[]) => ps.map((p, i) => `${i ? 'L' : 'M'}${x(p.d).toFixed(1)} ${y(p.c).toFixed(1)}`).join(' ');
+  const line = path(past);
+  const lp = past[past.length - 1] as Pt;
+  const dot = (p: Pt) => ({ left: `${(x(p.d) / W) * 100}%`, top: y(p.c) });
+  // Antippbare Punkte: alle Stände und (ohne Doppelung von heute) die Prognosemonate
+  const pts = [...past.map((p) => ({ ...p, fc: false })), ...future.filter((p) => p.d !== lp.d).map((p) => ({ ...p, fc: true }))];
+  const pick = (clientX: number) => {
+    const r = plotRef.current?.querySelector('.tarea')?.getBoundingClientRect();
+    if (!r || r.width === 0) return;
+    const px = ((clientX - r.left) / r.width) * W;
+    let best = 0;
+    pts.forEach((p, i) => { if (Math.abs(x(p.d) - px) < Math.abs(x((pts[best] as Pt).d) - px)) best = i; });
+    setHover(best);
+  };
+  const hp = hover !== null ? pts[hover] : undefined;
+  // Beschriftung links über der Linie weglassen, wenn die Kurve dort genau durchläuft (Linie bleibt)
+  const crowded = (v: number) => {
+    const ly = y(v) - 9;
+    const near = (p: Pt) => x(p.d) < W * 0.26 && Math.abs(y(p.c) - ly) < 13;
+    if (all.some(near)) return true;
+    // auch zwischen zwei Punkten am linken Rand prüfen
+    for (let i = 1; i < all.length; i++) {
+      const a = all[i - 1] as Pt, b = all[i] as Pt;
+      if (x(a.d) > W * 0.26) break;
+      const xm = Math.min(W * 0.26, x(b.d));
+      const f = x(b.d) > x(a.d) ? (xm - x(a.d)) / (x(b.d) - x(a.d)) : 0;
+      if (Math.abs(y(a.c + (b.c - a.c) * f) - ly) < 13) return true;
+    }
+    return false;
+  };
+  const hl = hp ? (x(hp.d) / W) * 100 : 0;
+  return (
+    <div className="tchart">
+      <div className={'tplot' + (hover !== null ? ' active' : '')} ref={plotRef} style={{ height: H }} data-nodrag
+        onPointerDown={(e) => pick(e.clientX)} onPointerMove={(e) => { if (e.pointerType !== 'mouse' || e.buttons || hover !== null) pick(e.clientX); }}
+        onPointerUp={(e) => { if (e.pointerType !== 'mouse') setHover(null); }} onPointerLeave={() => setHover(null)} onPointerCancel={() => setHover(null)}>
+        {ticks.map((v) => (
+          <div key={v} className="tgrid" style={{ top: y(v) }} aria-hidden="true">{!crowded(v) && <span>{formatEUR0(v)}</span>}</div>
+        ))}
+        <div className="tarea">
+        <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label={aria}>
+          <defs><linearGradient id={gid} x1="0" y1="0" x2="0" y2="1"><stop offset="0" style={{ stopColor: color, stopOpacity: 0.28 }} /><stop offset="1" style={{ stopColor: color, stopOpacity: 0 }} /></linearGradient></defs>
+          {past.length > 1 && <path d={`${line} L${x(lp.d).toFixed(1)} ${H} L${x((past[0] as Pt).d).toFixed(1)} ${H} Z`} fill={`url(#${gid})`} />}
+          {past.length > 1 && <path d={line} fill="none" style={{ stroke: color }} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />}
+          {future.length > 1 && <path d={path(future)} fill="none" style={{ stroke: color }} strokeWidth="2" strokeDasharray="4 5" strokeLinecap="round" opacity="0.8" vectorEffect="non-scaling-stroke" />}
+        </svg>
+        {markers.map((m) => <i key={m.d} className="tmark" style={dot(m)} aria-hidden="true" />)}
+        {hp === undefined && markers.map((m) => m.label && <span key={'l' + m.d} className="tmlabel" style={dot(m)} aria-hidden="true">{m.label}</span>)}
+        <i className="tnow" style={{ ...dot(lp), background: color }} aria-hidden="true" />
+        {hp && (
+          <>
+            <div className="tscrub" style={{ left: `${hl}%` }} aria-hidden="true" />
+            <i className="tsdot" style={{ ...dot(hp), borderColor: color }} aria-hidden="true" />
+            <span className="ttip" style={{ left: `${hl}%`, transform: `translateX(${hl < 18 ? '0' : hl > 82 ? '-100%' : '-50%'})` }} aria-live="polite">
+              <b className="num">{hp.fc ? '≈ ' : ''}{formatEUR0(hp.c)}</b> {hp.d === todayISO() ? 'heute' : hp.fc ? `${monthShort(hp.d.slice(0, 7))} ${hp.d.slice(2, 4)}` : formatDateDE(hp.d).slice(0, 6) + hp.d.slice(2, 4)}
+            </span>
+          </>
+        )}
+        </div>
+      </div>
+      <div className="wlabels" aria-hidden="true"><span>{labels[0]}</span><span className="now">{labels[1]}</span><span>{labels[2]}</span></div>
+    </div>
+  );
+}
+
+/** Schmale Zeilen: Betrag, Datum, Veränderung zum vorherigen Stand, Löschen. */
+function EntryRows({ items }: { items: { key: string; date: string; cents: number; del: () => unknown }[] }) {
+  return (
+    <>
+      {items.map((e, i) => {
+        const prevE = items[i + 1];
+        const diff = prevE ? e.cents - prevE.cents : null;
+        return (
+          <div className="whrow" key={e.key}>
+            <b className="lastentry num">{formatEUR0(e.cents)}</b>
+            <span className="whdate">{formatDateDE(e.date).slice(0, 6)}{e.date.slice(0, 4) !== todayISO().slice(0, 4) ? e.date.slice(2, 4) : ''}</span>
+            <span className={'whdiff ' + (diff === null ? '' : diff >= 0 ? 'pos' : 'neg')}>{diff === null ? '–' : `${diff >= 0 ? '+' : '−'}${formatEUR0(Math.abs(diff)).replace(/\s?€/, '')}`}</span>
+            <button className="iconx" aria-label={`Eintrag vom ${formatDateDE(e.date)} löschen`} onClick={() => void e.del()}>✕</button>
+          </div>
+        );
+      })}
+    </>
+  );
+}
+
+/** Tage zwischen zwei ISO-Daten. */
+function daysBetween(a: string, b: string): number {
+  return Math.round((new Date(b + 'T00:00:00').getTime() - new Date(a + 'T00:00:00').getTime()) / 86400000);
+}
+
+/**
+ * Kopf der Detailansicht: großer Betrag mit Aktualisieren-Symbol daneben, darunter ein Chip mit dem Datum des
+ * letzten Stands (ab 30 Tagen orange: „abgleichen“). Betrag, Symbol oder Chip antippen → Eingabe direkt an Ort und Stelle.
+ */
+function StandHead({ kind, cents, date, bank, sub, left, caption, display, edit }: {
+  kind: 'spar' | 'depot'; cents: number | null; date: string | null; bank?: number | null; sub: ReactNode;
+  /** linksbündig, ohne ↻ neben dem Betrag (das Symbol sitzt dann in der Kopfzeile) */
+  left?: boolean; caption?: string; display?: string; edit?: [boolean, (v: boolean) => void];
+}) {
+  const { run } = useStore();
+  const today = todayISO();
+  const own = useState(false);
+  const [editing, setEditing] = edit ?? own;
+  const [val, setVal] = useState('');
+  const [day, setDay] = useState(today);
+  const [err, setErr] = useState('');
+  const name = kind === 'spar' ? 'Sparkonto' : 'Depot';
+  const before = date ? { cents: bank ?? cents ?? 0, date } : null;
+  const c = val ? parseCents(val) : null;
+  const diff = c !== null && before ? c - before.cents : null;
+  const age = date ? daysBetween(date, today) : null;
+  const stale = age !== null && age >= 30;
+  const open = () => { setVal(''); setDay(today); setErr(''); setEditing(true); };
+  // Beim Öffnen von außen (↻ in der Kopfzeile) Eingabe zurücksetzen
+  const wasEditing = useRef(editing);
+  if (editing && !wasEditing.current) { wasEditing.current = true; if (val || err || day !== today) { setVal(''); setErr(''); setDay(today); } }
+  if (!editing && wasEditing.current) wasEditing.current = false;
+  async function save() {
+    if (c === null) return setErr(kind === 'spar' ? 'Bitte gib einen gültigen Kontostand ein.' : 'Bitte gib einen gültigen Depotstand ein.');
+    if (!isValidISODate(day) || day > today) return setErr('Bitte wähle ein Datum bis heute.');
+    setErr('');
+    const r = kind === 'spar'
+      ? await run((db) => addSavingsEntry(db, day, c).then(() => true), 'Kontostand erfasst')
+      : await run((db) => addDepotEntry(db, day, c), 'Depotstand erfasst');
+    if (r) setEditing(false);
+  }
+  if (editing) {
+    return (
+      <div className={'wdetail wedit' + (left ? ' wleft' : '')}>
+        <label className="wbig">
+          <span className="mini">{kind === 'spar' ? 'Kontostand laut Bank' : 'Depotstand'}</span>
+          <span className="wbigin"><AmountInput label={kind === 'spar' ? 'Kontostand Sparkonto' : 'Neuer Depotstand'} value={val} onChange={setVal} placeholder={before ? formatEUR0(before.cents).replace(/\s?€/, '') : '0'} autoFocus /><b>€</b></span>
+        </label>
+        <div className="wactions">
+          {kind === 'depot' && <label className="wdate"><span>vom</span><input type="date" value={day} max={today} aria-label="Stand vom" onChange={(e) => setDay(e.target.value)} /></label>}
+          <button className="wsave" onClick={() => void save()} disabled={!val}>Speichern</button>
+          <button className="wcancel" aria-label="Abbrechen" onClick={() => setEditing(false)}>✕</button>
+        </div>
+        {diff !== null && before && <span className="mini wdiff">Unterschied <b className={diff >= 0 ? 'pos' : 'neg'}>{diff >= 0 ? '+' : '−'}{formatEUR0(Math.abs(diff))}</b> zum {formatDateDE(before.date).slice(0, 6)}</span>}
+        {err && <div className="err-text" role="alert">{err}</div>}
+      </div>
+    );
+  }
+  if (left) {
+    return (
+      <div className="wdetail wleft">
+        {caption && <span className="wcap">{caption}</span>}
+        <button className="wamt" onClick={open} aria-label={`${name} ${cents !== null ? formatEUR0(cents) : 'ohne Stand'} – antippen zum Aktualisieren`}>
+          <span className="wbigval num">{display ?? (cents !== null ? formatEUR0(cents) : '–')}</span>
+        </button>
+        {sub}
+        {date === null
+          ? <button className="wchip" onClick={open}>Stand eintragen</button>
+          : stale && <button className="wchip warn" onClick={open}><i />Bankstand {age} Tage alt · abgleichen</button>}
+      </div>
+    );
+  }
+  return (
+    <div className="wdetail">
+      <div className="wamtrow">
+        <button className="wamt" onClick={open} aria-label={`${name} ${cents !== null ? formatEUR0(cents) : 'ohne Stand'} – antippen zum Aktualisieren`}>
+          <span className="mid34 num">{cents !== null ? formatEUR0(cents) : '–'}</span>
+        </button>
+        <button className="wupd" onClick={open} aria-label="Stand aktualisieren"><Icon name="repeat" size={16} w={2.4} /></button>
+      </div>
+      {sub}
+      {date === null
+        ? <button className="wchip" onClick={open}>Stand eintragen</button>
+        : stale && <button className="wchip warn" onClick={open}><i />{kind === 'spar' ? 'Bankstand' : 'Stand'} {age} Tage alt · abgleichen</button>}
+    </div>
+  );
+}

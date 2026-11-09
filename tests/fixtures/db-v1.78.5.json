@@ -1,0 +1,1907 @@
+{
+ "transactions": [
+  {
+   "id": "094810b6-9440-49dd-8306-8e27b6b7ebbc",
+   "date": "2026-10-15",
+   "type": "expense",
+   "amountCents": 4000,
+   "categoryId": "cat-abos-vertraege",
+   "description": "Kfz-Versicherung jährlich",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "952dac63-b17e-4cf1-b27c-5de3a5b80949"
+  },
+  {
+   "id": "10db9967-12ab-4157-896b-27df722e1d86",
+   "date": "2026-11-01",
+   "type": "expense",
+   "amountCents": 4800,
+   "categoryId": "cat-versicherungen",
+   "description": "Berufsunfähigkeit",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "rec-berufsunfaehigkeit"
+  },
+  {
+   "id": "14b8e5e9-9529-4e0a-9a64-98b9f25a7825",
+   "date": "2026-03-15",
+   "type": "expense",
+   "amountCents": 4000,
+   "categoryId": "cat-abos-vertraege",
+   "description": "Kfz-Versicherung jährlich",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "952dac63-b17e-4cf1-b27c-5de3a5b80949"
+  },
+  {
+   "id": "169ccccb-ed84-4ad8-b396-003ed04c0711",
+   "date": "2026-10-01",
+   "type": "expense",
+   "amountCents": 2990,
+   "categoryId": "cat-abos-vertraege",
+   "description": "Fitnessstudio",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "rec-fitnessstudio"
+  },
+  {
+   "id": "1bbc5151-dce5-48a3-ad2e-bd89b54b9b55",
+   "date": "2026-11-01",
+   "type": "expense",
+   "amountCents": 490,
+   "categoryId": "cat-mobilitaet",
+   "description": "Pannenhilfe",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "rec-pannenhilfe"
+  },
+  {
+   "id": "1fbe23fc-fed7-45d3-938a-626b22d5fbef",
+   "date": "2026-11-01",
+   "type": "expense",
+   "amountCents": 40000,
+   "categoryId": "08a8d13c-4602-4758-bec9-1291fb53e12d",
+   "description": "Beitrag Haushaltskonto",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "4805c23c-b67a-4999-bb2e-959db165d082"
+  },
+  {
+   "id": "2280b622-f312-48f3-862b-2a8d4526f265",
+   "date": "2026-10-01",
+   "type": "expense",
+   "amountCents": 72000,
+   "categoryId": "cat-wohnen",
+   "description": "Miete",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "rec-miete"
+  },
+  {
+   "id": "23720c20-687f-4c12-ac84-2bf9d46ef04d",
+   "date": "2026-11-01",
+   "type": "expense",
+   "amountCents": 5800,
+   "categoryId": "cat-mobilitaet",
+   "description": "Deutschlandticket",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "rec-deutschlandticket"
+  },
+  {
+   "id": "24f5574c-d79f-4e85-86ec-fca993ce347a",
+   "date": "2026-07-15",
+   "type": "expense",
+   "amountCents": 4000,
+   "categoryId": "cat-abos-vertraege",
+   "description": "Kfz-Versicherung jährlich",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "952dac63-b17e-4cf1-b27c-5de3a5b80949"
+  },
+  {
+   "id": "28f08d14-837f-4eef-be47-e214759ad304",
+   "date": "2026-11-15",
+   "type": "expense",
+   "amountCents": 4000,
+   "categoryId": "cat-abos-vertraege",
+   "description": "Kfz-Versicherung jährlich",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "952dac63-b17e-4cf1-b27c-5de3a5b80949"
+  },
+  {
+   "id": "2b0793b7-ed3a-438d-ad05-54f42bd8536c",
+   "date": "2026-06-15",
+   "type": "expense",
+   "amountCents": 4000,
+   "categoryId": "cat-abos-vertraege",
+   "description": "Kfz-Versicherung jährlich",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "952dac63-b17e-4cf1-b27c-5de3a5b80949"
+  },
+  {
+   "id": "2c3a2783-a103-4ea7-b644-8233a02b48c8",
+   "date": "2026-09-01",
+   "type": "expense",
+   "amountCents": 6400,
+   "categoryId": "cat-wohnen",
+   "description": "Strom",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "rec-strom"
+  },
+  {
+   "id": "2c85618e-8751-4bd9-9caf-fab992baf361",
+   "date": "2026-05-15",
+   "type": "expense",
+   "amountCents": 4000,
+   "categoryId": "cat-abos-vertraege",
+   "description": "Kfz-Versicherung jährlich",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "952dac63-b17e-4cf1-b27c-5de3a5b80949"
+  },
+  {
+   "id": "2d661fab-c8f2-4920-b139-37d776907d33",
+   "date": "2026-11-01",
+   "type": "expense",
+   "amountCents": 1099,
+   "categoryId": "cat-abos-vertraege",
+   "description": "Musik-Abo",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "rec-musik-abo"
+  },
+  {
+   "id": "2fa24e82-a3ee-472c-81fb-9712b7b2072b",
+   "date": "2026-09-01",
+   "type": "expense",
+   "amountCents": 3499,
+   "categoryId": "cat-wohnen",
+   "description": "Internet",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "rec-internet"
+  },
+  {
+   "id": "3374099b-2ad8-44bf-9066-8bbd2af675bd",
+   "date": "2026-10-01",
+   "type": "expense",
+   "amountCents": 1100,
+   "categoryId": "cat-mobilitaet",
+   "description": "Kfz-Steuer",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "rec-kfz-steuer"
+  },
+  {
+   "id": "36f37cb3-1dfd-4bd7-bdc1-64a2e5d0b53b",
+   "date": "2026-10-01",
+   "type": "expense",
+   "amountCents": 1240,
+   "categoryId": "cat-versicherungen",
+   "description": "Zahnzusatz",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "rec-zahnzusatz"
+  },
+  {
+   "id": "3ef5bf74-8d58-4e9b-9d6c-944991a6f653",
+   "date": "2026-02-15",
+   "type": "expense",
+   "amountCents": 4000,
+   "categoryId": "cat-abos-vertraege",
+   "description": "Kfz-Versicherung jährlich",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "952dac63-b17e-4cf1-b27c-5de3a5b80949"
+  },
+  {
+   "id": "3ffa80ce-8624-4ece-836b-3abb3948b141",
+   "date": "2026-10-01",
+   "type": "expense",
+   "amountCents": 1399,
+   "categoryId": "cat-abos-vertraege",
+   "description": "Streaming",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "rec-streaming"
+  },
+  {
+   "id": "47aab853-a8f9-4825-876a-d7a13eb5bad2",
+   "date": "2026-10-01",
+   "type": "expense",
+   "amountCents": 3499,
+   "categoryId": "cat-wohnen",
+   "description": "Internet",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "rec-internet"
+  },
+  {
+   "id": "4f249fc1-3e3e-4422-9796-3e38c3277db9",
+   "date": "2026-11-01",
+   "type": "expense",
+   "amountCents": 590,
+   "categoryId": "cat-versicherungen",
+   "description": "Haftpflicht",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "rec-haftpflicht"
+  },
+  {
+   "id": "4f6e31a3-c344-49f2-bd7a-fbe9f037bd2e",
+   "date": "2026-11-01",
+   "type": "expense",
+   "amountCents": 1499,
+   "categoryId": "cat-abos-vertraege",
+   "description": "Handyvertrag",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "rec-handyvertrag"
+  },
+  {
+   "id": "513e3170-03c4-4e45-bb2c-b386bd840895",
+   "date": "2026-10-01",
+   "type": "expense",
+   "amountCents": 40000,
+   "categoryId": "08a8d13c-4602-4758-bec9-1291fb53e12d",
+   "description": "Beitrag Haushaltskonto",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "4805c23c-b67a-4999-bb2e-959db165d082"
+  },
+  {
+   "id": "55ab4174-5598-4783-979d-597a54e9f55c",
+   "date": "2026-10-01",
+   "type": "expense",
+   "amountCents": 490,
+   "categoryId": "cat-mobilitaet",
+   "description": "Pannenhilfe",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "rec-pannenhilfe"
+  },
+  {
+   "id": "656564c8-c04e-4188-b75b-91c34e9b3b80",
+   "date": "2026-11-01",
+   "type": "expense",
+   "amountCents": 1836,
+   "categoryId": "cat-wohnen",
+   "description": "Rundfunkbeitrag",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "rec-rundfunkbeitrag"
+  },
+  {
+   "id": "66c4a7f8-aa85-4fa6-931e-6646decc27cf",
+   "date": "2026-09-15",
+   "type": "expense",
+   "amountCents": 4000,
+   "categoryId": "cat-abos-vertraege",
+   "description": "Kfz-Versicherung jährlich",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "952dac63-b17e-4cf1-b27c-5de3a5b80949"
+  },
+  {
+   "id": "68fcf19f-3263-4879-a8ce-40db1fb86424",
+   "date": "2026-09-01",
+   "type": "expense",
+   "amountCents": 1499,
+   "categoryId": "cat-abos-vertraege",
+   "description": "Handyvertrag",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "rec-handyvertrag"
+  },
+  {
+   "id": "6a79c281-2618-4f8a-ab8c-bc916a708870",
+   "createdAt": "2026-11-09T20:25:43.093Z",
+   "date": "2026-10-04",
+   "type": "expense",
+   "amountCents": 5678,
+   "categoryId": "0d861942-5bc1-4405-8dd2-08a176e4727c",
+   "description": "Wocheneinkauf",
+   "account": "joint"
+  },
+  {
+   "id": "6bbcfe9d-cf31-4679-80d2-5a4d053a2779",
+   "date": "2026-09-01",
+   "type": "expense",
+   "amountCents": 1399,
+   "categoryId": "cat-abos-vertraege",
+   "description": "Streaming",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "rec-streaming"
+  },
+  {
+   "id": "734a7985-b9f8-4bd6-80f7-3ca17b23fb48",
+   "date": "2026-09-01",
+   "type": "expense",
+   "amountCents": 1240,
+   "categoryId": "cat-versicherungen",
+   "description": "Zahnzusatz",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "rec-zahnzusatz"
+  },
+  {
+   "id": "7dbfcc5e-ceb5-4b5f-85dc-8314eb29035a",
+   "date": "2026-11-01",
+   "type": "income",
+   "amountCents": 285000,
+   "categoryId": "cat-gehalt",
+   "description": "Gehalt",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "rec-gehalt"
+  },
+  {
+   "id": "8336c2b4-c1aa-493b-8b62-e3ad8983074a",
+   "date": "2026-09-01",
+   "type": "expense",
+   "amountCents": 1836,
+   "categoryId": "cat-wohnen",
+   "description": "Rundfunkbeitrag",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "rec-rundfunkbeitrag"
+  },
+  {
+   "id": "834ee27f-e0d1-4b3d-8799-b21ebe06f35f",
+   "date": "2026-04-15",
+   "type": "expense",
+   "amountCents": 4000,
+   "categoryId": "cat-abos-vertraege",
+   "description": "Kfz-Versicherung jährlich",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "952dac63-b17e-4cf1-b27c-5de3a5b80949"
+  },
+  {
+   "id": "84926b02-d3fc-427c-a36f-d4dfc2bd5dee",
+   "date": "2026-10-01",
+   "type": "income",
+   "amountCents": 285000,
+   "categoryId": "cat-gehalt",
+   "description": "Gehalt",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "rec-gehalt"
+  },
+  {
+   "id": "8bab0446-e474-47fc-9aa3-19d2c0b39562",
+   "date": "2026-09-01",
+   "type": "expense",
+   "amountCents": 40000,
+   "categoryId": "08a8d13c-4602-4758-bec9-1291fb53e12d",
+   "description": "Beitrag Haushaltskonto",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "4805c23c-b67a-4999-bb2e-959db165d082"
+  },
+  {
+   "id": "8bf722b6-ddec-42a8-855c-e09ba772b5a9",
+   "date": "2026-11-01",
+   "type": "expense",
+   "amountCents": 720,
+   "categoryId": "cat-versicherungen",
+   "description": "Hausrat",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "rec-hausrat"
+  },
+  {
+   "id": "8cb3ee21-905b-406f-a306-fd7570ba2799",
+   "date": "2026-09-01",
+   "type": "expense",
+   "amountCents": 720,
+   "categoryId": "cat-versicherungen",
+   "description": "Hausrat",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "rec-hausrat"
+  },
+  {
+   "id": "90dde351-e106-4c1c-9bcc-67accaf359c7",
+   "createdAt": "2026-11-09T20:25:43.093Z",
+   "date": "2026-10-03",
+   "type": "expense",
+   "amountCents": 2345,
+   "categoryId": "cat-auto--benzin",
+   "description": "REWE Markt"
+  },
+  {
+   "id": "91549681-7966-4fc6-bb34-72997976b20a",
+   "date": "2026-11-01",
+   "type": "expense",
+   "amountCents": 1399,
+   "categoryId": "cat-abos-vertraege",
+   "description": "Streaming",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "rec-streaming"
+  },
+  {
+   "id": "9755c26f-e8af-4efd-a7b7-551dbc51b4a8",
+   "date": "2026-11-01",
+   "type": "expense",
+   "amountCents": 72000,
+   "categoryId": "cat-wohnen",
+   "description": "Miete",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "rec-miete"
+  },
+  {
+   "id": "97ba3c82-326d-4c52-ba9f-ebe8686f555c",
+   "date": "2026-11-01",
+   "type": "expense",
+   "amountCents": 2990,
+   "categoryId": "cat-abos-vertraege",
+   "description": "Fitnessstudio",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "rec-fitnessstudio"
+  },
+  {
+   "id": "98478a86-0d72-4e2a-ab0d-6ca4129a2f44",
+   "date": "2026-11-09",
+   "type": "expense",
+   "amountCents": 21900,
+   "categoryId": "cat-sparen--sparkonto",
+   "description": "Sparziel: Urlaub",
+   "createdAt": "2026-11-09T20:25:43.110Z",
+   "goalId": "537969c5-a3b4-456d-b6d6-b7e8ffd6e301"
+  },
+  {
+   "id": "993b5ce0-e8ec-4820-aabc-a62c893db1b4",
+   "date": "2026-11-01",
+   "type": "expense",
+   "amountCents": 1100,
+   "categoryId": "cat-mobilitaet",
+   "description": "Kfz-Steuer",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "rec-kfz-steuer"
+  },
+  {
+   "id": "9c4f459c-c611-4d07-9889-5d42bd3110eb",
+   "date": "2026-10-01",
+   "type": "expense",
+   "amountCents": 30000,
+   "categoryId": "cat-sparen--sparkonto",
+   "description": "Sparrate",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "rec-sparrate"
+  },
+  {
+   "id": "9df867bc-9657-4aae-b344-e9096a494db0",
+   "date": "2026-09-01",
+   "type": "expense",
+   "amountCents": 1099,
+   "categoryId": "cat-abos-vertraege",
+   "description": "Musik-Abo",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "rec-musik-abo"
+  },
+  {
+   "id": "a0cf643d-fbc4-400b-83df-8e57203837d6",
+   "date": "2026-09-01",
+   "type": "income",
+   "amountCents": 285000,
+   "categoryId": "cat-gehalt",
+   "description": "Gehalt",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "rec-gehalt"
+  },
+  {
+   "id": "a240e643-7512-41c9-8189-32e68d463fa2",
+   "date": "2026-10-01",
+   "type": "expense",
+   "amountCents": 1099,
+   "categoryId": "cat-abos-vertraege",
+   "description": "Musik-Abo",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "rec-musik-abo"
+  },
+  {
+   "id": "a24f71d2-1c1d-4f58-8c4e-a0c2c513001b",
+   "date": "2026-09-01",
+   "type": "expense",
+   "amountCents": 72000,
+   "categoryId": "cat-wohnen",
+   "description": "Miete",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "rec-miete"
+  },
+  {
+   "id": "a96ad17d-d02c-4817-b1b2-51c7445ce511",
+   "date": "2026-10-01",
+   "type": "expense",
+   "amountCents": 590,
+   "categoryId": "cat-versicherungen",
+   "description": "Haftpflicht",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "rec-haftpflicht"
+  },
+  {
+   "id": "aa251e8a-6029-4c36-a4f6-fee86cdd8c3b",
+   "date": "2026-09-01",
+   "type": "expense",
+   "amountCents": 1100,
+   "categoryId": "cat-mobilitaet",
+   "description": "Kfz-Steuer",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "rec-kfz-steuer"
+  },
+  {
+   "id": "ada9a2a4-9c5d-4e9b-9a25-f8dbef1ac057",
+   "date": "2026-09-01",
+   "type": "expense",
+   "amountCents": 490,
+   "categoryId": "cat-mobilitaet",
+   "description": "Pannenhilfe",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "rec-pannenhilfe"
+  },
+  {
+   "id": "af19962f-1faa-4a5d-8d88-75c337f37827",
+   "date": "2026-11-01",
+   "type": "expense",
+   "amountCents": 3499,
+   "categoryId": "cat-wohnen",
+   "description": "Internet",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "rec-internet"
+  },
+  {
+   "id": "af99d02e-1ded-4113-acf8-868b4cb6d74a",
+   "date": "2026-10-01",
+   "type": "expense",
+   "amountCents": 1836,
+   "categoryId": "cat-wohnen",
+   "description": "Rundfunkbeitrag",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "rec-rundfunkbeitrag"
+  },
+  {
+   "id": "b917c1a3-a20b-4e9c-bd59-a09104891d23",
+   "date": "2026-09-01",
+   "type": "expense",
+   "amountCents": 590,
+   "categoryId": "cat-versicherungen",
+   "description": "Haftpflicht",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "rec-haftpflicht"
+  },
+  {
+   "id": "bce24d70-0a6b-42ae-892b-c1069e99da78",
+   "date": "2026-11-01",
+   "type": "expense",
+   "amountCents": 30000,
+   "categoryId": "cat-sparen--sparkonto",
+   "description": "Sparrate",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "rec-sparrate"
+  },
+  {
+   "id": "bff833b8-49b5-4fba-aa56-a87c5e10886f",
+   "date": "2026-09-01",
+   "type": "expense",
+   "amountCents": 4800,
+   "categoryId": "cat-versicherungen",
+   "description": "Berufsunfähigkeit",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "rec-berufsunfaehigkeit"
+  },
+  {
+   "id": "c1e1cf0d-c32a-4040-ad77-e2d9532142b2",
+   "date": "2026-10-01",
+   "type": "expense",
+   "amountCents": 4250,
+   "categoryId": "cat-mobilitaet",
+   "description": "Autoversicherung",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "rec-autoversicherung"
+  },
+  {
+   "id": "c77b6869-0a58-471d-bf76-87c3e441d822",
+   "date": "2026-10-01",
+   "type": "expense",
+   "amountCents": 4800,
+   "categoryId": "cat-versicherungen",
+   "description": "Berufsunfähigkeit",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "rec-berufsunfaehigkeit"
+  },
+  {
+   "id": "c99eefb6-2b2f-4e28-bfd7-f1320b4817af",
+   "date": "2026-09-01",
+   "type": "expense",
+   "amountCents": 30000,
+   "categoryId": "cat-sparen--sparkonto",
+   "description": "Sparrate",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "rec-sparrate"
+  },
+  {
+   "id": "ce9ada96-8ec5-4c99-a6f6-be4ebffbf644",
+   "date": "2026-11-01",
+   "type": "expense",
+   "amountCents": 4250,
+   "categoryId": "cat-mobilitaet",
+   "description": "Autoversicherung",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "rec-autoversicherung"
+  },
+  {
+   "id": "cf7a999a-2147-479d-8e8b-a395a0383d2e",
+   "date": "2026-01-15",
+   "type": "expense",
+   "amountCents": 4000,
+   "categoryId": "cat-abos-vertraege",
+   "description": "Kfz-Versicherung jährlich",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "952dac63-b17e-4cf1-b27c-5de3a5b80949"
+  },
+  {
+   "id": "d08d32ab-1baa-4463-9e1e-1b85cb68048c",
+   "date": "2026-11-01",
+   "type": "expense",
+   "amountCents": 6400,
+   "categoryId": "cat-wohnen",
+   "description": "Strom",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "rec-strom"
+  },
+  {
+   "id": "d6b4b954-08bb-47a1-9f79-7d08e08c89fc",
+   "date": "2026-09-01",
+   "type": "expense",
+   "amountCents": 5800,
+   "categoryId": "cat-mobilitaet",
+   "description": "Deutschlandticket",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "rec-deutschlandticket"
+  },
+  {
+   "id": "d74f3fda-b7e2-4c62-9884-cfcf57dbd7c7",
+   "date": "2026-10-01",
+   "type": "expense",
+   "amountCents": 5800,
+   "categoryId": "cat-mobilitaet",
+   "description": "Deutschlandticket",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "rec-deutschlandticket"
+  },
+  {
+   "id": "e88422d7-c4a4-43a6-844a-bd38ef7c934b",
+   "date": "2026-08-15",
+   "type": "expense",
+   "amountCents": 4000,
+   "categoryId": "cat-abos-vertraege",
+   "description": "Kfz-Versicherung jährlich",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "952dac63-b17e-4cf1-b27c-5de3a5b80949"
+  },
+  {
+   "id": "eb62da59-1508-417a-9f6d-ac533f8277d8",
+   "date": "2026-09-01",
+   "type": "expense",
+   "amountCents": 4250,
+   "categoryId": "cat-mobilitaet",
+   "description": "Autoversicherung",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "rec-autoversicherung"
+  },
+  {
+   "id": "f2dca280-3807-4aee-b389-b1ff20565877",
+   "date": "2026-10-01",
+   "type": "expense",
+   "amountCents": 1499,
+   "categoryId": "cat-abos-vertraege",
+   "description": "Handyvertrag",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "rec-handyvertrag"
+  },
+  {
+   "id": "fbba08d2-32fb-446a-a268-1ba58476e8d6",
+   "date": "2026-10-01",
+   "type": "expense",
+   "amountCents": 6400,
+   "categoryId": "cat-wohnen",
+   "description": "Strom",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "rec-strom"
+  },
+  {
+   "id": "fe785c89-452c-4dab-8097-461501717552",
+   "date": "2026-11-01",
+   "type": "expense",
+   "amountCents": 1240,
+   "categoryId": "cat-versicherungen",
+   "description": "Zahnzusatz",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "rec-zahnzusatz"
+  },
+  {
+   "id": "ff84362c-f0fb-45a9-a5aa-e95a7b165dad",
+   "date": "2026-09-01",
+   "type": "expense",
+   "amountCents": 2990,
+   "categoryId": "cat-abos-vertraege",
+   "description": "Fitnessstudio",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "rec-fitnessstudio"
+  },
+  {
+   "id": "ff93c33a-745c-454e-a5b6-b3dee780a11e",
+   "date": "2026-10-01",
+   "type": "expense",
+   "amountCents": 720,
+   "categoryId": "cat-versicherungen",
+   "description": "Hausrat",
+   "createdAt": "2026-11-09T20:25:43.096Z",
+   "recurringId": "rec-hausrat"
+  }
+ ],
+ "categories": [
+  {
+   "id": "08a8d13c-4602-4758-bec9-1291fb53e12d",
+   "name": "Gemeinsames Konto",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": null,
+   "archived": false,
+   "sort": -1,
+   "createdAt": "2026-11-09T20:25:43.089Z"
+  },
+  {
+   "id": "0d861942-5bc1-4405-8dd2-08a176e4727c",
+   "name": "Lebensmittel",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": null,
+   "archived": false,
+   "sort": 41,
+   "createdAt": "2026-11-09T20:25:43.092Z",
+   "scope": "joint"
+  },
+  {
+   "id": "17920b33-5b64-49d7-8c65-ac9d9175675f",
+   "name": "Einkaufen",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": "0d861942-5bc1-4405-8dd2-08a176e4727c",
+   "archived": false,
+   "sort": 42,
+   "createdAt": "2026-11-09T20:25:43.092Z",
+   "scope": "joint"
+  },
+  {
+   "id": "2a020aa2-a519-448e-b7b3-4210b3eec6de",
+   "name": "Drogerie",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": "aa2ff18e-6109-43fa-b3ff-222480d44010",
+   "archived": false,
+   "sort": 45,
+   "createdAt": "2026-11-09T20:25:43.092Z",
+   "scope": "joint"
+  },
+  {
+   "id": "56ba2c03-4cdd-4672-9c37-f128d3751e6a",
+   "name": "Getränke",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": "0d861942-5bc1-4405-8dd2-08a176e4727c",
+   "archived": false,
+   "sort": 43,
+   "createdAt": "2026-11-09T20:25:43.092Z",
+   "scope": "joint"
+  },
+  {
+   "id": "aa2ff18e-6109-43fa-b3ff-222480d44010",
+   "name": "Haushalt",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": null,
+   "archived": false,
+   "sort": 44,
+   "createdAt": "2026-11-09T20:25:43.092Z",
+   "scope": "joint"
+  },
+  {
+   "id": "ad8806d1-ebfa-4dc8-902b-45dba02a10c6",
+   "name": "Putzmittel",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": "aa2ff18e-6109-43fa-b3ff-222480d44010",
+   "archived": false,
+   "sort": 46,
+   "createdAt": "2026-11-09T20:25:43.092Z",
+   "scope": "joint"
+  },
+  {
+   "id": "cat-abos-vertraege",
+   "name": "Abos & Verträge",
+   "kind": "expense",
+   "group": "fix",
+   "parentId": null,
+   "archived": false,
+   "sort": 5,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-auto",
+   "name": "Auto",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": null,
+   "archived": false,
+   "sort": 16,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-auto--benzin",
+   "name": "Benzin",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": "cat-auto",
+   "archived": false,
+   "sort": 17,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-auto--parken",
+   "name": "Parken",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": "cat-auto",
+   "archived": false,
+   "sort": 19,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-auto--wartung",
+   "name": "Wartung",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": "cat-auto",
+   "archived": false,
+   "sort": 18,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-bargeld",
+   "name": "Bargeld",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": null,
+   "archived": false,
+   "sort": 20,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-bargeld--auszahlung",
+   "name": "Auszahlung",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": "cat-bargeld",
+   "archived": false,
+   "sort": 21,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-bekleidung",
+   "name": "Bekleidung",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": null,
+   "archived": false,
+   "sort": 27,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-bekleidung--schuhe",
+   "name": "Schuhe",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": "cat-bekleidung",
+   "archived": false,
+   "sort": 28,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-freizeit",
+   "name": "Freizeit",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": null,
+   "archived": false,
+   "sort": 29,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-freizeit--ausfluege",
+   "name": "Ausflüge",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": "cat-freizeit",
+   "archived": false,
+   "sort": 30,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-freizeit--kino",
+   "name": "Kino",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": "cat-freizeit",
+   "archived": false,
+   "sort": 31,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-gehalt",
+   "name": "Gehalt",
+   "kind": "income",
+   "group": "einnahme",
+   "parentId": null,
+   "archived": false,
+   "sort": 0,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-gesundheit",
+   "name": "Gesundheit",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": null,
+   "archived": false,
+   "sort": 11,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-gesundheit--apotheke",
+   "name": "Apotheke",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": "cat-gesundheit",
+   "archived": false,
+   "sort": 13,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-gesundheit--arzt",
+   "name": "Arzt",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": "cat-gesundheit",
+   "archived": false,
+   "sort": 12,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-gesundheit--drogerie",
+   "name": "Drogerie",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": "cat-gesundheit",
+   "archived": false,
+   "sort": 14,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-gesundheit--friseur",
+   "name": "Friseur",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": "cat-gesundheit",
+   "archived": false,
+   "sort": 15,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-lebensmittel",
+   "name": "Lebensmittel",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": null,
+   "archived": false,
+   "sort": 6,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-lebensmittel--baecker",
+   "name": "Bäcker",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": "cat-lebensmittel",
+   "archived": false,
+   "sort": 10,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-lebensmittel--einkaufen",
+   "name": "Einkaufen",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": "cat-lebensmittel",
+   "archived": false,
+   "sort": 7,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-lebensmittel--essen-gehen",
+   "name": "Essen gehen",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": "cat-lebensmittel",
+   "archived": false,
+   "sort": 9,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-lebensmittel--kantine",
+   "name": "Kantine",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": "cat-lebensmittel",
+   "archived": false,
+   "sort": 8,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-mobilitaet",
+   "name": "Mobilität",
+   "kind": "expense",
+   "group": "fix",
+   "parentId": null,
+   "archived": false,
+   "sort": 3,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-roller",
+   "name": "Roller",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": null,
+   "archived": false,
+   "sort": 22,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-roller--benzin",
+   "name": "Benzin",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": "cat-roller",
+   "archived": false,
+   "sort": 23,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-roller--teile",
+   "name": "Teile",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": "cat-roller",
+   "archived": false,
+   "sort": 24,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-sonstige-einnahmen",
+   "name": "Sonstige Einnahmen",
+   "kind": "income",
+   "group": "einnahme",
+   "parentId": null,
+   "archived": false,
+   "sort": 1,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-sonstiges",
+   "name": "Sonstiges",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": null,
+   "archived": false,
+   "sort": 32,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-sonstiges--geschenke",
+   "name": "Geschenke",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": "cat-sonstiges",
+   "archived": false,
+   "sort": 34,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-sonstiges--hobby",
+   "name": "Hobby",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": "cat-sonstiges",
+   "archived": false,
+   "sort": 38,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-sonstiges--online",
+   "name": "Online",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": "cat-sonstiges",
+   "archived": false,
+   "sort": 33,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-sonstiges--sonstige",
+   "name": "Sonstige",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": "cat-sonstiges",
+   "archived": false,
+   "sort": 36,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-sonstiges--spenden",
+   "name": "Spenden",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": "cat-sonstiges",
+   "archived": false,
+   "sort": 35,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-sonstiges--urlaub",
+   "name": "Urlaub",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": "cat-sonstiges",
+   "archived": false,
+   "sort": 37,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-sparen",
+   "name": "Sparen",
+   "kind": "expense",
+   "group": "spar",
+   "parentId": null,
+   "archived": false,
+   "sort": 39,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-sparen--sparkonto",
+   "name": "Sparkonto",
+   "kind": "expense",
+   "group": "spar",
+   "parentId": "cat-sparen",
+   "archived": false,
+   "sort": 40,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-sport",
+   "name": "Sport",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": null,
+   "archived": false,
+   "sort": 25,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-sport--sport",
+   "name": "Sport",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": "cat-sport",
+   "archived": false,
+   "sort": 26,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-versicherungen",
+   "name": "Versicherungen",
+   "kind": "expense",
+   "group": "fix",
+   "parentId": null,
+   "archived": false,
+   "sort": 4,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-wohnen",
+   "name": "Wohnen",
+   "kind": "expense",
+   "group": "fix",
+   "parentId": null,
+   "archived": false,
+   "sort": 2,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  }
+ ],
+ "budgets": [
+  {
+   "id": "cat:cat-auto:default",
+   "scope": "category",
+   "monthKey": "default",
+   "amountCents": 30000,
+   "categoryId": "cat-auto"
+  },
+  {
+   "id": "month:2026-10",
+   "scope": "month",
+   "monthKey": "2026-10",
+   "amountCents": 150000
+  }
+ ],
+ "settings": [
+  {
+   "key": "app",
+   "value": {
+    "expectedIncomeCents": 285000,
+    "split": {
+     "fix": 40,
+     "alltag": 40,
+     "spar": 15
+    },
+    "savingsBalanceCents": 0,
+    "savingsBalanceDate": null,
+    "accountName": "Girokonto",
+    "backupReminderDays": 30,
+    "joint": {
+     "enabled": true,
+     "name": "Haushaltskonto",
+     "partnerName": "Alex",
+     "categoryId": "08a8d13c-4602-4758-bec9-1291fb53e12d",
+     "partnerDefaultCents": 40000,
+     "partnerByMonth": {},
+     "startMonth": "2026-09"
+    },
+    "savingsGoals": [
+     {
+      "id": "537969c5-a3b4-456d-b6d6-b7e8ffd6e301",
+      "name": "Urlaub",
+      "targetCents": 200000,
+      "savedCents": 25000,
+      "dueMonth": "2027-06",
+      "createdAt": "2026-11-09T20:25:43.095Z",
+      "auto": true,
+      "lastBookedMonth": "2026-11"
+     }
+    ]
+   }
+  }
+ ],
+ "recurring": [
+  {
+   "id": "4805c23c-b67a-4999-bb2e-959db165d082",
+   "name": "Beitrag Haushaltskonto",
+   "type": "expense",
+   "amountCents": 40000,
+   "categoryId": "08a8d13c-4602-4758-bec9-1291fb53e12d",
+   "startMonth": "2026-09",
+   "day": 1,
+   "active": true,
+   "createdAt": "2026-11-09T20:25:43.089Z"
+  },
+  {
+   "id": "952dac63-b17e-4cf1-b27c-5de3a5b80949",
+   "name": "Kfz-Versicherung jährlich",
+   "type": "expense",
+   "amountCents": 4000,
+   "categoryId": "cat-abos-vertraege",
+   "startMonth": "2026-01",
+   "day": 15,
+   "active": true,
+   "createdAt": "2026-11-09T20:25:43.094Z",
+   "interval": "yearly",
+   "yearlyCents": 48000,
+   "dueMonth": 3
+  },
+  {
+   "id": "rec-autoversicherung",
+   "name": "Autoversicherung",
+   "type": "expense",
+   "amountCents": 4250,
+   "categoryId": "cat-mobilitaet",
+   "startMonth": "2026-09",
+   "day": 1,
+   "active": true,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "rec-berufsunfaehigkeit",
+   "name": "Berufsunfähigkeit",
+   "type": "expense",
+   "amountCents": 4800,
+   "categoryId": "cat-versicherungen",
+   "startMonth": "2026-09",
+   "day": 1,
+   "active": true,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "rec-deutschlandticket",
+   "name": "Deutschlandticket",
+   "type": "expense",
+   "amountCents": 5800,
+   "categoryId": "cat-mobilitaet",
+   "startMonth": "2026-09",
+   "day": 1,
+   "active": true,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "rec-fitnessstudio",
+   "name": "Fitnessstudio",
+   "type": "expense",
+   "amountCents": 2990,
+   "categoryId": "cat-abos-vertraege",
+   "startMonth": "2026-09",
+   "day": 1,
+   "active": true,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "rec-gehalt",
+   "name": "Gehalt",
+   "type": "income",
+   "amountCents": 285000,
+   "categoryId": "cat-gehalt",
+   "startMonth": "2026-09",
+   "day": 1,
+   "active": true,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "rec-haftpflicht",
+   "name": "Haftpflicht",
+   "type": "expense",
+   "amountCents": 590,
+   "categoryId": "cat-versicherungen",
+   "startMonth": "2026-09",
+   "day": 1,
+   "active": true,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "rec-handyvertrag",
+   "name": "Handyvertrag",
+   "type": "expense",
+   "amountCents": 1499,
+   "categoryId": "cat-abos-vertraege",
+   "startMonth": "2026-09",
+   "day": 1,
+   "active": true,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "rec-hausrat",
+   "name": "Hausrat",
+   "type": "expense",
+   "amountCents": 720,
+   "categoryId": "cat-versicherungen",
+   "startMonth": "2026-09",
+   "day": 1,
+   "active": true,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "rec-internet",
+   "name": "Internet",
+   "type": "expense",
+   "amountCents": 3499,
+   "categoryId": "cat-wohnen",
+   "startMonth": "2026-09",
+   "day": 1,
+   "active": true,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "rec-kfz-steuer",
+   "name": "Kfz-Steuer",
+   "type": "expense",
+   "amountCents": 1100,
+   "categoryId": "cat-mobilitaet",
+   "startMonth": "2026-09",
+   "day": 1,
+   "active": true,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "rec-miete",
+   "name": "Miete",
+   "type": "expense",
+   "amountCents": 72000,
+   "categoryId": "cat-wohnen",
+   "startMonth": "2026-09",
+   "day": 1,
+   "active": true,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "rec-musik-abo",
+   "name": "Musik-Abo",
+   "type": "expense",
+   "amountCents": 1099,
+   "categoryId": "cat-abos-vertraege",
+   "startMonth": "2026-09",
+   "day": 1,
+   "active": true,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "rec-pannenhilfe",
+   "name": "Pannenhilfe",
+   "type": "expense",
+   "amountCents": 490,
+   "categoryId": "cat-mobilitaet",
+   "startMonth": "2026-09",
+   "day": 1,
+   "active": true,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "rec-rundfunkbeitrag",
+   "name": "Rundfunkbeitrag",
+   "type": "expense",
+   "amountCents": 1836,
+   "categoryId": "cat-wohnen",
+   "startMonth": "2026-09",
+   "day": 1,
+   "active": true,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "rec-sparrate",
+   "name": "Sparrate",
+   "type": "expense",
+   "amountCents": 30000,
+   "categoryId": "cat-sparen--sparkonto",
+   "startMonth": "2026-09",
+   "day": 1,
+   "active": true,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "rec-streaming",
+   "name": "Streaming",
+   "type": "expense",
+   "amountCents": 1399,
+   "categoryId": "cat-abos-vertraege",
+   "startMonth": "2026-09",
+   "day": 1,
+   "active": true,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "rec-strom",
+   "name": "Strom",
+   "type": "expense",
+   "amountCents": 6400,
+   "categoryId": "cat-wohnen",
+   "startMonth": "2026-09",
+   "day": 1,
+   "active": true,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "rec-zahnzusatz",
+   "name": "Zahnzusatz",
+   "type": "expense",
+   "amountCents": 1240,
+   "categoryId": "cat-versicherungen",
+   "startMonth": "2026-09",
+   "day": 1,
+   "active": true,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  }
+ ],
+ "recurringRuns": [
+  {
+   "key": "4805c23c-b67a-4999-bb2e-959db165d082:2026-09",
+   "recurringId": "4805c23c-b67a-4999-bb2e-959db165d082",
+   "month": "2026-09",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "4805c23c-b67a-4999-bb2e-959db165d082:2026-10",
+   "recurringId": "4805c23c-b67a-4999-bb2e-959db165d082",
+   "month": "2026-10",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "4805c23c-b67a-4999-bb2e-959db165d082:2026-11",
+   "recurringId": "4805c23c-b67a-4999-bb2e-959db165d082",
+   "month": "2026-11",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "952dac63-b17e-4cf1-b27c-5de3a5b80949:2026-01",
+   "recurringId": "952dac63-b17e-4cf1-b27c-5de3a5b80949",
+   "month": "2026-01",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "952dac63-b17e-4cf1-b27c-5de3a5b80949:2026-02",
+   "recurringId": "952dac63-b17e-4cf1-b27c-5de3a5b80949",
+   "month": "2026-02",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "952dac63-b17e-4cf1-b27c-5de3a5b80949:2026-03",
+   "recurringId": "952dac63-b17e-4cf1-b27c-5de3a5b80949",
+   "month": "2026-03",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "952dac63-b17e-4cf1-b27c-5de3a5b80949:2026-04",
+   "recurringId": "952dac63-b17e-4cf1-b27c-5de3a5b80949",
+   "month": "2026-04",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "952dac63-b17e-4cf1-b27c-5de3a5b80949:2026-05",
+   "recurringId": "952dac63-b17e-4cf1-b27c-5de3a5b80949",
+   "month": "2026-05",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "952dac63-b17e-4cf1-b27c-5de3a5b80949:2026-06",
+   "recurringId": "952dac63-b17e-4cf1-b27c-5de3a5b80949",
+   "month": "2026-06",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "952dac63-b17e-4cf1-b27c-5de3a5b80949:2026-07",
+   "recurringId": "952dac63-b17e-4cf1-b27c-5de3a5b80949",
+   "month": "2026-07",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "952dac63-b17e-4cf1-b27c-5de3a5b80949:2026-08",
+   "recurringId": "952dac63-b17e-4cf1-b27c-5de3a5b80949",
+   "month": "2026-08",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "952dac63-b17e-4cf1-b27c-5de3a5b80949:2026-09",
+   "recurringId": "952dac63-b17e-4cf1-b27c-5de3a5b80949",
+   "month": "2026-09",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "952dac63-b17e-4cf1-b27c-5de3a5b80949:2026-10",
+   "recurringId": "952dac63-b17e-4cf1-b27c-5de3a5b80949",
+   "month": "2026-10",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "952dac63-b17e-4cf1-b27c-5de3a5b80949:2026-11",
+   "recurringId": "952dac63-b17e-4cf1-b27c-5de3a5b80949",
+   "month": "2026-11",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "rec-autoversicherung:2026-09",
+   "recurringId": "rec-autoversicherung",
+   "month": "2026-09",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "rec-autoversicherung:2026-10",
+   "recurringId": "rec-autoversicherung",
+   "month": "2026-10",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "rec-autoversicherung:2026-11",
+   "recurringId": "rec-autoversicherung",
+   "month": "2026-11",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "rec-berufsunfaehigkeit:2026-09",
+   "recurringId": "rec-berufsunfaehigkeit",
+   "month": "2026-09",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "rec-berufsunfaehigkeit:2026-10",
+   "recurringId": "rec-berufsunfaehigkeit",
+   "month": "2026-10",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "rec-berufsunfaehigkeit:2026-11",
+   "recurringId": "rec-berufsunfaehigkeit",
+   "month": "2026-11",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "rec-deutschlandticket:2026-09",
+   "recurringId": "rec-deutschlandticket",
+   "month": "2026-09",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "rec-deutschlandticket:2026-10",
+   "recurringId": "rec-deutschlandticket",
+   "month": "2026-10",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "rec-deutschlandticket:2026-11",
+   "recurringId": "rec-deutschlandticket",
+   "month": "2026-11",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "rec-fitnessstudio:2026-09",
+   "recurringId": "rec-fitnessstudio",
+   "month": "2026-09",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "rec-fitnessstudio:2026-10",
+   "recurringId": "rec-fitnessstudio",
+   "month": "2026-10",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "rec-fitnessstudio:2026-11",
+   "recurringId": "rec-fitnessstudio",
+   "month": "2026-11",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "rec-gehalt:2026-09",
+   "recurringId": "rec-gehalt",
+   "month": "2026-09",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "rec-gehalt:2026-10",
+   "recurringId": "rec-gehalt",
+   "month": "2026-10",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "rec-gehalt:2026-11",
+   "recurringId": "rec-gehalt",
+   "month": "2026-11",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "rec-haftpflicht:2026-09",
+   "recurringId": "rec-haftpflicht",
+   "month": "2026-09",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "rec-haftpflicht:2026-10",
+   "recurringId": "rec-haftpflicht",
+   "month": "2026-10",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "rec-haftpflicht:2026-11",
+   "recurringId": "rec-haftpflicht",
+   "month": "2026-11",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "rec-handyvertrag:2026-09",
+   "recurringId": "rec-handyvertrag",
+   "month": "2026-09",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "rec-handyvertrag:2026-10",
+   "recurringId": "rec-handyvertrag",
+   "month": "2026-10",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "rec-handyvertrag:2026-11",
+   "recurringId": "rec-handyvertrag",
+   "month": "2026-11",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "rec-hausrat:2026-09",
+   "recurringId": "rec-hausrat",
+   "month": "2026-09",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "rec-hausrat:2026-10",
+   "recurringId": "rec-hausrat",
+   "month": "2026-10",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "rec-hausrat:2026-11",
+   "recurringId": "rec-hausrat",
+   "month": "2026-11",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "rec-internet:2026-09",
+   "recurringId": "rec-internet",
+   "month": "2026-09",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "rec-internet:2026-10",
+   "recurringId": "rec-internet",
+   "month": "2026-10",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "rec-internet:2026-11",
+   "recurringId": "rec-internet",
+   "month": "2026-11",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "rec-kfz-steuer:2026-09",
+   "recurringId": "rec-kfz-steuer",
+   "month": "2026-09",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "rec-kfz-steuer:2026-10",
+   "recurringId": "rec-kfz-steuer",
+   "month": "2026-10",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "rec-kfz-steuer:2026-11",
+   "recurringId": "rec-kfz-steuer",
+   "month": "2026-11",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "rec-miete:2026-09",
+   "recurringId": "rec-miete",
+   "month": "2026-09",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "rec-miete:2026-10",
+   "recurringId": "rec-miete",
+   "month": "2026-10",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "rec-miete:2026-11",
+   "recurringId": "rec-miete",
+   "month": "2026-11",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "rec-musik-abo:2026-09",
+   "recurringId": "rec-musik-abo",
+   "month": "2026-09",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "rec-musik-abo:2026-10",
+   "recurringId": "rec-musik-abo",
+   "month": "2026-10",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "rec-musik-abo:2026-11",
+   "recurringId": "rec-musik-abo",
+   "month": "2026-11",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "rec-pannenhilfe:2026-09",
+   "recurringId": "rec-pannenhilfe",
+   "month": "2026-09",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "rec-pannenhilfe:2026-10",
+   "recurringId": "rec-pannenhilfe",
+   "month": "2026-10",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "rec-pannenhilfe:2026-11",
+   "recurringId": "rec-pannenhilfe",
+   "month": "2026-11",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "rec-rundfunkbeitrag:2026-09",
+   "recurringId": "rec-rundfunkbeitrag",
+   "month": "2026-09",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "rec-rundfunkbeitrag:2026-10",
+   "recurringId": "rec-rundfunkbeitrag",
+   "month": "2026-10",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "rec-rundfunkbeitrag:2026-11",
+   "recurringId": "rec-rundfunkbeitrag",
+   "month": "2026-11",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "rec-sparrate:2026-09",
+   "recurringId": "rec-sparrate",
+   "month": "2026-09",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "rec-sparrate:2026-10",
+   "recurringId": "rec-sparrate",
+   "month": "2026-10",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "rec-sparrate:2026-11",
+   "recurringId": "rec-sparrate",
+   "month": "2026-11",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "rec-streaming:2026-09",
+   "recurringId": "rec-streaming",
+   "month": "2026-09",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "rec-streaming:2026-10",
+   "recurringId": "rec-streaming",
+   "month": "2026-10",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "rec-streaming:2026-11",
+   "recurringId": "rec-streaming",
+   "month": "2026-11",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "rec-strom:2026-09",
+   "recurringId": "rec-strom",
+   "month": "2026-09",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "rec-strom:2026-10",
+   "recurringId": "rec-strom",
+   "month": "2026-10",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "rec-strom:2026-11",
+   "recurringId": "rec-strom",
+   "month": "2026-11",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "rec-zahnzusatz:2026-09",
+   "recurringId": "rec-zahnzusatz",
+   "month": "2026-09",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "rec-zahnzusatz:2026-10",
+   "recurringId": "rec-zahnzusatz",
+   "month": "2026-10",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  },
+  {
+   "key": "rec-zahnzusatz:2026-11",
+   "recurringId": "rec-zahnzusatz",
+   "month": "2026-11",
+   "createdAt": "2026-11-09T20:25:43.096Z"
+  }
+ ],
+ "depotEntries": [
+  {
+   "id": "1dfd5296-9727-4cbf-8d12-579a9b4c7f09",
+   "date": "2026-08-31",
+   "valueCents": 1234500,
+   "createdAt": "2026-11-09T20:25:43.095Z"
+  }
+ ],
+ "meta": [
+  {
+   "key": "schemaVersion",
+   "value": 8
+  },
+  {
+   "key": "seeded",
+   "value": true
+  }
+ ]
+}

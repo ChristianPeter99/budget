@@ -1,0 +1,17 @@
+﻿Transaktionstyp,Buchungsdatum,Karteneinsatz,Betrag,Zahlungsempfänger,IBAN,BIC,Verwendungszweck,Beschreibung,Kontonummer,Kontoname,Kategorie,Unterkategorie,Bargeldabhebung
+Sparen,27.10.2026,,"-0,63 €",Sparen,,,"Aufrundung aus Kartenzahlung vom 25.10.2026 / -19,37 EUR",,1111111111,Variable Kosten,Geldanlage,Sonstiges Sparen
+SEPA-Lastschrift,27.10.2026,,"-62,40 €",PayPal Europe S.a.r.l. et Cie S.C.A,LU00000000000000000000,PPLXLUL2,"1000000000001/PP.0000.PP/. Beispielshop GmbH, Ihr Einkauf bei Beispielshop GmbH",PayPal Europe S.a.r.l. et Cie S.C.A,1111111111,Variable Kosten,Weitere Ausgaben,Weitere Ausgaben
+Echtzeit-Überweisung,27.10.2026,,"150,00 €",Max Muster,DE00000000000000000000,TESTDEFF,,,1111111111,Variable Kosten,Umbuchung,Umbuchung
+Kartenzahlung,27.10.2026,25.10.2026 16:40,"-7,80 €",Aral,,,,Aral Station 1,1111111111,Variable Kosten,Mobilität,Tanken
+Kartenzahlung,26.10.2026,25.10.2026 10:59,"-3,40 €",Backhaus Muster,,,,,1111111111,Variable Kosten,Lebensmittel,Bäckerei
+Pocket-Umbuchung,25.10.2026,,"150,00 €",Sparen,,,,Max Muster,1111111111,Variable Kosten,Umbuchung,Umbuchung
+Rückerstattung,25.10.2026,24.10.2026 16:11,"12,49 €",toom,,,,toom Baumarkt,1111111111,Variable Kosten,Weitere Einnahmen,Weitere Einnahmen
+Kartenzahlung,26.10.2026,24.10.2026 16:28,"-22,65 €",Kaufland,,,,KAUFLAND 1,1111111111,Variable Kosten,Lebensmittel,Supermarkt
+Kartenzahlung,23.10.2026,22.10.2026 07:51,"-41,27 €",Lidl,,,,Lidl sagt Danke,1111111111,Variable Kosten,Lebensmittel,Supermarkt
+Kartenzahlung,22.10.2026,21.10.2026 18:38,"-19,58 €",Lidl,,,,Lidl sagt Danke,1111111111,Variable Kosten,Lebensmittel,Supermarkt
+Kartenzahlung,22.10.2026,21.10.2026 08:00,"-35,00 €",KANTINE MUSTER GMBH,,,,,1111111111,Variable Kosten,Restaurant/ Café/ Bar,Kantine
+SEPA-Lastschrift,21.10.2026,,"-28,99 €",Amazon,DE00000000000000000000,TUBDDEDD,304-0000000-0000000 Amazon.de XYZ,"AMAZON EU S.A R.L., NIEDERLASSUNG DEUTSCHLAND",1111111111,Variable Kosten,Shopping,Online-Shopping
+Kartenzahlung,18.10.2026,17.10.2026 22:41,"-11,50 €",Vereinsheim,,,,,1111111111,Variable Kosten,Restaurant/ Café/ Bar,Restaurant/ Café/ Bar
+Kartenzahlung,18.10.2026,17.10.2026 22:41,"-11,50 €",Vereinsheim,,,,,1111111111,Variable Kosten,Restaurant/ Café/ Bar,Restaurant/ Café/ Bar
+Kartenzahlung,14.10.2026,12.10.2026 19:58,"-16,83 €",Edeka,,,,Edeka Muster,1111111111,Variable Kosten,Lebensmittel,Supermarkt
+Kaputte Zeile,xx.10.2026,,"abc",Niemand,,,,,1111111111,Variable Kosten,,,

@@ -1,0 +1,630 @@
+{
+ "categories": [
+  {
+   "id": "cat-gehalt",
+   "name": "Gehalt",
+   "kind": "income",
+   "group": "einnahme",
+   "parentId": null,
+   "archived": false,
+   "sort": 0,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-sonstige-einnahmen",
+   "name": "Sonstige Einnahmen",
+   "kind": "income",
+   "group": "einnahme",
+   "parentId": null,
+   "archived": false,
+   "sort": 1,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-wohnen",
+   "name": "Wohnen",
+   "kind": "expense",
+   "group": "fix",
+   "parentId": null,
+   "archived": false,
+   "sort": 2,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-mobilitaet",
+   "name": "Mobilität",
+   "kind": "expense",
+   "group": "fix",
+   "parentId": null,
+   "archived": false,
+   "sort": 3,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-versicherungen",
+   "name": "Versicherungen",
+   "kind": "expense",
+   "group": "fix",
+   "parentId": null,
+   "archived": false,
+   "sort": 4,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-abos-vertraege",
+   "name": "Abos & Verträge",
+   "kind": "expense",
+   "group": "fix",
+   "parentId": null,
+   "archived": false,
+   "sort": 5,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-lebensmittel",
+   "name": "Lebensmittel",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": null,
+   "archived": false,
+   "sort": 6,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-lebensmittel--einkaufen",
+   "name": "Einkaufen",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": "cat-lebensmittel",
+   "archived": false,
+   "sort": 7,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-lebensmittel--kantine",
+   "name": "Kantine",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": "cat-lebensmittel",
+   "archived": false,
+   "sort": 8,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-lebensmittel--essen-gehen",
+   "name": "Essen gehen",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": "cat-lebensmittel",
+   "archived": false,
+   "sort": 9,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-lebensmittel--baecker",
+   "name": "Bäcker",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": "cat-lebensmittel",
+   "archived": false,
+   "sort": 10,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-gesundheit",
+   "name": "Gesundheit",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": null,
+   "archived": false,
+   "sort": 11,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-gesundheit--arzt",
+   "name": "Arzt",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": "cat-gesundheit",
+   "archived": false,
+   "sort": 12,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-gesundheit--apotheke",
+   "name": "Apotheke",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": "cat-gesundheit",
+   "archived": false,
+   "sort": 13,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-gesundheit--drogerie",
+   "name": "Drogerie",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": "cat-gesundheit",
+   "archived": false,
+   "sort": 14,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-gesundheit--friseur",
+   "name": "Friseur",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": "cat-gesundheit",
+   "archived": false,
+   "sort": 15,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-auto",
+   "name": "Auto",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": null,
+   "archived": false,
+   "sort": 16,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-auto--benzin",
+   "name": "Benzin",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": "cat-auto",
+   "archived": false,
+   "sort": 17,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-auto--wartung",
+   "name": "Wartung",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": "cat-auto",
+   "archived": false,
+   "sort": 18,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-auto--parken",
+   "name": "Parken",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": "cat-auto",
+   "archived": false,
+   "sort": 19,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-bargeld",
+   "name": "Bargeld",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": null,
+   "archived": false,
+   "sort": 20,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-bargeld--auszahlung",
+   "name": "Auszahlung",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": "cat-bargeld",
+   "archived": false,
+   "sort": 21,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-roller",
+   "name": "Roller",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": null,
+   "archived": false,
+   "sort": 22,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-roller--benzin",
+   "name": "Benzin",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": "cat-roller",
+   "archived": false,
+   "sort": 23,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-roller--teile",
+   "name": "Teile",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": "cat-roller",
+   "archived": false,
+   "sort": 24,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-sport",
+   "name": "Sport",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": null,
+   "archived": false,
+   "sort": 25,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-sport--sport",
+   "name": "Sport",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": "cat-sport",
+   "archived": false,
+   "sort": 26,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-bekleidung",
+   "name": "Bekleidung",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": null,
+   "archived": false,
+   "sort": 27,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-bekleidung--schuhe",
+   "name": "Schuhe",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": "cat-bekleidung",
+   "archived": false,
+   "sort": 28,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-freizeit",
+   "name": "Freizeit",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": null,
+   "archived": false,
+   "sort": 29,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-freizeit--ausfluege",
+   "name": "Ausflüge",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": "cat-freizeit",
+   "archived": false,
+   "sort": 30,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-freizeit--kino",
+   "name": "Kino",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": "cat-freizeit",
+   "archived": false,
+   "sort": 31,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-sonstiges",
+   "name": "Sonstiges",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": null,
+   "archived": false,
+   "sort": 32,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-sonstiges--online",
+   "name": "Online",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": "cat-sonstiges",
+   "archived": false,
+   "sort": 33,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-sonstiges--geschenke",
+   "name": "Geschenke",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": "cat-sonstiges",
+   "archived": false,
+   "sort": 34,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-sonstiges--spenden",
+   "name": "Spenden",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": "cat-sonstiges",
+   "archived": false,
+   "sort": 35,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-sonstiges--sonstige",
+   "name": "Sonstige",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": "cat-sonstiges",
+   "archived": false,
+   "sort": 36,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-sonstiges--urlaub",
+   "name": "Urlaub",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": "cat-sonstiges",
+   "archived": false,
+   "sort": 37,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-sonstiges--hobby",
+   "name": "Hobby",
+   "kind": "expense",
+   "group": "alltag",
+   "parentId": "cat-sonstiges",
+   "archived": false,
+   "sort": 38,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-sparen",
+   "name": "Sparen",
+   "kind": "expense",
+   "group": "spar",
+   "parentId": null,
+   "archived": false,
+   "sort": 39,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "cat-sparen--sparkonto",
+   "name": "Sparkonto",
+   "kind": "expense",
+   "group": "spar",
+   "parentId": "cat-sparen",
+   "archived": false,
+   "sort": 40,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  }
+ ],
+ "transactions": [],
+ "budgets": [],
+ "recurring": [
+  {
+   "id": "rec-gehalt",
+   "name": "Gehalt",
+   "type": "income",
+   "amountCents": 285000,
+   "categoryId": "cat-gehalt",
+   "startMonth": "__MONTH__",
+   "day": 1,
+   "active": true,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "rec-miete",
+   "name": "Miete",
+   "type": "expense",
+   "amountCents": 72000,
+   "categoryId": "cat-wohnen",
+   "startMonth": "__MONTH__",
+   "day": 1,
+   "active": true,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "rec-rundfunkbeitrag",
+   "name": "Rundfunkbeitrag",
+   "type": "expense",
+   "amountCents": 1836,
+   "categoryId": "cat-wohnen",
+   "startMonth": "__MONTH__",
+   "day": 1,
+   "active": true,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "rec-strom",
+   "name": "Strom",
+   "type": "expense",
+   "amountCents": 6400,
+   "categoryId": "cat-wohnen",
+   "startMonth": "__MONTH__",
+   "day": 1,
+   "active": true,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "rec-internet",
+   "name": "Internet",
+   "type": "expense",
+   "amountCents": 3499,
+   "categoryId": "cat-wohnen",
+   "startMonth": "__MONTH__",
+   "day": 1,
+   "active": true,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "rec-autoversicherung",
+   "name": "Autoversicherung",
+   "type": "expense",
+   "amountCents": 4250,
+   "categoryId": "cat-mobilitaet",
+   "startMonth": "__MONTH__",
+   "day": 1,
+   "active": true,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "rec-kfz-steuer",
+   "name": "Kfz-Steuer",
+   "type": "expense",
+   "amountCents": 1100,
+   "categoryId": "cat-mobilitaet",
+   "startMonth": "__MONTH__",
+   "day": 1,
+   "active": true,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "rec-deutschlandticket",
+   "name": "Deutschlandticket",
+   "type": "expense",
+   "amountCents": 5800,
+   "categoryId": "cat-mobilitaet",
+   "startMonth": "__MONTH__",
+   "day": 1,
+   "active": true,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "rec-pannenhilfe",
+   "name": "Pannenhilfe",
+   "type": "expense",
+   "amountCents": 490,
+   "categoryId": "cat-mobilitaet",
+   "startMonth": "__MONTH__",
+   "day": 1,
+   "active": true,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "rec-haftpflicht",
+   "name": "Haftpflicht",
+   "type": "expense",
+   "amountCents": 590,
+   "categoryId": "cat-versicherungen",
+   "startMonth": "__MONTH__",
+   "day": 1,
+   "active": true,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "rec-hausrat",
+   "name": "Hausrat",
+   "type": "expense",
+   "amountCents": 720,
+   "categoryId": "cat-versicherungen",
+   "startMonth": "__MONTH__",
+   "day": 1,
+   "active": true,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "rec-zahnzusatz",
+   "name": "Zahnzusatz",
+   "type": "expense",
+   "amountCents": 1240,
+   "categoryId": "cat-versicherungen",
+   "startMonth": "__MONTH__",
+   "day": 1,
+   "active": true,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "rec-berufsunfaehigkeit",
+   "name": "Berufsunfähigkeit",
+   "type": "expense",
+   "amountCents": 4800,
+   "categoryId": "cat-versicherungen",
+   "startMonth": "__MONTH__",
+   "day": 1,
+   "active": true,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "rec-handyvertrag",
+   "name": "Handyvertrag",
+   "type": "expense",
+   "amountCents": 1499,
+   "categoryId": "cat-abos-vertraege",
+   "startMonth": "__MONTH__",
+   "day": 1,
+   "active": true,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "rec-streaming",
+   "name": "Streaming",
+   "type": "expense",
+   "amountCents": 1399,
+   "categoryId": "cat-abos-vertraege",
+   "startMonth": "__MONTH__",
+   "day": 1,
+   "active": true,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "rec-musik-abo",
+   "name": "Musik-Abo",
+   "type": "expense",
+   "amountCents": 1099,
+   "categoryId": "cat-abos-vertraege",
+   "startMonth": "__MONTH__",
+   "day": 1,
+   "active": true,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "rec-fitnessstudio",
+   "name": "Fitnessstudio",
+   "type": "expense",
+   "amountCents": 2990,
+   "categoryId": "cat-abos-vertraege",
+   "startMonth": "__MONTH__",
+   "day": 1,
+   "active": true,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+   "id": "rec-sparrate",
+   "name": "Sparrate",
+   "type": "expense",
+   "amountCents": 30000,
+   "categoryId": "cat-sparen--sparkonto",
+   "startMonth": "__MONTH__",
+   "day": 1,
+   "active": true,
+   "createdAt": "2026-01-01T00:00:00.000Z"
+  }
+ ],
+ "recurringRuns": [],
+ "depotEntries": [],
+ "settings": {
+  "expectedIncomeCents": 285000,
+  "split": {
+   "fix": 40,
+   "alltag": 40,
+   "spar": 15
+  },
+  "savingsBalanceCents": 0,
+  "savingsBalanceDate": null,
+  "accountName": "Girokonto",
+  "backupReminderDays": 30
+ }
+}

@@ -1,0 +1,3 @@
+/* Reihenfolge ist Teil des Designs: erst die Variablen, dann alle Regeln in fester Folge */
+@import './tokens.css';
+@import './app.css';

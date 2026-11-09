@@ -1,0 +1,26 @@
+/* Designsystem
+   Farbrollen: Orange = Fixkosten, Blau = Alltag, Grün = Sparen.
+   Interaktion und Einnahmen sind neutral (weiß). Rot = über Budget / negativ,
+   Bernstein = wird knapp. Schrift: 6 Stufen relativ zur iOS-Textgröße.
+   Abstände im 8-pt-Raster (4 · 8 · 12 · 16 · 24 · 32). */
+:root{
+  color-scheme:dark;
+  /* Flächen */
+  --bg:#000;--card:#0F0F11;--card2:#1A1B1F;--raise:#0F0F11;--line:#1E1F24;--track:#1C1D22;--ring-track:#1A1B20;
+  /* Text */
+  --text:#F4F4F6;--text2:#B4B8C0;--mut:#A3A7B0;--faint:#8A8E98;
+  /* Bedeutung */
+  --neg:#FF7A7A;--warn:#E8B04B;--pos:#3ED598;
+  /* Bereiche */
+  --fix:#F0902E;--all:#0A84FF;--spar:#3ED598;--goal:#9BE8C7;--bar:#A3ABB8;--inc:#D5D8DF;--hh:#5EC8F2;--depot:#A9B2FF;
+  --all-bar:var(--all);--fix-bar:var(--fix);--hh-bar:#2A86B5;
+  /* Schriftstufen (bei Standard-Textgröße 17 px: 40 · 28 · 17 · 15 · 13 · 11) */
+  --t-hero:2.353rem;--t-label:1.059rem;--t-title:1.647rem;--t-section:1rem;--t-body:.882rem;--t-note:.765rem;--t-micro:.647rem;
+  /* Abstände und Rundungen */
+  --s1:4px;--s2:8px;--s3:12px;--s4:16px;--s5:24px;--s6:32px;
+  --r-card:20px;--r-hero:24px;--r-ctl:12px;
+  /* Ränder: --edge = Abstand zum Bildschirmrand (installierte App), Leiste unten */
+  --edge:0px;
+  --navh:54px;
+  --navb:calc(max(10px, env(safe-area-inset-bottom) - var(--gap,0px) - 12px));
+}
